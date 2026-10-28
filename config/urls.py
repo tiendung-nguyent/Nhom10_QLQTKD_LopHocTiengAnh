@@ -15,8 +15,18 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+from django.shortcuts import redirect
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # App URLs
+    path('users/', include('apps.users.urls')),
+    path('tests/', include('apps.placement_tests.urls')),
+    path('classes/', include('apps.classes.urls')),
+    path('billing/', include('apps.billing.urls')),
+
+    # Root redirect → Student Dashboard (default demo page)
+    path('', lambda request: redirect('users:student_dashboard')),
 ]

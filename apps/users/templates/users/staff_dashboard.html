@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Tư vấn Tuyển sinh{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-breadcrumb">🎯 <span>Tuyển sinh</span> / Dashboard Quản lý Tuyển sinh</div>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <h1 class="page-title">Dashboard Tư vấn Tuyển sinh 🎯</h1>
+      <p class="page-subtitle">Theo dõi tiến trình hồ sơ, xếp lớp và xác nhận học phí — {{ today|date:"l, d/m/Y" }}</p>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <a href="{% url 'classes:class_assignment' %}" class="btn btn-purple btn-sm">
+        🎓 Xếp lớp học viên
+      </a>
+      <a href="{% url 'billing:invoice_list' %}" class="btn btn-emerald btn-sm">
+        🧾 Xác nhận học phí
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ─── THẺ KPI TUYỂN SINH (KPI STAT GRID) ────────────────── -->
+<div class="stat-grid">
+  <!-- 1. Số ca đăng ký mới -->
+  <div class="stat-card">
+    <div class="stat-icon coral">📥</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ new_registrations|default:8 }}</div>
+      <div class="stat-label">Số ca đăng ký mới hôm nay</div>
+      <div class="stat-delta up">↑ +3 ca so với hôm qua</div>
+    </div>
+  </div>
+
+  <!-- 2. Số hồ sơ đã có điểm chuẩn -->
+  <div class="stat-card">
+    <div class="stat-icon purple">✦</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ scored_students|default:15 }}</div>
+      <div class="stat-label">Số hồ sơ đã có điểm chuẩn</div>
+      <div class="stat-delta up">↑ 6 hồ sơ chờ xếp lớp ngay</div>
+    </div>
+  </div>
+
+  <!-- 3. Số học viên đã đóng tiền -->
+  <div class="stat-card">
+    <div class="stat-icon emerald">💰</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ paid_students|default:9 }}</div>
+      <div class="stat-label">Học viên đã đóng học phí</div>
+      <div class="stat-delta up">↑ Đã kích hoạt vào lớp</div>
+    </div>
+  </div>
+
+  <!-- 4. Doanh thu học phí tháng -->
+  <div class="stat-card">
+    <div class="stat-icon blue">📈</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ revenue|default:"40.5" }}<span style="font-size:14px">tr</span></div>
+      <div class="stat-label">Doanh thu học phí tháng {{ today|date:"m/Y" }}</div>
+      <div class="stat-delta up">↑ 12% so với tháng trước</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── HỒ SƠ CẦN XỬ LÝ & PHỄU CHUYỂN ĐỔI ─────────────────── -->
+<div class="two-col" style="margin-bottom: 24px;">
+
+  <!-- THẺ 1: HỒ SƠ CẦN XỬ LÝ NGAY -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div>
+        <div class="card-title">🔥 Hồ sơ cần xử lý ngay</div>
+        <div class="card-subtitle">Học viên đã có điểm chính thức hoặc cần xác nhận thu tiền</div>
+      </div>
+      <span class="badge badge-red">{{ urgent_count|default:3 }} trường hợp</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <div style="display: flex; flex-direction: column;">
+        <div style="padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">Nguyễn Minh Tuấn</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+              Điểm B2 (85đ) · Chờ phân lớp B2 Upper Intermediate
+            </div>
+          </div>
+          <a href="{% url 'classes:class_assignment' %}" class="btn btn-primary btn-sm">Xếp lớp ngay 🎓</a>
+        </div>
+
+        <div style="padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">Trần Thị Hoa</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+              Chờ xác nhận thanh toán · 4.500.000đ qua VietQR
+            </div>
+          </div>
+          <a href="{% url 'billing:invoice_list' %}" class="btn btn-emerald btn-sm">Xác nhận thu 🧾</a>
+        </div>
+
+        <div style="padding: 14px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">Trần Văn Bình</div>
+            <div style="font-size: 12px; color: var(--accent-orange); margin-top: 2px;">
+              Chuyển thiếu 500.000đ · Hạn nộp còn 3 ngày
+            </div>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="Toast.show('Đã gửi email nhắc nhở bổ sung học phí tới Trần Văn Bình!', 'info')">
+            📧 Nhắc nộp
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <a href="{% url 'classes:class_assignment' %}" class="btn btn-outline btn-block btn-sm">
+        Xem tất cả hồ sơ tuyển sinh →
+      </a>
+    </div>
+  </div>
+
+  <!-- THẺ 2: BIỂU ĐỒ PHỄU CHUYỂN ĐỔI (CONVERSION FUNNEL) ────── -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div>
+        <div class="card-title">📊 Phễu Chuyển đổi Quy trình Tuyển sinh</div>
+        <div class="card-subtitle">Theo dõi tỷ lệ chuyển đổi từ Đăng ký → Nhập học chính thức</div>
+      </div>
+      <span class="badge badge-purple">BPMN Pipeline</span>
+    </div>
+    <div class="card-body">
+      {% for stage in funnel_data %}
+      <div class="ai-score-bar" style="margin-bottom: 14px;">
+        <div class="bar-label" style="margin-bottom: 4px;">
+          <span style="font-weight: 600;">{{ stage.label }}</span>
+          <span style="font-weight: 700; color: var(--text-primary);">
+            {{ stage.count }} hồ sơ <span style="color: var(--text-muted); font-size: 11px;">({{ stage.pct }}%)</span>
+          </span>
+        </div>
+        <div class="bar-track" style="height: 10px;">
+          <div class="bar-fill" style="width: {{ stage.pct }}%; background: {{ stage.color }};"></div>
+        </div>
+      </div>
+      {% endfor %}
+
+      <!-- Highlight tỷ lệ chuyển đổi -->
+      <div style="margin-top: 18px; padding: 14px; background: var(--emerald-light); border-radius: var(--radius-md); text-align: center; border: 1px solid #A7F3D0;">
+        <div style="font-size: 24px; font-weight: 800; color: #047857;">{{ conversion_rate|default:"23.7" }}%</div>
+        <div style="font-size: 12px; color: #065F46; font-weight: 600; margin-top: 2px;">
+          Tỷ lệ chuyển đổi thành công từ Đăng ký → Đóng tiền vào lớp
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ─── THAO TÁC NHANH (QUICK ACTIONS 3 Ô) ────────────────── -->
+<div class="three-col">
+  <a href="{% url 'classes:class_assignment' %}" class="card rounded-2xl shadow-sm" style="text-align: center; padding: 24px; text-decoration: none; cursor: pointer;">
+    <div style="font-size: 38px; margin-bottom: 10px;">🎓</div>
+    <div style="font-weight: 700; font-size: 15px; color: var(--text-primary);">Xếp lớp học viên</div>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">{{ scored_students|default:6 }} hồ sơ chờ phân lớp</div>
+  </a>
+
+  <a href="{% url 'billing:invoice_list' %}" class="card rounded-2xl shadow-sm" style="text-align: center; padding: 24px; text-decoration: none; cursor: pointer;">
+    <div style="font-size: 38px; margin-bottom: 10px;">🧾</div>
+    <div style="font-weight: 700; font-size: 15px; color: var(--text-primary);">Quản lý & Thu học phí</div>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">{{ paid_students|default:4 }} giao dịch chờ đối soát</div>
+  </a>
+
+  <div class="card rounded-2xl shadow-sm" style="text-align: center; padding: 24px; cursor: pointer;" onclick="Toast.show('Đang xuất báo cáo doanh thu & tuyển sinh Excel!', 'success')">
+    <div style="font-size: 38px; margin-bottom: 10px;">📊</div>
+    <div style="font-weight: 700; font-size: 15px; color: var(--text-primary);">Xuất Báo cáo Tuyển sinh</div>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Xuất định dạng Excel / PDF</div>
+  </div>
+</div>
+{% endblock %}

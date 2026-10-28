@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Giáo viên Thẩm định{% endblock %}
+{% block page_heading %}Dashboard Giáo viên{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-breadcrumb">🏫 <span>Giáo viên</span> / Dashboard Thẩm định AI</div>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <h1 class="page-title">Dashboard Giáo viên Thẩm định 📚</h1>
+      <p class="page-subtitle">Quản lý và thẩm định kết quả chấm điểm AI — {{ today|date:"l, d/m/Y" }}</p>
+    </div>
+    <a href="{% url 'placement_tests:teacher_review' %}" class="btn btn-purple btn-lg">
+      🤖 Vào trang Duyệt bài AI →
+    </a>
+  </div>
+</div>
+
+<!-- ─── THẺ THỐNG KÊ KPI GIÁO VIÊN ────────────────────────── -->
+<div class="stat-grid">
+  <!-- 1. Bài chờ duyệt hôm nay -->
+  <div class="stat-card">
+    <div class="stat-icon coral">⏳</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ pending_count|default:7 }}</div>
+      <div class="stat-label">Bài thi chờ duyệt hôm nay</div>
+      <div class="stat-delta down">↑ 3 bài mới nộp gần đây</div>
+    </div>
+  </div>
+
+  <!-- 2. Bài đã phê duyệt -->
+  <div class="stat-card">
+    <div class="stat-icon emerald">✅</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ approved_count|default:12 }}</div>
+      <div class="stat-label">Bài đã phê duyệt tháng này</div>
+      <div class="stat-delta up">↑ 100% hồ sơ chuyển tuyển sinh</div>
+    </div>
+  </div>
+
+  <!-- 3. Độ chính xác điểm AI -->
+  <div class="stat-card">
+    <div class="stat-icon purple">✦</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ ai_accuracy|default:88 }}<span style="font-size:14px">%</span></div>
+      <div class="stat-label">Độ tương đồng điểm AI & GV</div>
+      <div class="stat-delta up">↑ Sai số trung bình &lt; 1.5đ</div>
+    </div>
+  </div>
+
+  <!-- 4. Lịch chấm Speaking -->
+  <div class="stat-card">
+    <div class="stat-icon blue">🎙️</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ speaking_count|default:4 }}</div>
+      <div class="stat-label">Lịch chấm / phỏng vấn Speaking</div>
+      <div class="stat-delta">Ca tiếp theo: 10:00</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── BẢNG DANH SÁCH BÀI THI CHỜ DUYỆT ─────────────────── -->
+<div class="card rounded-2xl shadow-sm" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <div>
+      <div class="card-title">🤖 Danh sách bài thi AI đã chấm sơ bộ – Chờ Giáo viên duyệt</div>
+      <div class="card-subtitle">Hồ sơ sau khi duyệt sẽ tự động đồng bộ sang bộ phận Tư vấn Tuyển sinh để xếp lớp</div>
+    </div>
+    <a href="{% url 'placement_tests:teacher_review' %}" class="btn btn-outline btn-sm">Xem giao diện 3 cột →</a>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Mã phiên</th>
+          <th>Học viên</th>
+          <th>Đề kiểm tra</th>
+          <th>Ngày thi</th>
+          <th>Điểm AI Speaking</th>
+          <th>Điểm AI Writing</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in review_list %}
+        <tr>
+          <td style="font-weight: 700; color: var(--text-muted);">#{{ item.ma_phien }}</td>
+          <td>
+            <div style="font-weight: 600; font-size: 13.5px;">{{ item.ten_hoc_vien }}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">{{ item.email }}</div>
+          </td>
+          <td>{{ item.ten_bai }}</td>
+          <td>{{ item.ngay_thi|date:"d/m/Y H:i" }}</td>
+          <td><span class="badge badge-purple">{{ item.speaking_score }}/30</span></td>
+          <td><span class="badge badge-purple">{{ item.writing_score }}/30</span></td>
+          <td>
+            {% if item.trang_thai == 'CHO_DUYET' %}
+              <span class="badge badge-coral">Chờ GV duyệt</span>
+            {% elif item.trang_thai == 'AI_DA_CHAM' %}
+              <span class="badge badge-ai">AI đã chấm</span>
+            {% else %}
+              <span class="badge badge-emerald">Đã duyệt</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'placement_tests:teacher_review' %}?session={{ item.ma_phien }}" class="btn btn-primary btn-sm">
+              Duyệt chi tiết ✏️
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ─── THẺ LỊCH CHẤM / PHỎNG VẤN SPEAKING HÔM NAY ────────── -->
+<div class="card rounded-2xl shadow-sm">
+  <div class="card-header">
+    <div class="card-title">🗓️ Lịch chấm Speaking & Phỏng vấn hôm nay</div>
+    <span class="badge badge-blue">{{ today|date:"d/m/Y" }}</span>
+  </div>
+  <div class="card-body">
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;">
+      {% for s in speaking_schedule %}
+      <div class="class-card available" style="margin-bottom: 0;">
+        <div>
+          <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">{{ s.ten_hoc_vien }}</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+            Phiên #{{ s.ma_phien }} · <strong>{{ s.gio_hen }}</strong>
+          </div>
+        </div>
+        <a href="{% url 'placement_tests:teacher_review' %}?session={{ s.ma_phien }}&skill=SPEAKING" class="btn btn-purple btn-sm">
+          🎙️ Nghe bài thi
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

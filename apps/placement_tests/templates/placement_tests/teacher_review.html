@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Duyệt bài Chấm điểm AI – Giáo viên{% endblock %}
+{% block page_heading %}Thẩm định & Duyệt bài AI{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-breadcrumb">🤖 <span>Giáo viên</span> / Thẩm định bài thi AI</div>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <h1 class="page-title">Duyệt bài AI – So sánh & Điều chỉnh điểm 🤖</h1>
+      <p class="page-subtitle">
+        Học viên: <strong style="color: var(--text-primary);">{{ hoc_vien_name|default:"Nguyễn Thị Lan" }}</strong> · 
+        Phiên thi: <strong>#{{ phien.ma_phien|default:"001" }}</strong> · 
+        Thi ngày: {{ phien.hoan_thanh|date:"d/m/Y H:i"|default:"28/10/2026 10:45" }}
+      </p>
+    </div>
+    <!-- Badge kỹ năng đang xét -->
+    <span class="badge badge-purple" style="font-size: 13px; padding: 6px 14px;">
+      ✦ Quy trình thẩm định 3 Cột (Side-by-Side)
+    </span>
+  </div>
+</div>
+
+<!-- ─── BỘ LỌC CHỌN KỸ NĂNG & PHIÊN THI ───────────────────── -->
+<div class="card rounded-2xl shadow-sm" style="margin-bottom: 20px;">
+  <div class="card-header" style="justify-content: flex-start; gap: 12px; flex-wrap: wrap;">
+    <div class="card-title" style="font-size: 13px; color: var(--text-muted);">Chọn Kỹ năng thẩm định:</div>
+    <a href="?session={{ phien.ma_phien|default:1 }}&skill=SPEAKING"
+       class="btn {% if current_skill == 'SPEAKING' or not current_skill %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
+      🎙️ Speaking (Ghi âm)
+      <span class="badge badge-coral" style="font-size: 9px; margin-left: 4px;">Chờ duyệt</span>
+    </a>
+    <a href="?session={{ phien.ma_phien|default:1 }}&skill=WRITING"
+       class="btn {% if current_skill == 'WRITING' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
+      ✍️ Writing (Tự luận)
+      <span class="badge badge-emerald" style="font-size: 9px; margin-left: 4px;">Đã duyệt</span>
+    </a>
+  </div>
+</div>
+
+<!-- ─── GIAO DIỆN SO SÁNH & ĐIỀU CHỈNH (SIDE-BY-SIDE 3 CỘT) ─ -->
+<div class="review-grid" style="margin-bottom: 24px;">
+
+  <!-- ═══════════════════════════════════════════════════════
+       CỘT 1: CÂU TRẢ LỜI THỰC TẾ CỦA HỌC VIÊN
+       ═══════════════════════════════════════════════════════ -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div>
+        <div class="card-title">📄 1. Câu trả lời của Học viên</div>
+        <div class="card-subtitle">
+          {% if current_skill == 'WRITING' %}Bài viết tự luận (Task 1 & Task 2){% else %}File ghi âm Speaking thực tế{% endif %}
+        </div>
+      </div>
+      <span class="badge badge-gray">Bản gốc</span>
+    </div>
+    <div class="card-body">
+
+      {% if current_skill == 'WRITING' %}
+      <!-- NỘI DUNG BÀI WRITING -->
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">✍️ Writing Task 1 (Formal Email - 156 từ):</div>
+        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text-primary); max-height: 220px; overflow-y: auto;">
+          Dear Mr. Anderson,<br><br>
+          I am writing this email to update you regarding my new role at Nexus Digital. Over the past three weeks, I have been working as an assistant project coordinator in the international outreach division.<br><br>
+          The corporate culture here is highly dynamic, which presents both exciting opportunities and substantial challenges. While managing cross-functional deadlines with European partners can be demanding, the project management frameworks I acquired under your guidance at my previous firm have proven invaluable.<br><br>
+          I would like to express my sincere appreciation for your consistent mentorship and encouragement during my tenure with your team.<br><br>
+          Warm regards,<br>
+          Lan Nguyen
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">✍️ Writing Task 2 (Essay - 264 từ):</div>
+        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text-primary); max-height: 220px; overflow-y: auto;">
+          In contemporary society, the integration of artificial intelligence into educational settings has sparked controversy. While some argue that automated pedagogical platforms will eventually supplant conventional educators, I contend that human teachers remain indispensable for authentic learning.<br><br>
+          On the one hand, AI offers customized curriculum pacing and immediate diagnostic feedback. On the other hand, education entails far more than the passive transfer of data; it necessitates emotional empathy, moral development, and critical discussion that algorithms cannot replicate...
+        </div>
+      </div>
+
+      {% else %}
+      <!-- NỘI DUNG BÀI GHI ÂM SPEAKING -->
+      <div style="margin-bottom: 18px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
+          🎙️ File Audio ghi âm Part 1 (90 giây):
+        </div>
+        <audio controls style="width: 100%; border-radius: 8px; margin-bottom: 10px;">
+          <source src="https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg" type="audio/ogg">
+          Trình duyệt không hỗ trợ audio player.
+        </audio>
+
+        <!-- Bản ghi tự động (Speech-to-Text Whisper AI) -->
+        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+          <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">
+            BẢN GHI TỰ ĐỘNG (SPEECH-TO-TEXT WHISPER AI)
+          </div>
+          <div style="font-size: 12.5px; color: var(--text-primary); line-height: 1.7; font-style: italic;">
+            "{{ cau_tra_loi.transcript }}"
+          </div>
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid var(--border-color); padding-top: 14px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
+          🎙️ File Audio ghi âm Part 2 (Topic: Memorable Travel):
+        </div>
+        <audio controls style="width: 100%; border-radius: 8px;">
+          <source src="https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg" type="audio/ogg">
+        </audio>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+          Thời lượng: 1 phút 42 giây · Âm thanh rõ ràng, không tạp âm
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       CỘT 2: GỢI Ý ĐIỂM CHI TIẾT & NHẬN XÉT TỪ AI
+       ═══════════════════════════════════════════════════════ -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div>
+        <div class="card-title">✦ 2. Phân tích & Gợi ý từ AI</div>
+        <div class="card-subtitle">
+          Mô hình: {{ cham_diem_ai.mo_hinh_ai|default:"GPT-4o" }} · Phiên bản: {{ cham_diem_ai.phien_ban_prompt|default:"v2.1" }}
+        </div>
+      </div>
+      <span class="badge badge-ai">Độ tin cậy {{ cham_diem_ai.do_tin_cay|default:"87" }}%</span>
+    </div>
+    <div class="card-body">
+
+      <!-- Điểm số AI đề xuất to rõ -->
+      <div style="text-align: center; margin-bottom: 16px; background: var(--purple-light); border-radius: var(--radius-md); padding: 14px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--accent-purple); text-transform: uppercase;">
+          ĐIỂM AI ĐỀ XUẤT
+        </div>
+        <div style="font-size: 32px; font-weight: 800; color: var(--accent-purple); line-height: 1.1; margin: 4px 0;">
+          {{ cham_diem_ai.diem_tong|default:"19" }}<span style="font-size: 15px; color: var(--text-secondary);">/30</span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-secondary);">
+          Gợi ý xếp loại: <strong>B1 – Intermediate</strong>
+        </div>
+      </div>
+
+      <!-- Rubric chi tiết 4 tiêu chí -->
+      <div class="ai-feedback-card" style="margin-bottom: 16px;">
+        <div class="ai-feedback-header">
+          <span>✦ Chi tiết Rubric Phân tích</span>
+        </div>
+        <div class="ai-criteria">
+          {% for criterion in ai_criteria %}
+          <div class="criterion">
+            <span class="criterion-name">{{ criterion.name }}</span>
+            <div class="criterion-bar"><div class="criterion-fill" data-width="{{ criterion.pct }}%" style="width:{{ criterion.pct }}%;"></div></div>
+            <span class="criterion-score">{{ criterion.score }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Nhận xét chi tiết từ AI -->
+      <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--accent-purple); text-transform: uppercase; margin-bottom: 6px;">
+          ✦ NHẬN XÉT PHÂN TÍCH CHI TIẾT TỪ AI
+        </div>
+        <div style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.7;">
+          {{ cham_diem_ai.nhan_xet }}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       CỘT 3: FORM GIÁO VIÊN CHỈNH SỬA & PHÊ DUYỆT (MODELFORM)
+       ═══════════════════════════════════════════════════════ -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div>
+        <div class="card-title">✏️ 3. Giáo viên Điều chỉnh & Duyệt</div>
+        <div class="card-subtitle">Chốt điểm chính thức cho thí sinh</div>
+      </div>
+      <span class="badge badge-emerald">Chốt kết quả</span>
+    </div>
+    <div class="card-body">
+      <form method="post" action="{% url 'placement_tests:approve_skill' %}" class="approve-form" id="teacher-review-form">
+        {% csrf_token %}
+        <input type="hidden" name="phien_id" value="{{ phien.ma_phien|default:1 }}">
+        <input type="hidden" name="ky_nang" value="{{ current_skill|default:'SPEAKING' }}">
+
+        <!-- Thông tin Kỹ năng & Điểm AI tham chiếu -->
+        <div class="form-group">
+          <label class="form-label">Kỹ năng đang thẩm định</label>
+          <input type="text" class="form-control" value="{% if current_skill == 'WRITING' %}Writing (Tự luận){% else %}Speaking (Ghi âm){% endif %}" readonly style="background: var(--bg-app); font-weight: 600;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Điểm AI đề xuất (Tham khảo)</label>
+          <input type="text" class="form-control" value="{{ cham_diem_ai.diem_tong|default:'19.0' }} / 30 điểm" readonly style="background: var(--bg-app); color: var(--accent-purple); font-weight: 700;">
+        </div>
+
+        <!-- Input Giáo viên chỉnh sửa điểm -->
+        <div class="form-group">
+          <label class="form-label" style="color: var(--accent-orange);">
+            ⭐ Điểm Giáo viên điều chỉnh chính thức (0–30)
+          </label>
+          <input type="number" name="diem_dieu_chinh" class="form-control" 
+                 min="0" max="30" step="0.5"
+                 value="{{ bai_lam.diem_dieu_chinh|default:cham_diem_ai.diem_tong|default:'20.0' }}"
+                 style="font-size: 16px; font-weight: 700; border-color: var(--accent-coral);"
+                 required>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+            Giáo viên có quyền giữ nguyên hoặc điều chỉnh tăng/giảm theo đánh giá thực tế.
+          </div>
+        </div>
+
+        <!-- Textarea Giáo viên chỉnh sửa nhận xét -->
+        <div class="form-group">
+          <label class="form-label">💬 Nhận xét chính thức của Giáo viên</label>
+          <textarea name="nhan_xet_gv" class="form-control" rows="5" 
+                    placeholder="Nhập nhận xét chi tiết gửi cho học viên và tư vấn viên…">Học viên thể hiện khả năng phản xạ và phát âm khá tốt. Tốc độ nói kiểm soát ổn định, cần cải thiện tính liên kết câu ở các chủ đề mở rộng. Đề xuất xếp vào lớp B1 IELTS Foundation.</textarea>
+        </div>
+
+        <!-- Dropdown Xếp loại Trình độ năng lực -->
+        <div class="form-group">
+          <label class="form-label">🎯 Khung năng lực CEFR xếp loại</label>
+          <select name="trinh_do" class="form-control" style="font-weight: 600;" required>
+            <option value="A1">A1 – Beginner (0 – 39 điểm)</option>
+            <option value="A2">A2 – Elementary (40 – 59 điểm)</option>
+            <option value="B1" selected>B1 – Intermediate (60 – 79 điểm)</option>
+            <option value="B2">B2 – Upper Intermediate (80 – 89 điểm)</option>
+            <option value="C1">C1 – Advanced (90 – 100 điểm)</option>
+          </select>
+        </div>
+
+        <!-- Cảnh báo quy trình chuyển tiếp BPMN -->
+        <div style="padding: 12px 14px; background: var(--emerald-light); border-radius: var(--radius-md); margin-bottom: 16px; font-size: 12px; color: #065F46; line-height: 1.5;">
+          ⚠️ Sau khi nhấn <strong>Phê duyệt kết quả</strong>, hồ sơ sẽ được khóa điểm và tự động chuyển sang bộ phận <strong>Tư vấn Tuyển sinh</strong> để phân lớp và phát hành phiếu học phí.
+        </div>
+
+        <!-- Nút POST Phê duyệt kết quả -->
+        <button type="submit" class="btn btn-emerald btn-block btn-lg" id="btn-approve-submit">
+          ✔ Phê duyệt kết quả & Chuyển tuyển sinh
+        </button>
+
+        <button type="button" class="btn btn-outline btn-block" style="margin-top: 8px;" onclick="Toast.show('Đã lưu nháp kết quả duyệt!', 'info')">
+          💾 Lưu nháp (chưa chốt)
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div><!-- .review-grid -->
+
+<!-- ─── BẢNG DANH SÁCH BÀI THI AI ĐÃ CHẤM SƠ BỘ ───────────── -->
+<div class="card rounded-2xl shadow-sm">
+  <div class="card-header">
+    <div>
+      <div class="card-title">📋 Danh sách bài thi đã được AI chấm sơ bộ (AI Pre-graded)</div>
+      <div class="card-subtitle">Nhấn "Duyệt" để tải dữ liệu thí sinh lên giao diện so sánh 3 cột ở trên</div>
+    </div>
+    <span class="badge badge-coral">{{ pending_list|length|default:3 }} bài chờ</span>
+  </div>
+  <div class="table-wrapper">
+    <table id="students-table">
+      <thead>
+        <tr>
+          <th>Mã phiên</th>
+          <th>Học viên</th>
+          <th>Kỹ năng</th>
+          <th>Điểm AI</th>
+          <th>Độ tin cậy</th>
+          <th>Trạng thái</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in pending_list %}
+        <tr>
+          <td style="font-weight: 700; color: var(--text-muted);">#{{ item.ma_phien }}</td>
+          <td>
+            <div style="font-weight: 600;">{{ item.ten_hoc_vien }}</div>
+          </td>
+          <td>
+            <span class="badge badge-purple">{{ item.ky_nang }}</span>
+          </td>
+          <td><strong style="color: var(--accent-purple);">{{ item.diem_ai }}/30</strong></td>
+          <td>88%</td>
+          <td>
+            {% if item.trang_thai == 'AI_DA_CHAM' %}
+              <span class="badge badge-coral">Chờ GV duyệt</span>
+            {% elif item.trang_thai == 'GV_DA_DUYET' %}
+              <span class="badge badge-emerald">GV đã duyệt</span>
+            {% else %}
+              <span class="badge badge-gray">{{ item.trang_thai }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="?session={{ item.ma_phien }}&skill={{ item.ky_nang }}" class="btn btn-primary btn-sm">
+              Duyệt ✏️
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

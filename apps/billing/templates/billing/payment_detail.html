@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Học phí & Thanh toán{% endblock %}
+{% block page_heading %}Học phí & Thanh toán{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-breadcrumb">💳 <span>Học viên</span> / Học phí & Thanh toán</div>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <h1 class="page-title">Học phí & Thanh toán 💳</h1>
+      <p class="page-subtitle">Thông tin khóa học, lớp học được tư vấn và thanh toán chuyển khoản qua VietQR</p>
+    </div>
+    <span class="badge badge-coral" id="invoice-status-badge" style="font-size: 13px; padding: 8px 14px;">
+      {{ phieu.trang_thai|default:"Chưa thanh toán" }}
+    </span>
+  </div>
+</div>
+
+<!-- ─── THÔNG BÁO HẠN THANH TOÁN ──────────────────────────── -->
+<div style="background: linear-gradient(135deg, var(--coral-light), #FFF8F5); border: 1.5px solid #FFD4C5; border-radius: var(--radius-lg); padding: 18px 22px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+  <div style="display: flex; align-items: center; gap: 14px; flex: 1;">
+    <span style="font-size: 28px;">📋</span>
+    <div>
+      <div style="font-size: 14px; font-weight: 700; color: var(--accent-orange);">
+        Phiếu học phí #{{ phieu.ma_tham_chieu|default:"HP20261128001" }}
+      </div>
+      <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+        Hạn chót thanh toán: <strong>{{ phieu.han_thanh_toan|date:"d/m/Y"|default:"10/11/2026" }}</strong> · 
+        Vui lòng hoàn tất thanh toán trước ngày khai giảng để trung tâm giữ chỗ chính thức và kích hoạt tài khoản học tập.
+      </div>
+    </div>
+  </div>
+  <span class="badge badge-coral" style="font-size: 12px;">Còn 7 ngày</span>
+</div>
+
+<div class="two-col" style="margin-bottom: 24px;">
+
+  <!-- ─── THẺ 1: THÔNG TIN KHÓA HỌC & LỚP HỌC ĐƯỢC TƯ VẤN ─── -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div class="card-title">🎓 Khóa học & Lớp học được tư vấn</div>
+      <span class="badge badge-purple">✦ Xếp lớp theo kết quả test</span>
+    </div>
+    <div class="card-body">
+      <!-- Banner khóa học -->
+      <div style="background: linear-gradient(135deg, #1E293B, #0F172A); border-radius: var(--radius-md); padding: 20px; color: #fff; margin-bottom: 18px;">
+        <div style="font-size: 11px; color: #94A3B8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px;">KHÓA HỌC DÀNH CHO BẠN</div>
+        <div style="font-size: 20px; font-weight: 800;">{{ khoa_hoc.ten_khoa|default:"B1 IELTS Foundation" }}</div>
+        <div style="font-size: 13px; color: #94A3B8; margin-top: 6px;">
+          Trình độ: <strong>{{ khoa_hoc.trinh_do|default:"B1 – Intermediate" }}</strong> · Thời lượng: <strong>{{ khoa_hoc.so_buoi|default:30 }} buổi</strong>
+        </div>
+      </div>
+
+      <!-- Chi tiết lớp học -->
+      <div class="payment-meta">
+        <div class="payment-meta-row">
+          <span class="label">🏫 Lớp học xếp</span>
+          <span class="value" style="font-weight: 700; color: var(--accent-coral);">{{ lop_hoc.ten_lop|default:"B1-01 · Sáng T2/T4/T6" }}</span>
+        </div>
+        <div class="payment-meta-row">
+          <span class="label">📅 Lịch học trong tuần</span>
+          <span class="value">{{ lop_hoc.lich_hoc|default:"07:30 – 09:30 · T2/T4/T6" }}</span>
+        </div>
+        <div class="payment-meta-row">
+          <span class="label">📆 Ngày khai giảng</span>
+          <span class="value">{{ lop_hoc.ngay_khai_giang|date:"d/m/Y"|default:"05/11/2026" }}</span>
+        </div>
+        <div class="payment-meta-row">
+          <span class="label">👨‍🏫 Giáo viên phụ trách</span>
+          <span class="value">{{ giao_vien.ho_ten|default:"Ms. Trần Thanh Thảo" }} (IELTS 8.5)</span>
+        </div>
+        <div class="payment-meta-row">
+          <span class="label">👥 Sĩ số hiện tại</span>
+          <span class="value">{{ si_so_hien_tai|default:12 }} / {{ lop_hoc.si_so_toi_da|default:20 }} học viên (Còn 8 chỗ)</span>
+        </div>
+      </div>
+
+      <!-- Căn cứ kết quả test -->
+      <div style="border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: 10px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">CĂN CỨ KẾT QUẢ ĐẦU VÀO</div>
+        <div class="payment-meta-row">
+          <span class="label">Điểm kiểm tra sơ bộ</span>
+          <span class="value" style="color: var(--accent-purple); font-weight: 800;">{{ tong_diem|default:72 }}/100</span>
+        </div>
+        <div class="payment-meta-row">
+          <span class="label">Trình độ tương đương</span>
+          <span class="badge badge-purple">{{ trinh_do|default:"B1 – Intermediate" }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── THẺ 2: TỔNG HỌC PHÍ & MÃ VIETQR ĐỘNG ──────────── -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div class="card-title">💰 Thanh toán Học phí & Mã VietQR</div>
+      <span class="badge badge-emerald">Chuyển khoản 24/7</span>
+    </div>
+    <div class="card-body">
+
+      <!-- Số tiền học phí to rõ -->
+      <div style="text-align: center; margin-bottom: 16px;">
+        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px;">TỔNG HỌC PHÍ PHẢI THANH TOÁN</div>
+        <div class="payment-amount">{{ phieu.so_tien|floatformat:0|default:"4,500,000" }} đ</div>
+      </div>
+
+      <!-- Ảnh Mã VietQR động -->
+      <div class="qr-container" style="margin-bottom: 18px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
+          📱 QUÉT MÃ VIETQR BẰNG MỌI APP NGÂN HÀNG
+        </div>
+        <img class="qr-img" 
+             src="https://img.vietqr.io/image/VCB-1017689456-compact2.png?amount={{ phieu.so_tien|default:4500000 }}&addInfo={{ phieu.ma_tham_chieu|default:'HP20261128001' }}&accountName=TRUNG%20TAM%20ANH%20NGU%20NHOM%2010"
+             alt="VietQR Thanh toán học phí"
+             onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=HP20261128001-4500000';">
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+          Số tiền và nội dung chuyển khoản được nhúng tự động trong mã QR
+        </div>
+      </div>
+
+      <!-- Thông tin chuyển khoản chi tiết kèm nút copy -->
+      <div class="payment-meta" style="margin-bottom: 18px;">
+        <div class="payment-meta-row">
+          <span class="label">Nội dung CK (Mã hóa đơn)</span>
+          <span class="value" style="color: var(--accent-coral); font-weight: 800;">
+            <span id="copy-memo">{{ phieu.ma_tham_chieu|default:"HP20261128001" }}</span>
+            <button type="button" class="copy-pill-btn" onclick="copyText('copy-memo')">Sao chép</button>
+          </span>
+        </div>
+        <div class="payment-meta-row">
+          <span class="label">Ngân hàng nhận</span>
+          <span class="value">{{ ngan_hang|default:"VietcomBank – CN Hồ Chí Minh" }}</span>
+        </div>
+        <div class="payment-meta-row">
+          <span class="label">Số tài khoản</span>
+          <span class="value">
+            <span id="copy-stk">{{ so_tai_khoan|default:"1017 689 456" }}</span>
+            <button type="button" class="copy-pill-btn" onclick="copyText('copy-stk')">Sao chép</button>
+          </span>
+        </div>
+        <div class="payment-meta-row">
+          <span class="label">Chủ tài khoản</span>
+          <span class="value">{{ chu_tai_khoan|default:"TRUNG TAM ANH NGU NHOM 10" }}</span>
+        </div>
+      </div>
+
+      <!-- FORM NÚT "TÔI ĐÃ CHUYỂN KHOẢN" (POST có CSRF Token) -->
+      <form id="payment-confirm-form" method="post" action="{% url 'billing:confirm_payment' %}">
+        {% csrf_token %}
+        <input type="hidden" name="ma_phieu" value="{{ phieu.pk|default:1 }}">
+
+        <div style="padding: 12px 14px; background: #FEF3C7; border-radius: var(--radius-md); margin-bottom: 14px; display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 20px;">ℹ️</span>
+          <div style="font-size: 12px; color: #92400E; line-height: 1.5;">
+            Sau khi chuyển khoản qua ứng dụng Mobile Banking, vui lòng nhấn nút bên dưới để hệ thống tiếp nhận đối soát webhook.
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-emerald btn-block btn-lg" id="btn-confirm-transfer">
+          ✅ Tôi đã chuyển khoản
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+</div><!-- .two-col -->
+
+<!-- ─── BẢNG LỊCH SỬ GIAO DỊCH ────────────────────────────── -->
+<div class="card rounded-2xl shadow-sm">
+  <div class="card-header">
+    <div class="card-title">🧾 Lịch sử Giao dịch & Biên lai</div>
+    <span class="badge badge-gray" id="transaction-count">1 giao dịch</span>
+  </div>
+  <div class="table-wrapper">
+    <table id="transactions-table">
+      <thead>
+        <tr>
+          <th>Mã GD Ngân hàng</th>
+          <th>Số tiền</th>
+          <th>Nội dung chuyển khoản</th>
+          <th>Thời gian</th>
+          <th>Hình thức</th>
+          <th>Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr id="latest-transaction-row">
+          <td style="font-weight: 700; color: var(--text-muted);">FT26301045123</td>
+          <td class="invoice-amount-positive">{{ phieu.so_tien|floatformat:0|default:"4,500,000" }} đ</td>
+          <td>{{ phieu.ma_tham_chieu|default:"HP20261128001" }}</td>
+          <td>{{ today|date:"d/m/Y H:i" }}</td>
+          <td><span class="badge badge-blue">VietQR Webhook</span></td>
+          <td><span class="badge badge-coral" id="latest-tx-badge">Chờ xác nhận</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // ─── COPY TEXT VÀO CLIPBOARD ────────────────────────────────
+  function copyText(elementId) {
+    const text = document.getElementById(elementId).innerText.trim();
+    navigator.clipboard.writeText(text).then(() => {
+      Toast.show('Đã sao chép: ' + text, 'success');
+    }).catch(() => {
+      Toast.show('Sao chép: ' + text, 'info');
+    });
+  }
+
+  // ─── XỬ LÝ SUBMIT "TÔI ĐÃ CHUYỂN KHOẢN" (FETCH API) ────────
+  const confirmForm = document.getElementById('payment-confirm-form');
+  if (confirmForm) {
+    confirmForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-confirm-transfer');
+      btn.disabled = true;
+      btn.textContent = '⏳ Đang ghi nhận giao dịch…';
+
+      try {
+        const fd = new FormData(confirmForm);
+        const res = await fetch(confirmForm.action, {
+          method: 'POST',
+          body: fd,
+          headers: { 'X-CSRFToken': fd.get('csrfmiddlewaretoken') }
+        });
+        const data = await res.json();
+
+        btn.textContent = '✔ Đã ghi nhận chuyển khoản!';
+        btn.classList.remove('btn-emerald');
+        btn.classList.add('btn-primary');
+
+        // Cập nhật giao diện ngay không cần reload
+        const statusBadge = document.getElementById('invoice-status-badge');
+        if (statusBadge) {
+          statusBadge.textContent = 'Đang đối soát';
+          statusBadge.className = 'badge badge-purple';
+        }
+        const txBadge = document.getElementById('latest-tx-badge');
+        if (txBadge) {
+          txBadge.textContent = 'Đang đối soát';
+          txBadge.className = 'badge badge-purple';
+        }
+
+        Toast.show(data.message || 'Cảm ơn bạn! Trung tâm sẽ đối soát và gửi biên lai qua email.', 'success');
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = '✅ Tôi đã chuyển khoản';
+        Toast.show('Đã tiếp nhận yêu cầu thanh toán!', 'success');
+      }
+    });
+  }
+</script>
+{% endblock %}

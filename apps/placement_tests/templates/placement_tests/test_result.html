@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kết quả Kiểm tra Trình độ{% endblock %}
+{% block page_heading %}Kết quả Kiểm tra{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-breadcrumb">📊 <span>Học viên</span> / Kết quả kiểm tra đầu vào</div>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <h1 class="page-title">Kết quả Kiểm tra Trình độ 📊</h1>
+      <p class="page-subtitle">Phiên thi #{{ phien.ma_phien|default:"001" }} · Hoàn thành ngày: {{ phien.hoan_thanh|date:"d/m/Y H:i"|default:"28/10/2026 10:45" }}</p>
+    </div>
+    <span class="badge badge-coral" style="font-size: 13px; padding: 8px 14px;">
+      ⏳ Chờ Giáo viên thẩm định
+    </span>
+  </div>
+</div>
+
+<!-- ─── AI PRE-GRADING SCORE NOTICE (YÊU CẦU ĐẶC BIỆT) ────── -->
+<div style="background: linear-gradient(135deg, var(--purple-light), #EDE9FE); border: 1.5px solid #DDD6FE; border-radius: var(--radius-lg); padding: 18px 22px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+  <div style="display: flex; align-items: flex-start; gap: 14px; flex: 1;">
+    <span style="font-size: 28px; line-height: 1;">✦</span>
+    <div>
+      <div style="font-size: 14px; font-weight: 700; color: var(--accent-purple);">
+        Điểm số & Nhận xét do AI chấm sơ bộ (AI Pre-grading Score)
+      </div>
+      <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px; line-height: 1.6;">
+        Hệ thống AI Agent (GPT-4o) đã tự động chấm điểm bài Trắc nghiệm và hoàn thành phân tích ngữ âm, từ vựng, ngữ pháp cho bài Writing & Speaking.
+        <br>Điểm số chính thức sẽ được <strong>Giáo viên chuyên môn thẩm định và phê duyệt</strong> trong vòng <strong>24h</strong> làm việc trước khi chuyển sang xếp lớp.
+      </div>
+    </div>
+  </div>
+  <div style="text-align: right; flex-shrink: 0;">
+    <span class="badge badge-purple" style="font-size: 12px; padding: 6px 12px;">
+      ✦ Độ tin cậy AI: 88%
+    </span>
+    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Model: GPT-4o · v2.1</div>
+  </div>
+</div>
+
+<!-- ─── TỔNG ĐIỂM & ĐIỂM THEO KỸ NĂNG ─────────────────────── -->
+<div class="two-col" style="margin-bottom: 24px;">
+
+  <!-- TỔNG ĐIỂM VÀ TRÌNH ĐỘ XẾP LOẠI -->
+  <div class="card rounded-2xl shadow-sm" style="text-align: center;">
+    <div class="card-header">
+      <div class="card-title">🏆 Điểm tổng hợp sơ bộ</div>
+      <span class="badge badge-coral">Chờ GV duyệt</span>
+    </div>
+    <div class="card-body">
+      <!-- Vòng tròn hiển thị điểm số (Score Ring) -->
+      <div class="score-ring" data-pct="{{ ket_qua.tong_diem|default:72 }}" style="--pct: 72; margin-bottom: 16px;">
+        <span class="score-val">{{ ket_qua.tong_diem|default:72 }}</span>
+      </div>
+      <div style="font-size: 13px; color: var(--text-muted); font-weight: 500;">trên thang điểm 100</div>
+
+      <div style="margin-top: 20px;">
+        <div class="badge badge-purple" style="font-size: 15px; padding: 8px 18px; border-radius: var(--radius-md);">
+          Trình độ dự kiến: <strong>{{ ket_qua.trinh_do|default:"B1 – Intermediate" }}</strong>
+        </div>
+      </div>
+
+      <div style="margin-top: 14px; background: var(--bg-app); border-radius: var(--radius-md); padding: 12px 16px;">
+        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">KHÓA HỌC PHÙ HỢP ĐỀ XUẤT</div>
+        <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-top: 2px;">
+          {{ khoa_de_xuat|default:"B1 IELTS Foundation – 30 buổi" }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHÂN BỐ ĐIỂM 4 KỸ NĂNG -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div class="card-title">📈 Phân tích điểm theo 4 Kỹ năng</div>
+      <span class="badge badge-emerald">4/4 Kỹ năng</span>
+    </div>
+    <div class="card-body">
+      {% for skill in skill_scores %}
+      <div class="ai-score-bar" style="margin-bottom: 14px;">
+        <div class="bar-label" style="margin-bottom: 6px;">
+          <span>
+            {{ skill.label }}
+            {% if skill.is_ai %}<span class="badge badge-ai" style="font-size: 10px; margin-left: 4px;">AI sơ bộ</span>{% else %}<span class="badge badge-emerald" style="font-size: 10px; margin-left: 4px;">Auto-graded</span>{% endif %}
+          </span>
+          <span style="font-weight: 700; color: {% if skill.is_ai %}var(--accent-purple){% else %}var(--accent-emerald){% endif %}; font-size: 14px;">
+            {{ skill.score }}/{{ skill.max }} ({{ skill.pct }}%)
+          </span>
+        </div>
+        <div class="bar-track" style="height: 8px;">
+          <div class="bar-fill" data-width="{{ skill.pct }}%" style="width: {{ skill.pct }}%; background: {{ skill.color }};"></div>
+        </div>
+      </div>
+      {% endfor %}
+
+      <!-- Nhận xét tổng quát của AI -->
+      <div style="margin-top: 18px; padding: 12px 16px; background: var(--purple-light); border-radius: var(--radius-md); border-left: 3px solid var(--accent-purple);">
+        <div style="font-size: 12px; font-weight: 700; color: var(--accent-purple); margin-bottom: 4px;">
+          ✦ Đánh giá tổng quan từ AI:
+        </div>
+        <div style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.6;">
+          Thí sinh có nền tảng <strong>Đọc hiểu & Nghe tốt</strong> (trên 80%). Kỹ năng Viết có cấu trúc rõ ràng nhưng cần đa dạng hóa từ vựng học thuật. Kỹ năng Nói phát âm dễ nghe, cần tăng tính lưu loát và tự tin khi phản xạ.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ─── AI FEEDBACK CHI TIẾT (WRITING & SPEAKING) ─────────── -->
+<div class="two-col" style="margin-bottom: 24px;">
+
+  <!-- PHÂN TÍCH WRITING TỪ AI -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div>
+        <div class="card-title">✍️ Phân tích Rubric Writing</div>
+        <div class="card-subtitle">Điểm AI sơ bộ: 19/30 · Phân tích tiêu chí IELTS chuẩn</div>
+      </div>
+      <span class="badge badge-ai">GPT-4o</span>
+    </div>
+    <div class="card-body">
+      <div class="ai-feedback-card">
+        <div class="ai-feedback-header">
+          <span>✦ Rubric Chấm điểm Chi tiết</span>
+        </div>
+        <div class="ai-criteria">
+          {% for c in writing_criteria %}
+          <div class="criterion">
+            <span class="criterion-name">{{ c.name }}</span>
+            <div class="criterion-bar"><div class="criterion-fill" data-width="{{ c.pct }}%" style="width: {{ c.pct }}%;"></div></div>
+            <span class="criterion-score">{{ c.score }}</span>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div style="margin-top: 14px; font-size: 12.5px; color: var(--text-secondary); padding: 12px; background: rgba(255,255,255,.75); border-radius: var(--radius-md); line-height: 1.6;">
+          <strong style="color: var(--accent-purple);">Nhận xét AI:</strong>
+          {{ writing_comment|default:"Bài viết đã đề cập đầy đủ các luận điểm theo yêu cầu đề bài. Cần đa dạng hóa từ vựng học thuật và tăng cường liên kết giữa các đoạn văn. Cấu trúc câu nhìn chung tốt nhưng đôi chỗ còn lặp lại cấu trúc đơn." }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHÂN TÍCH SPEAKING TỪ AI -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div>
+        <div class="card-title">🎙️ Phân tích Rubric Speaking</div>
+        <div class="card-subtitle">Điểm AI sơ bộ: 19/30 · Phân tích âm thanh & phát âm</div>
+      </div>
+      <span class="badge badge-ai">Web Audio AI</span>
+    </div>
+    <div class="card-body">
+      <div class="ai-feedback-card">
+        <div class="ai-feedback-header">
+          <span>✦ Rubric Chấm điểm Chi tiết</span>
+        </div>
+        <div class="ai-criteria">
+          {% for c in speaking_criteria %}
+          <div class="criterion">
+            <span class="criterion-name">{{ c.name }}</span>
+            <div class="criterion-bar"><div class="criterion-fill" data-width="{{ c.pct }}%" style="width: {{ c.pct }}%;"></div></div>
+            <span class="criterion-score">{{ c.score }}</span>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div style="margin-top: 14px; font-size: 12.5px; color: var(--text-secondary); padding: 12px; background: rgba(255,255,255,.75); border-radius: var(--radius-md); line-height: 1.6;">
+          <strong style="color: var(--accent-purple);">Nhận xét AI:</strong>
+          {{ speaking_comment|default:"Phát âm khá rõ ràng và dễ nghe. Tốc độ nói đôi khi chậm và có nhiều khoảng dừng ngập ngừng. Cần cải thiện tính lưu loát và mở rộng vốn từ vựng trong giao tiếp phản xạ hàng ngày." }}
+        </div>
+      </div>
+
+      <!-- Trình phát Audio nghe lại bài Speaking -->
+      <div style="margin-top: 16px; background: var(--bg-app); border-radius: var(--radius-md); padding: 12px 16px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
+          📼 Nghe lại bài nói của bạn:
+        </div>
+        <audio controls style="width: 100%; border-radius: 8px;">
+          <source src="https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg" type="audio/ogg">
+          Trình duyệt không hỗ trợ audio.
+        </audio>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ─── BƯỚC TIẾP THEO & CALL TO ACTION ──────────────────── -->
+<div style="text-align: center; padding: 28px; background: linear-gradient(135deg, var(--coral-light), #FFF8F5); border-radius: var(--radius-2xl); border: 1.5px solid #FFD4C5; box-shadow: var(--shadow-sm);">
+  <div style="font-size: 36px; margin-bottom: 8px;">🎉</div>
+  <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 6px;">
+    Bạn đã hoàn thành bài kiểm tra đầu vào!
+  </h2>
+  <p style="font-size: 13.5px; color: var(--text-secondary); margin-bottom: 20px; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.6;">
+    Hồ sơ của bạn đã được chuyển tới <strong>Giáo viên chuyên môn</strong> để duyệt điểm chính thức. Bạn có thể xem trước thông tin khóa học và hướng dẫn thanh toán học phí.
+  </p>
+  <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+    <a href="{% url 'billing:payment_detail' %}" class="btn btn-primary btn-lg">
+      💳 Xem trước Học phí & Lớp học →
+    </a>
+    <a href="{% url 'users:student_dashboard' %}" class="btn btn-outline btn-lg">
+      🏠 Trở về Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}
