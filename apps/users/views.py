@@ -306,7 +306,7 @@ def quick_profile_api(request):
 
     # Kiểm tra xem học viên đã từng có hồ sơ và đã nộp học phí chưa
     from apps.users.helpers import check_student_tuition_paid
-    existing_kh = KhachHang.objects.filter(email=email).first()
+    existing_kh = KhachHang.objects.filter(email__iexact=email).first()
     has_paid = check_student_tuition_paid(existing_kh) if existing_kh else False
 
     ngay_sinh = None
@@ -332,15 +332,22 @@ def quick_profile_api(request):
                 'message': 'Vui lòng điền đầy đủ Họ và tên học viên!'
             }, status=400)
 
-        kh, created = KhachHang.objects.update_or_create(
-            email=email,
-            defaults={
-                'ho_ten': ho_ten,
-                'so_dien_thoai': so_dien_thoai,
-                'ngay_sinh': ngay_sinh if ngay_sinh else (existing_kh.ngay_sinh if existing_kh else None),
-                'trang_thai': KhachHang.TrangThai.DANG_TU_VAN,
-            }
-        )
+        if existing_kh:
+            existing_kh.ho_ten = ho_ten
+            existing_kh.so_dien_thoai = so_dien_thoai
+            if ngay_sinh:
+                existing_kh.ngay_sinh = ngay_sinh
+            existing_kh.trang_thai = KhachHang.TrangThai.DANG_TU_VAN
+            existing_kh.save()
+            kh = existing_kh
+        else:
+            kh = KhachHang.objects.create(
+                email=email,
+                ho_ten=ho_ten,
+                so_dien_thoai=so_dien_thoai,
+                ngay_sinh=ngay_sinh,
+                trang_thai=KhachHang.TrangThai.DANG_TU_VAN,
+            )
 
         HoSoTuVan.objects.get_or_create(
             khach_hang=kh,
@@ -374,12 +381,14 @@ def quick_profile_api(request):
     request.session['student_name'] = kh.ho_ten
     request.session['user_name'] = kh.ho_ten
     request.session['student_id'] = kh.id
+    request.session['student_phone'] = kh.so_dien_thoai
     request.session['student_goal'] = muc_tieu
     request.session['student_goal_type'] = goal_type
     request.session['student_target_detail'] = target_detail or muc_tieu
     request.session['can_take_test'] = True
     request.session['first_time_test'] = False
     request.session['profile_completed'] = True
+    request.session.modified = True
 
     # Đồng bộ tài khoản Django User nếu đang đăng nhập bằng Google OAuth / auth
     if hasattr(request, 'user') and request.user.is_authenticated:
@@ -408,22 +417,24 @@ def quick_profile_api(request):
     elif len(parts) == 1 and len(parts[0]) >= 2:
         initials = parts[0][:2].upper()
 
-    return JsonResponse({
-        'status': 'success',
-        'message': success_msg,
-        'has_paid': has_paid,
-        'student': {
-            'ho_ten': kh.ho_ten,
-            'email': kh.email,
-            'so_dien_thoai': kh.so_dien_thoai,
-            'muc_tieu': muc_tieu,
-            'goal_type': goal_type,
-            'target_detail': target_detail,
-            'role': 'STUDENT',
-            'role_label': 'Học viên',
-            'initials': initials,
-        }
-    })
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json' or 'application/json' in request.META.get('HTTP_ACCEPT', ''):
+        return JsonResponse({
+            'status': 'success',
+            'message': success_msg,
+            'has_paid': has_paid,
+            'student': {
+                'ho_ten': kh.ho_ten,
+                'email': kh.email,
+                'so_dien_thoai': kh.so_dien_thoai,
+                'muc_tieu': muc_tieu,
+                'goal_type': goal_type,
+                'target_detail': target_detail,
+                'role': 'STUDENT',
+                'role_label': 'Học viên',
+                'initials': initials,
+            }
+        })
+    return redirect('placement_tests:test_room')
 
 
 def student_dashboard(request):
@@ -449,9 +460,8 @@ def student_dashboard(request):
         if st_id:
             student_obj = KhachHang.objects.filter(id=st_id).first()
 
-    if not student_obj:
-        if not request.session.get('first_time_test') and not request.session.get('is_new_student'):
-            student_obj = KhachHang.objects.first()
+    if not student_obj and student_email:
+        student_obj = KhachHang.objects.filter(email__iexact=student_email).first()
 
     # 1. KIỂM TRA BÀI TEST ĐẦU VÀO CỦA HỌC VIÊN
     test_completed = False
