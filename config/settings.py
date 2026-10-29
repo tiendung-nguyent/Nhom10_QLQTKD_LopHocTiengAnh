@@ -187,3 +187,34 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'academixenglishcenter@gmail.com'
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = 'Academix English Center <academixenglishcenter@gmail.com>'
+import os
+from pathlib import Path
+import dj_database_url
+from dotenv import load_dotenv  # Thêm dòng này
+
+# Load biến môi trường từ file .env
+load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Lấy key (sẽ tự động đọc từ .env ở Local hoặc từ Render Environment khi deploy)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        # Khai báo trực tiếp APP để không bị lỗi DoesNotExist khi DB chưa có record
+        'APP': {
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID', 'placeholder-client-id'),
+            'secret': os.environ.get('GOOGLE_CLIENT_SECRET', 'placeholder-secret'),
+            'key': ''
+        },
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+        'FETCH_USERINFO': True,
+    }
+}
