@@ -1,0 +1,877 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Đăng nhập / Đăng ký Học viên{% endblock %}
+{% block page_heading %}Cổng Học viên – Xác thực & Kiểm tra đầu vào{% endblock %}
+
+{% block content %}
+<div class="auth-page-container">
+
+  <!-- Breadcrumb & Header Title -->
+  <div class="page-header" style="margin-bottom: 20px;">
+    <div class="page-breadcrumb">🎒 <span>Học viên</span> / Đăng nhập & Đăng ký bằng Email</div>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <h1 class="page-title">Cổng Xác thực Học viên 🎒</h1>
+        <p class="page-subtitle">Đăng nhập tài khoản hoặc đăng ký thông tin học viên mới để bắt đầu bài kiểm tra 4 kỹ năng</p>
+      </div>
+
+      <!-- Quick Demo Switcher Pills -->
+      <div class="auth-demo-bar">
+        <span class="auth-demo-label"><i class="fa-solid fa-flask"></i> Thử nghiệm nhanh:</span>
+        <a href="{% url 'users:student_login' %}?demo=existing" class="auth-demo-pill existing" title="Đăng nhập học viên cũ đã có thông tin">
+          <i class="fa-solid fa-user-check"></i> Học viên cũ (Nguyễn Văn A)
+        </a>
+        <a href="{% url 'users:student_login' %}?demo=new_unregistered" class="auth-demo-pill new" title="Thử nghiệm học viên mới chưa điền thông tin">
+          <i class="fa-solid fa-user-plus"></i> Học viên mới (Cần điền thông tin)
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert Notifications (Errors / Info Banner) -->
+  {% if error %}
+  <div class="auth-alert error">
+    <i class="fa-solid fa-circle-exclamation"></i>
+    <div>{{ error }}</div>
+  </div>
+  {% endif %}
+
+  {% if info_banner %}
+  <div class="auth-alert info">
+    <i class="fa-solid fa-circle-info"></i>
+    <div><strong>Lưu ý:</strong> {{ info_banner }}</div>
+  </div>
+  {% elif require_info %}
+  <div class="auth-alert warning">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <div>
+      <strong>Yêu cầu thông tin học viên mới:</strong> 
+      Theo quy chế kiểm tra đầu vào, bạn cần điền đầy đủ thông tin cá nhân bên dưới để hệ thống kích hoạt đề thi và lưu hồ sơ xếp lớp!
+    </div>
+  </div>
+  {% elif msg == 'logged_out' %}
+  <div class="auth-alert success">
+    <i class="fa-solid fa-circle-check"></i>
+    <div>Bạn đã đăng xuất tài khoản học viên thành công. Hãy đăng nhập lại khi cần làm bài thi.</div>
+  </div>
+  {% endif %}
+
+  <!-- ─── MAIN 2-COLUMN AUTH HERO LAYOUT ─── -->
+  <div class="auth-grid">
+
+    <!-- CỘT TRÁI: GIỚI THIỆU LỘ TRÌNH & QUY TRÌNH THI KIỂM TRA -->
+    <div class="auth-intro-card">
+      <div class="intro-badge">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Hệ thống Đánh giá AI Chuẩn CEFR
+      </div>
+      <h2 class="intro-title">Kiểm tra Trình độ 4 Kỹ năng Tiếng Anh Toàn diện</h2>
+      <p class="intro-desc">
+        Hệ thống tích hợp chấm điểm AI tức thì cho kỹ năng <strong>Writing & Speaking</strong> kết hợp đối soát trắc nghiệm 
+        <strong>Reading & Listening</strong> tự động. Kết quả được giáo viên chuyên môn thẩm định để xếp lớp tối ưu.
+      </p>
+
+      <!-- 4 Bước quy trình BPMN chuẩn -->
+      <div class="auth-flow-steps">
+        <div class="flow-step-item {% if tab == 'register' or is_new_student %}active{% else %}done{% endif %}">
+          <div class="flow-step-num">1</div>
+          <div class="flow-step-text">
+            <div class="flow-step-name">Xác thực Email & Đăng ký hồ sơ</div>
+            <div class="flow-step-sub">Nhập email và điền thông tin cá nhân (bắt buộc với học viên mới).</div>
+          </div>
+        </div>
+
+        <div class="flow-step-item">
+          <div class="flow-step-num">2</div>
+          <div class="flow-step-text">
+            <div class="flow-step-name">Vào phòng thi 4 kỹ năng</div>
+            <div class="flow-step-sub">Hoàn thành bài test linh hoạt: Trắc nghiệm, Writing tự luận, Speaking ghi âm.</div>
+          </div>
+        </div>
+
+        <div class="flow-step-item">
+          <div class="flow-step-num">3</div>
+          <div class="flow-step-text">
+            <div class="flow-step-name">AI chấm sơ bộ & GV phê duyệt</div>
+            <div class="flow-step-sub">Nhận gợi ý điểm số chi tiết từ AI và điểm thẩm định chính thức từ Giảng viên.</div>
+          </div>
+        </div>
+
+        <div class="flow-step-item">
+          <div class="flow-step-num">4</div>
+          <div class="flow-step-text">
+            <div class="flow-step-name">Tư vấn lộ trình & Xếp lớp</div>
+            <div class="flow-step-sub">Nhận đề xuất khóa học phù hợp với mục tiêu và thời khóa biểu của bạn.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Callout Box Bắt buộc dành cho học viên mới -->
+      <div class="auth-mandatory-box">
+        <div style="font-size: 20px;">📋</div>
+        <div>
+          <div style="font-weight: 700; font-size: 13px; color: var(--accent-orange); margin-bottom: 2px;">
+            QUY ĐỊNH BẮT BUỘC ĐỐI VỚI HỌC VIÊN MỚI
+          </div>
+          <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.5;">
+            Để bảo đảm tính minh bạch và cấp chứng chỉ xếp lớp, học viên mới <strong>phải điền đầy đủ Họ tên, Số điện thoại và Mục tiêu học tập</strong> thì hệ thống mới mở khóa đề thi và tính giờ làm bài.
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Test Data Chips -->
+      <div class="sample-accounts-box">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">
+          Tài khoản mẫu thử nghiệm:
+        </div>
+        <div class="sample-chips">
+          {% for st in sample_students %}
+          <div class="sample-chip" onclick="fillQuickEmail('{{ st.email }}', '{{ st.type }}')" title="Bấm để chọn: {{ st.desc }}">
+            <span class="chip-dot {{ st.type }}"></span>
+            <strong>{{ st.email }}</strong>
+            <small>({{ st.desc }})</small>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- CỘT PHẢI: FORM ĐĂNG NHẬP / ĐĂNG KÝ BẰNG EMAIL -->
+    <div class="auth-card">
+
+      <!-- Segmented Tab Header (Đăng nhập <-> Đăng ký) -->
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab-btn {% if tab != 'register' %}active{% endif %}" id="tab-btn-login" onclick="switchAuthTab('login')">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Đăng nhập bằng Email
+        </button>
+        <button type="button" class="auth-tab-btn {% if tab == 'register' or is_new_student %}active{% endif %}" id="tab-btn-register" onclick="switchAuthTab('register')">
+          <i class="fa-solid fa-user-pen"></i> Đăng ký Học viên mới
+        </button>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════
+           TAB 1: ĐĂNG NHẬP BẰNG EMAIL (HỌC VIÊN ĐÃ CÓ TÀI KHOẢN)
+           ═══════════════════════════════════════════════════════ -->
+      <div class="auth-panel" id="panel-login" style="{% if tab == 'register' %}display:none;{% endif %}">
+        <div class="auth-panel-heading">
+          <h3 class="auth-heading-title">Chào mừng trở lại! 👋</h3>
+          <p class="auth-heading-desc">
+            Nhập email để truy cập phòng thi hoặc xem kết quả điểm số của bạn.
+          </p>
+        </div>
+
+        <form method="post" action="{% url 'users:student_login' %}" id="login-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="login">
+          <input type="hidden" name="next" value="{{ next|default:'placement_tests:test_room' }}">
+
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label" for="login-email">
+              <i class="fa-regular fa-envelope"></i> Địa chỉ Email học viên:
+            </label>
+            <div class="input-with-icon">
+              <input type="email" id="login-email" name="email" class="form-control auth-input" 
+                placeholder="vidu: a.nguyen@email.com" value="{{ email }}" required autofocus>
+              <i class="fa-solid fa-at input-icon"></i>
+            </div>
+            <div class="field-hint">Hệ thống sẽ tự động nhận diện nếu bạn là học viên mới chưa có hồ sơ.</div>
+          </div>
+
+          <div class="auth-features-notice">
+            <div class="notice-item"><i class="fa-solid fa-bolt" style="color:var(--accent-coral);"></i> Đăng nhập 1 bước tiện lợi không cần mật khẩu phức tạp</div>
+            <div class="notice-item"><i class="fa-solid fa-shield-halved" style="color:var(--accent-emerald);"></i> Tự động đồng bộ tiến trình làm bài thi</div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg auth-submit-btn" id="login-submit-btn">
+            Tiếp tục bằng Email <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <div class="auth-footer-prompt">
+          Bạn là học viên lần đầu tham gia kiểm tra đầu vào? 
+          <a href="javascript:void(0)" onclick="switchAuthTab('register')" class="auth-link">
+            Đăng ký & Điền thông tin học viên mới ngay →
+          </a>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════
+           TAB 2: ĐĂNG KÝ HỌC VIÊN MỚI (BẮT BUỘC ĐIỀN THÔNG TIN)
+           ═══════════════════════════════════════════════════════ -->
+      <div class="auth-panel" id="panel-register" style="{% if tab != 'register' %}display:none;{% endif %}">
+        <div class="auth-panel-heading">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <h3 class="auth-heading-title">Thông tin Học viên Mới 📋</h3>
+            <span class="badge badge-coral">Bắt buộc để làm test</span>
+          </div>
+          <p class="auth-heading-desc">
+            Vui lòng điền thông tin bên dưới để được cấp quyền làm bài test đầu vào. 
+            Thông tin dùng để gửi kết quả thi và xếp lớp học phù hợp.
+          </p>
+        </div>
+
+        <form method="post" action="{% url 'users:student_login' %}" id="register-form" onsubmit="return validateRegisterForm()">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="register">
+          <input type="hidden" name="next" value="{{ next|default:'placement_tests:test_room' }}">
+
+          <div class="form-row-2">
+            <!-- Email -->
+            <div class="form-group">
+              <label class="form-label" for="reg-email">
+                <i class="fa-regular fa-envelope"></i> Email học viên <span class="req-star">*</span>:
+              </label>
+              <div class="input-with-icon">
+                <input type="email" id="reg-email" name="email" class="form-control auth-input" 
+                  placeholder="name@email.com" value="{{ email }}" required>
+                <i class="fa-solid fa-at input-icon"></i>
+              </div>
+            </div>
+
+            <!-- Họ và tên -->
+            <div class="form-group">
+              <label class="form-label" for="reg-hoten">
+                <i class="fa-regular fa-user"></i> Họ và tên đầy đủ <span class="req-star">*</span>:
+              </label>
+              <div class="input-with-icon">
+                <input type="text" id="reg-hoten" name="ho_ten" class="form-control auth-input" 
+                  placeholder="Ví dụ: Nguyễn Mai Phương" value="{{ ho_ten }}" required>
+                <i class="fa-solid fa-signature input-icon"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <!-- Số điện thoại -->
+            <div class="form-group">
+              <label class="form-label" for="reg-sdt">
+                <i class="fa-solid fa-phone"></i> Số điện thoại / Zalo <span class="req-star">*</span>:
+              </label>
+              <div class="input-with-icon">
+                <input type="tel" id="reg-sdt" name="so_dien_thoai" class="form-control auth-input" 
+                  placeholder="0912 345 678" value="{{ so_dien_thoai }}" required>
+                <i class="fa-solid fa-mobile-screen input-icon"></i>
+              </div>
+              <div class="field-hint">Dùng nhận thông báo kết quả duyệt điểm và mã phòng học.</div>
+            </div>
+
+            <!-- Ngày sinh -->
+            <div class="form-group">
+              <label class="form-label" for="reg-ngaysinh">
+                <i class="fa-regular fa-calendar"></i> Ngày sinh:
+              </label>
+              <div class="input-with-icon">
+                <input type="date" id="reg-ngaysinh" name="ngay_sinh" class="form-control auth-input" 
+                  value="2003-06-15">
+                <i class="fa-solid fa-cake-candles input-icon"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mục tiêu học tập -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">
+              <i class="fa-solid fa-bullseye"></i> Mục tiêu học tiếng Anh của bạn:
+            </label>
+            <div class="goal-pill-grid">
+              <label class="goal-pill active">
+                <input type="radio" name="muc_tieu" value="IELTS Foundation" checked>
+                <span>🎯 Luyện thi IELTS (Mục tiêu 6.5+)</span>
+              </label>
+              <label class="goal-pill">
+                <input type="radio" name="muc_tieu" value="Tiếng Anh Giao tiếp">
+                <span>💼 Giao tiếp công sở & Phỏng vấn</span>
+              </label>
+              <label class="goal-pill">
+                <input type="radio" name="muc_tieu" value="Xây dựng nền tảng">
+                <span>🌱 Mất gốc tiếng Anh cần xây lại nền</span>
+              </label>
+              <label class="goal-pill">
+                <input type="radio" name="muc_tieu" value="Chứng chỉ B1/B2 Đại học">
+                <span>🎓 Chuẩn đầu ra Đại học (B1/B2/TOEIC)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Trình độ tự đánh giá & Ca thi -->
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="reg-trinhdo">
+                <i class="fa-solid fa-chart-simple"></i> Trình độ tự đánh giá sơ bộ:
+              </label>
+              <select id="reg-trinhdo" name="trinh_do" class="form-control auth-select">
+                <option value="A0">Mới bắt đầu / Mất căn bản (A0)</option>
+                <option value="A1" selected>Sơ cấp cơ bản (A1 – Elementary)</option>
+                <option value="A2">Giao tiếp câu ngắn hàng ngày (A2)</option>
+                <option value="B1">Trung cấp (B1 – Đã thi thử 4.5–5.0)</option>
+                <option value="B2">Khá giỏi (B2 – Tự tin trao đổi)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="reg-cathi">
+                <i class="fa-regular fa-clock"></i> Thời gian làm bài thi:
+              </label>
+              <select id="reg-cathi" name="ca_thi" class="form-control auth-select">
+                <option value="ONLINE_NOW" selected>⚡ Làm bài kiểm tra online ngay bây giờ</option>
+                <option value="HEN_LICH">📅 Hẹn lịch thi có giám thị hỗ trợ</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Cam kết học viên -->
+          <div class="auth-agreement-box">
+            <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
+              <input type="checkbox" id="reg-agree" required checked style="margin-top:3px;">
+              <span style="font-size:12px; color:var(--text-secondary); line-height:1.5;">
+                Tôi cam kết thông tin cá nhân cung cấp là chính xác, đồng ý tự hoàn thành bài thi trung thực 
+                và tiếp nhận lộ trình học từ trung tâm Academix.
+              </span>
+            </label>
+          </div>
+
+          <!-- Nút nộp form đăng ký & vào thi -->
+          <button type="submit" class="btn btn-primary btn-lg auth-submit-btn" id="reg-submit-btn">
+            <i class="fa-solid fa-circle-check"></i> Hoàn tất thông tin & Vào phòng thi ngay 📝
+          </button>
+        </form>
+
+        <div class="auth-footer-prompt">
+          Đã có hồ sơ từ trước? 
+          <a href="javascript:void(0)" onclick="switchAuthTab('login')" class="auth-link">
+            Chuyển sang Đăng nhập bằng Email →
+          </a>
+        </div>
+      </div>
+
+    </div><!-- .auth-card -->
+
+  </div><!-- .auth-grid -->
+
+</div><!-- .auth-page-container -->
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ─── AUTHENTICATION STYLES (MATCHING ACADEMIX THEME) ─── */
+  .auth-page-container {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+  }
+
+  .auth-demo-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 6px 12px;
+    box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
+  }
+
+  .auth-demo-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .auth-demo-pill {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all var(--transition);
+  }
+
+  .auth-demo-pill.existing {
+    background: var(--emerald-light);
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+  }
+  .auth-demo-pill.existing:hover {
+    background: #A7F3D0;
+  }
+
+  .auth-demo-pill.new {
+    background: var(--coral-light);
+    color: var(--accent-orange);
+    border: 1px solid #FFD4C5;
+  }
+  .auth-demo-pill.new:hover {
+    background: #FFD4C5;
+  }
+
+  .auth-alert {
+    border-radius: var(--radius-md);
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13.5px;
+    animation: fadeIn .3s ease;
+  }
+
+  .auth-alert.error {
+    background: #FEF2F2;
+    border: 1.5px solid #FCA5A5;
+    color: #991B1B;
+  }
+  .auth-alert.warning {
+    background: #FFFBEB;
+    border: 1.5px solid #FDE68A;
+    color: #92400E;
+  }
+  .auth-alert.info {
+    background: var(--purple-light);
+    border: 1.5px solid #DDD6FE;
+    color: var(--accent-purple);
+  }
+  .auth-alert.success {
+    background: var(--emerald-light);
+    border: 1.5px solid #A7F3D0;
+    color: #065F46;
+  }
+
+  /* 2-Column Grid */
+  .auth-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.25fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .auth-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Cột Trái */
+  .auth-intro-card {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-2xl);
+    padding: 28px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .intro-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, var(--purple-light), #EDE9FE);
+    color: var(--accent-purple);
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: var(--radius-full);
+    margin-bottom: 14px;
+  }
+
+  .intro-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+
+  .intro-desc {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .auth-flow-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .flow-step-item {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .flow-step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    background: var(--bg-app);
+    border: 1.5px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .flow-step-item.active .flow-step-num {
+    background: var(--accent-coral);
+    border-color: var(--accent-coral);
+    color: #fff;
+    box-shadow: 0 0 0 3px rgba(255, 126, 95, 0.2);
+  }
+
+  .flow-step-item.done .flow-step-num {
+    background: var(--accent-emerald);
+    border-color: var(--accent-emerald);
+    color: #fff;
+  }
+
+  .flow-step-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+
+  .flow-step-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  .auth-mandatory-box {
+    background: linear-gradient(135deg, var(--coral-light), #FFF8F5);
+    border: 1.5px solid #FFD4C5;
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+
+  .sample-accounts-box {
+    background: var(--bg-app);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    border: 1px dashed var(--border-color);
+  }
+
+  .sample-chips {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sample-chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all var(--transition);
+  }
+
+  .sample-chip:hover {
+    border-color: var(--accent-coral);
+    transform: translateX(4px);
+  }
+
+  .chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .chip-dot.existing { background: var(--accent-emerald); }
+  .chip-dot.ready { background: var(--accent-purple); }
+  .chip-dot.new { background: var(--accent-coral); }
+
+  /* Cột Phải: Auth Card */
+  .auth-card {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-2xl);
+    padding: 28px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .auth-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    background: var(--bg-app);
+    border-radius: var(--radius-full);
+    padding: 4px;
+    margin-bottom: 24px;
+  }
+
+  .auth-tab-btn {
+    border: none;
+    background: transparent;
+    padding: 10px 14px;
+    border-radius: var(--radius-full);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all var(--transition);
+  }
+
+  .auth-tab-btn.active {
+    background: var(--bg-card);
+    color: var(--accent-coral);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .auth-panel-heading {
+    margin-bottom: 20px;
+  }
+
+  .auth-heading-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+
+  .auth-heading-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+
+  .input-with-icon {
+    position: relative;
+  }
+
+  .input-with-icon .auth-input {
+    padding-left: 38px;
+    height: 44px;
+    font-size: 14px;
+    border-radius: var(--radius-md);
+  }
+
+  .input-with-icon .input-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 14px;
+    pointer-events: none;
+  }
+
+  .field-hint {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .req-star {
+    color: var(--accent-coral);
+  }
+
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 600px) {
+    .form-row-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .auth-features-notice {
+    background: var(--bg-app);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .notice-item {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .goal-pill-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  @media (max-width: 600px) {
+    .goal-pill-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .goal-pill {
+    background: var(--bg-app);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all var(--transition);
+  }
+
+  .goal-pill input {
+    cursor: pointer;
+  }
+
+  .goal-pill.active, .goal-pill:has(input:checked) {
+    border-color: var(--accent-coral);
+    background: var(--coral-light);
+    color: var(--accent-orange);
+  }
+
+  .auth-agreement-box {
+    background: var(--bg-app);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 20px;
+  }
+
+  .auth-submit-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(255, 126, 95, 0.3);
+  }
+
+  .auth-footer-prompt {
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border-color);
+  }
+
+  .auth-link {
+    color: var(--accent-coral);
+    font-weight: 700;
+    text-decoration: underline;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Chuyển đổi tab Đăng nhập <-> Đăng ký
+  function switchAuthTab(tab) {
+    const loginBtn = document.getElementById('tab-btn-login');
+    const regBtn = document.getElementById('tab-btn-register');
+    const loginPanel = document.getElementById('panel-login');
+    const regPanel = document.getElementById('panel-register');
+
+    if (tab === 'login') {
+      loginBtn.classList.add('active');
+      regBtn.classList.remove('active');
+      loginPanel.style.display = 'block';
+      regPanel.style.display = 'none';
+      document.getElementById('login-email')?.focus();
+    } else {
+      regBtn.classList.add('active');
+      loginBtn.classList.remove('active');
+      regPanel.style.display = 'block';
+      loginPanel.style.display = 'none';
+      
+      // Chuyển email nếu đã gõ ở tab login
+      const typed = document.getElementById('login-email')?.value;
+      if (typed && !document.getElementById('reg-email')?.value) {
+        document.getElementById('reg-email').value = typed;
+      }
+      document.getElementById('reg-hoten')?.focus();
+    }
+  }
+
+  // Điền nhanh tài khoản thử nghiệm
+  function fillQuickEmail(email, type) {
+    if (type === 'new') {
+      switchAuthTab('register');
+      const regEmail = document.getElementById('reg-email');
+      const regHoten = document.getElementById('reg-hoten');
+      const regSdt = document.getElementById('reg-sdt');
+      if (regEmail) regEmail.value = email;
+      if (regHoten) regHoten.value = 'Trần Minh Tú';
+      if (regSdt) regSdt.value = '0988 777 666';
+      Toast.show('Đã nạp thông tin học viên mới mẫu! Nhấn "Hoàn tất thông tin" để vào thi.', 'info');
+    } else {
+      switchAuthTab('login');
+      const loginEmail = document.getElementById('login-email');
+      if (loginEmail) loginEmail.value = email;
+      Toast.show(`Đã chọn tài khoản: ${email}`, 'info');
+    }
+  }
+
+  // Client-side validation cho Form đăng ký học viên mới
+  function validateRegisterForm() {
+    const hoten = document.getElementById('reg-hoten')?.value.trim();
+    const email = document.getElementById('reg-email')?.value.trim();
+    const sdt = document.getElementById('reg-sdt')?.value.trim();
+    const agree = document.getElementById('reg-agree')?.checked;
+
+    if (!email) {
+      Toast.show('Vui lòng nhập địa chỉ email học viên!', 'warning');
+      document.getElementById('reg-email')?.focus();
+      return false;
+    }
+    if (!hoten || hoten.length < 2) {
+      Toast.show('Vui lòng nhập họ và tên đầy đủ của học viên!', 'warning');
+      document.getElementById('reg-hoten')?.focus();
+      return false;
+    }
+    if (!sdt || sdt.length < 8) {
+      Toast.show('Vui lòng nhập số điện thoại liên hệ hợp lệ!', 'warning');
+      document.getElementById('reg-sdt')?.focus();
+      return false;
+    }
+    if (!agree) {
+      Toast.show('Vui lòng tích chọn đồng ý cam kết thi trung thực!', 'warning');
+      return false;
+    }
+
+    const btn = document.getElementById('reg-submit-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang kích hoạt hồ sơ & đề thi...';
+    }
+    return true;
+  }
+</script>
+{% endblock %}
+

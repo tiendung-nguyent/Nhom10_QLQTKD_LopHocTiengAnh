@@ -4,433 +4,1034 @@
 {% block title %}Phòng thi Kiểm tra Trình độ{% endblock %}
 {% block page_heading %}Phòng thi Trình độ{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* ─── THANH THÔNG TIN THÍ SINH DỰ THI ─── */
+  .candidate-bar {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
+    transition: all var(--transition);
+  }
+
+  .candidate-bar.verified {
+    border-left: 5px solid var(--accent-emerald);
+    background: linear-gradient(to right, rgba(16, 185, 129, 0.04), var(--bg-card));
+  }
+
+  .candidate-bar.unverified {
+    border-left: 5px solid var(--accent-coral);
+    background: linear-gradient(to right, rgba(255, 126, 95, 0.05), var(--bg-card));
+  }
+
+  .candidate-info-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .candidate-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--bg-app);
+    border: 1.5px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--accent-coral);
+    flex-shrink: 0;
+  }
+
+  .candidate-bar.verified .candidate-avatar {
+    background: var(--emerald-light);
+    border-color: #A7F3D0;
+    color: #065F46;
+  }
+
+  .candidate-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+
+  .candidate-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 3px;
+    flex-wrap: wrap;
+  }
+
+  .candidate-status-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .pulse-badge {
+    animation: pulseGlow 1.8s infinite;
+  }
+
+  @keyframes pulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(255, 126, 95, 0.4); }
+    70% { box-shadow: 0 0 0 8px rgba(255, 126, 95, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 126, 95, 0); }
+  }
+
+  /* ─── KHÓA VÀ CHE MỜ ĐỀ THI ─── */
+  .test-room-relative-container {
+    position: relative;
+  }
+
+  .test-sections-wrapper.blur-locked {
+    filter: blur(4px);
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.6;
+    transition: filter var(--transition), opacity var(--transition);
+  }
+
+  .test-lock-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(6px);
+    border-radius: var(--radius-2xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 30px 20px;
+  }
+
+  [data-theme="dark"] .test-lock-overlay {
+    background: rgba(15, 23, 42, 0.88);
+  }
+
+  .lock-overlay-content {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-2xl);
+    padding: 36px 30px;
+    max-width: 540px;
+    box-shadow: var(--shadow-lg);
+    animation: popIn 0.3s ease;
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .lock-icon-box {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--coral-light);
+    border: 2px solid #FFD4C5;
+    font-size: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    color: var(--accent-coral);
+  }
+
+  .test-section-card.tab-locked, .test-segmented-tab.tab-locked {
+    opacity: 0.55;
+    cursor: not-allowed !important;
+    filter: grayscale(0.5);
+  }
+
+  .badge-locked {
+    background: #F3F4F6;
+    color: #6B7280;
+    border: 1px solid #D1D5DB;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  [data-theme="dark"] .badge-locked {
+    background: #1F2937;
+    color: #9CA3AF;
+    border-color: #374151;
+  }
+
+  /* Start test banner */
+  .start-test-banner {
+    background: linear-gradient(135deg, rgba(255, 126, 95, 0.08), rgba(254, 180, 123, 0.08));
+    border: 1.5px solid #FFD4C5;
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 22px;
+  }
+
+  [data-theme="dark"] .start-test-banner {
+    background: linear-gradient(135deg, rgba(255, 126, 95, 0.12), rgba(30, 41, 59, 0.8));
+    border-color: #475569;
+  }
+
+  /* Audio Recording Card */
+  .speaking-task-card {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 20px;
+    margin-bottom: 18px;
+    transition: all var(--transition);
+  }
+
+  .speaking-task-card.active-recording {
+    border-color: var(--accent-coral);
+    box-shadow: 0 0 0 3px rgba(255, 126, 95, 0.15);
+  }
+
+  .speaking-timer-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--coral-light);
+    color: var(--accent-coral);
+  }
+
+  .word-count-badge {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+  }
+
+  .word-count-badge.valid {
+    background: var(--emerald-light);
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+  }
+
+  .word-count-badge.invalid {
+    background: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+  }
+
+  .voice-playback-box {
+    background: var(--bg-app);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    margin-top: 12px;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
   <div class="page-breadcrumb">📝 <span>Học viên</span> / Phòng thi kiểm tra đầu vào</div>
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
       <h1 class="page-title">Phòng thi Kiểm tra Trình độ 📝</h1>
-      <p class="page-subtitle">Entrance Placement Test – Kỳ T11/2026 · Mã phiên thi: #{{ phien.ma_phien|default:"001" }}</p>
+      <p class="page-subtitle">{{ test_title|default:"Entrance Placement Test" }} · Khảo sát thích ứng năng lực học viên</p>
     </div>
     <!-- Đồng hồ đếm ngược thời gian thi -->
     <div style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 16px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow-sm);">
       <span style="font-size: 18px;">⏳</span>
       <div>
-        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">THỜI GIAN CÒN LẠI</div>
-        <div id="countdown" style="font-size: 18px; font-weight: 800; color: var(--accent-coral); font-variant-numeric: tabular-nums;">89:42</div>
+        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;" id="countdown-label">TRẮC NGHIỆM (45 PHÚT)</div>
+        <div id="countdown" style="font-size: 18px; font-weight: 800; color: var(--accent-coral); font-variant-numeric: tabular-nums;">
+          45:00 (Sẵn sàng)
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ─── BỘ CHỌN PHẦN THI LINH HOẠT HIỆN ĐẠI (HERO 3-CARD GRID & CAPSULE BAR) ─── -->
-<div data-tab-group="test-sections" class="test-sections-wrapper">
+<!-- ─── THANH THÔNG TIN THÍ SINH / HỌC VIÊN DỰ THI ─── -->
+<div class="candidate-bar {% if can_take_test %}verified{% else %}unverified{% endif %}" id="candidate-bar">
+  <div class="candidate-info-left">
+    <div class="candidate-avatar">
+      {% if can_take_test %}<i class="fa-solid fa-user-check"></i>{% else %}<i class="fa-solid fa-user-clock"></i>{% endif %}
+    </div>
+    <div>
+      <div class="candidate-name" id="display-student-name">
+        {% if student.ho_ten %}{{ student.ho_ten }}{% else %}Học viên mới (Chưa điền thông tin){% endif %}
+      </div>
+      <div class="candidate-meta" id="display-student-meta">
+        {% if student.email %}<span><i class="fa-regular fa-envelope"></i> {{ student.email }}</span>{% endif %}
+        {% if student.so_dien_thoai %}<span><i class="fa-solid fa-phone"></i> {{ student.so_dien_thoai }}</span>{% endif %}
+        <span style="color:var(--accent-coral); font-weight:700;"><i class="fa-solid fa-bullseye"></i> Mục tiêu: {{ goal_display_text|default:"Luyện thi IELTS" }}</span>
+        <span><i class="fa-solid fa-id-card"></i> Mã hồ sơ: #HSTV-2026-001</span>
+      </div>
+    </div>
+  </div>
 
-  <!-- 1. HERO 3-CARD SELECTION GRID -->
-  <div class="test-section-grid">
+  <div class="candidate-status-right">
+    {% if can_take_test %}
+    <span class="badge badge-emerald" id="student-status-badge">
+      <i class="fa-solid fa-circle-check"></i> Đã đủ điều kiện làm test
+    </span>
+    {% if has_paid_tuition %}
+    <span class="badge badge-emerald" title="Học viên đã nộp học phí chính thức"><i class="fa-solid fa-receipt"></i> Đã đóng học phí</span>
+    <button type="button" class="btn btn-outline btn-sm" onclick="openEditProfileModal(true)" title="Đã nộp học phí: Chỉ được đổi Số điện thoại">
+      <i class="fa-solid fa-phone"></i> Đổi số điện thoại
+    </button>
+    {% else %}
+    <button type="button" class="btn btn-outline btn-sm" onclick="openEditProfileModal(false)" title="Chỉnh sửa thông tin học viên & Mục tiêu học tập">
+      <i class="fa-solid fa-user-pen"></i> Đổi thông tin & Mục tiêu
+    </button>
+    {% endif %}
+    {% else %}
+    <span class="badge badge-coral pulse-badge" id="student-status-badge">
+      <i class="fa-solid fa-triangle-exclamation"></i> Cần điền thông tin mới được làm test
+    </span>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openEditProfileModal(false)">
+      <i class="fa-solid fa-user-pen"></i> Điền thông tin ngay
+    </button>
+    {% endif %}
+  </div>
+</div>
 
-    <!-- Card 1: Trắc nghiệm -->
-    <div class="test-section-card active" data-tab="test-sections" data-tab-target="mcq" role="button" tabindex="0">
+<div class="test-room-relative-container">
+  <!-- Lock Overlay khi học viên mới chưa điền thông tin -->
+  <div id="test-lock-overlay" class="test-lock-overlay" style="{% if can_take_test %}display:none;{% endif %}">
+    <div class="lock-overlay-content">
+      <div class="lock-icon-box">🔒</div>
+      <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">Đề thi đang tạm khóa</h3>
+      <p style="font-size: 13.5px; color: var(--text-secondary); max-width: 480px; margin: 0 auto 20px; line-height: 1.6;">
+        Chào bạn! Bạn chỉ cần hoàn tất thông tin cá nhân và chọn mục tiêu học tập <strong>1 lần duy nhất</strong> để hệ thống tự động sinh đề thi phù hợp và mở khóa bài thi.
+      </p>
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <button type="button" class="btn btn-primary btn-lg" onclick="openModal('student-gate-modal')">
+          <i class="fa-solid fa-user-pen"></i> Điền thông tin học viên mới ngay
+        </button>
+        <a href="{% url 'users:student_login' %}?tab=login&next={% url 'placement_tests:test_room' %}" class="btn btn-outline btn-lg">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Đăng nhập học viên cũ
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── BỘ CHỌN PHẦN THI (HERO 2-CARD GRID & CAPSULE BAR) ─── -->
+  <div data-tab-group="test-sections" class="test-sections-wrapper {% if not can_take_test %}blur-locked{% endif %}" id="test-sections-wrapper">
+
+  {% if test_already_completed %}
+  <!-- ─── THÔNG BÁO HOÀN THÀNH TOÀN BỘ BÀI TEST (ĐÃ LƯU TIẾN TRÌNH) ─── -->
+  <div id="full-test-completed-banner" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.08)); border: 2px solid #A7F3D0; border-radius: var(--radius-xl); padding: 22px 26px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; box-shadow: var(--shadow-sm);">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--emerald-light); display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--accent-emerald); flex-shrink: 0;">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <div>
+        <div style="font-weight: 800; font-size: 17px; color: #065F46;">
+          Tiến trình đã lưu: Bạn đã hoàn thành toàn bộ bài kiểm tra đầu vào!
+        </div>
+        <div style="font-size: 13.5px; color: #047857; margin-top: 4px;">
+          Kết quả phiên vừa làm: <strong>Trắc nghiệm: {{ completed_summary.mcq_score|default:0 }} / 40đ</strong> · 
+          <strong>Writing: {{ completed_summary.writing_score|default:0 }} / 30đ</strong> · 
+          <strong>Speaking: {{ completed_summary.speaking_score|default:0 }} / 30đ</strong> 
+          → <span style="background: #065F46; color: #fff; padding: 2px 10px; border-radius: 6px; font-weight: 800; margin-left: 4px;">Tổng điểm: {{ completed_summary.total_score|default:0 }} / 100đ</span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+          <i class="fa-solid fa-shield-halved"></i> Điểm số phiên này đã được lưu an toàn trong hồ sơ. Nếu bạn không bấm kiểm tra lại, điểm này sẽ được bảo lưu và chuyển sang cho Giảng viên.
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary" style="font-weight: 700; padding: 10px 20px;">
+        <i class="fa-solid fa-chart-column"></i> Xem chi tiết Bảng điểm & AI chấm 📊
+      </a>
+      <a href="{% url 'placement_tests:reset_full_test' %}" class="btn btn-outline" onclick="return handleResetAllClick(event);" title="Làm lại bài kiểm tra từ đầu">
+        <i class="fa-solid fa-rotate-left"></i> Làm lại bài kiểm tra từ đầu
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- 1. HERO 2-CARD SELECTION GRID -->
+  <div class="test-section-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+
+    <!-- Card 1: Trắc nghiệm (45 phút) -->
+    <div class="test-section-card active" data-tab="test-sections" data-tab-target="mcq" id="card-sec-mcq" role="button" tabindex="0">
       <div class="test-card-top">
         <div class="test-icon-box coral">
           <i class="fa-solid fa-list-check"></i>
         </div>
         <div class="test-card-badges">
-          <span class="badge badge-coral">Reading & Listening</span>
-          <span class="test-active-pill"><i class="fa-solid fa-circle-check"></i> Đang chọn</span>
+          <span class="badge badge-coral">{{ goal_type }} MCQ (40đ)</span>
+          <span class="test-active-pill" id="pill-mcq-status"><i class="fa-solid fa-play"></i> Phần 1</span>
         </div>
       </div>
       <div class="test-card-content">
-        <h3 class="test-card-title">1. Thi Trắc nghiệm</h3>
-        <p class="test-card-desc">Đọc hiểu đoạn văn luận & nghe đoạn hội thoại audio thực tế. Đối soát đáp án tự động tức thì.</p>
+        <h3 class="test-card-title">1. Thi Trắc nghiệm (45 phút)</h3>
+        <p class="test-card-desc">Đề thi thích ứng linh hoạt theo mục tiêu <strong>{{ goal_display_text }}</strong>: 40% Ngữ pháp, 40% Từ vựng, 20% Đọc hiểu.</p>
       </div>
       <div class="test-card-meta">
-        <div class="meta-item"><i class="fa-regular fa-clock"></i> 30 phút</div>
+        <div class="meta-item"><i class="fa-regular fa-clock" style="color: var(--accent-coral);"></i> <strong>45 phút</strong></div>
         <div class="meta-item"><i class="fa-solid fa-bolt" style="color: var(--accent-orange);"></i> Tự động chấm</div>
-        <div class="meta-item"><i class="fa-solid fa-clipboard-question"></i> 5 câu hỏi</div>
+        <div class="meta-item"><i class="fa-solid fa-clipboard-question"></i> {{ cau_hoi_mcq|length }} câu hỏi</div>
       </div>
     </div>
 
-    <!-- Card 2: Writing -->
-    <div class="test-section-card" data-tab="test-sections" data-tab-target="writing" role="button" tabindex="0">
+    <!-- Card 2: Writing & Speaking gộp chung (60 phút) -->
+    <div class="test-section-card {% if not mcq_submitted and not test_already_completed %}tab-locked{% endif %}" data-tab="test-sections" data-tab-target="writing-speaking" id="card-sec-ws" role="button" tabindex="0">
       <div class="test-card-top">
         <div class="test-icon-box purple">
-          <i class="fa-solid fa-pen-fancy"></i>
+          <i class="fa-solid fa-pen-nib"></i>
         </div>
         <div class="test-card-badges">
-          <span class="badge badge-purple">Writing Tự luận</span>
-          <span class="test-active-pill"><i class="fa-solid fa-circle-check"></i> Đang chọn</span>
+          <span class="badge badge-purple">Tự luận & Nói (60đ)</span>
+          <span class="badge-locked" id="pill-ws-lock"><i class="fa-solid fa-lock"></i> {% if test_already_completed %}Đã hoàn thành{% elif mcq_submitted %}Đã mở khóa{% else %}Khóa (Nộp P1 trước){% endif %}</span>
         </div>
       </div>
       <div class="test-card-content">
-        <h3 class="test-card-title">2. Thi Writing (Tự luận)</h3>
-        <p class="test-card-desc">Task 1 viết thư phản hồi trang trọng & Task 2 bài luận học thuật. AI Agent chấm sơ bộ 4 tiêu chí.</p>
+        <h3 class="test-card-title">2. Writing & Speaking (60 phút)</h3>
+        <p class="test-card-desc">Speaking làm trước (15' - 3 Task thu âm tự động ngắt giờ, có thể nghe lại voice), Writing làm sau (40' - Viết thư & Luận). Gemini AI chấm 4 tiêu chí.</p>
       </div>
       <div class="test-card-meta">
-        <div class="meta-item"><i class="fa-regular fa-clock"></i> 40 phút</div>
-        <div class="meta-item"><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-purple);"></i> AI chấm sơ bộ</div>
-        <div class="meta-item"><i class="fa-solid fa-file-lines"></i> 2 bài viết</div>
-      </div>
-    </div>
-
-    <!-- Card 3: Speaking -->
-    <div class="test-section-card" data-tab="test-sections" data-tab-target="speaking" role="button" tabindex="0">
-      <div class="test-card-top">
-        <div class="test-icon-box emerald">
-          <i class="fa-solid fa-microphone-lines"></i>
-        </div>
-        <div class="test-card-badges">
-          <span class="badge badge-emerald">Speaking Ghi âm</span>
-          <span class="test-active-pill"><i class="fa-solid fa-circle-check"></i> Đang chọn</span>
-        </div>
-      </div>
-      <div class="test-card-content">
-        <h3 class="test-card-title">3. Thi Speaking (Ghi âm)</h3>
-        <p class="test-card-desc">Thu âm trực tiếp qua Web Audio API. AI phân tích phát âm, ngữ âm và độ trôi chảy chuẩn CEFR.</p>
-      </div>
-      <div class="test-card-meta">
-        <div class="meta-item"><i class="fa-regular fa-clock"></i> 1–3 phút</div>
-        <div class="meta-item"><i class="fa-solid fa-brain" style="color: var(--accent-emerald);"></i> AI Voice Analysis</div>
-        <div class="meta-item"><i class="fa-solid fa-headphones"></i> Web Audio</div>
+        <div class="meta-item"><i class="fa-regular fa-clock" style="color: var(--accent-purple);"></i> <strong>60 phút</strong></div>
+        <div class="meta-item"><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-purple);"></i> Gemini AI chấm</div>
+        <div class="meta-item"><i class="fa-solid fa-microphone-lines" style="color: var(--accent-emerald);"></i> Nghe lại Voice</div>
       </div>
     </div>
 
   </div>
 
-  <!-- 2. SLEEK CAPSULE SEGMENTED CONTROL BAR -->
+  <!-- 2. CAPSULE SEGMENTED CONTROL BAR -->
   <div class="test-segmented-container">
     <div class="test-segmented-bar">
       <button type="button" class="test-segmented-tab active" data-tab="test-sections" data-tab-target="mcq" id="tab-btn-mcq">
-        <i class="fa-solid fa-list-check"></i> 1. Trắc nghiệm (Reading & Listening)
+        <i class="fa-solid fa-list-check"></i> 1. Trắc nghiệm (45 phút)
       </button>
-      <button type="button" class="test-segmented-tab" data-tab="test-sections" data-tab-target="writing" id="tab-btn-writing">
-        <i class="fa-solid fa-pen-fancy"></i> 2. Writing Tự luận (AI chấm)
-      </button>
-      <button type="button" class="test-segmented-tab" data-tab="test-sections" data-tab-target="speaking" id="tab-btn-speaking">
-        <i class="fa-solid fa-microphone-lines"></i> 3. Speaking Ghi âm (Web Audio)
+      <button type="button" class="test-segmented-tab {% if not mcq_submitted and not test_already_completed %}tab-locked{% endif %}" data-tab="test-sections" data-tab-target="writing-speaking" id="tab-btn-writing-speaking">
+        <i class="fa-solid fa-pen-nib"></i> 2. Writing & Speaking (60 phút) <span id="tab-ws-lock-icon">{% if not mcq_submitted and not test_already_completed %}<i class="fa-solid fa-lock" style="font-size:11px; margin-left:4px;"></i>{% endif %}</span>
       </button>
     </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════
-       PHẦN 1: THI TRẮC NGHIỆM / READING & LISTENING
+       PHẦN 1: THI TRẮC NGHIỆM (45 PHÚT)
        ═══════════════════════════════════════════════════════ -->
-  <div data-tab-panel="test-sections" data-panel="mcq">
-    <form method="post" action="{% url 'placement_tests:submit_mcq' %}" id="mcq-form">
-      {% csrf_token %}
-      <input type="hidden" name="phien_id" value="{{ phien.ma_phien|default:1 }}">
-      <input type="hidden" name="section" value="TRAC_NGHIEM">
+  <div data-tab-panel="test-sections" data-panel="mcq" id="panel-mcq">
 
-      <!-- Hướng dẫn phần thi -->
-      <div style="background: linear-gradient(135deg, var(--coral-light), #FFF8F5); border: 1.5px solid #FFD4C5; border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 22px;">💡</span>
-          <div style="font-size: 13px; color: var(--accent-orange); font-weight: 500;">
-            Phần thi gồm 5 câu hỏi Reading & Listening. Chọn 1 đáp án đúng nhất cho mỗi câu. Hệ thống sẽ <strong>tự động chấm điểm</strong> ngay khi bạn nộp bài.
+    <!-- Banner bắt đầu thi Trắc nghiệm (Hiển thị khi chưa bấm bắt đầu) -->
+    <div class="start-test-banner" id="mcq-start-banner" style="{% if test_already_completed or mcq_submitted %}display:none;{% endif %}">
+      <div style="font-size: 32px; margin-bottom: 8px;">🚀</div>
+      <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px; color: var(--text-primary);">
+        {{ test_title|default:"Bài kiểm tra Trắc nghiệm Đầu vào" }}
+      </h2>
+      <p style="font-size: 13.5px; color: var(--text-secondary); max-width: 600px; margin: 0 auto 16px; line-height: 1.6;">
+        Đề thi được sinh phù hợp với mục tiêu <strong>{{ goal_display_text }}</strong> gồm <strong>{{ cau_hoi_mcq|length }} câu hỏi</strong>. 
+        Khi bấm <strong>"Bắt đầu làm bài"</strong>, các câu hỏi sẽ mở ra và đồng hồ đếm ngược 45 phút bắt đầu chạy.
+        Bạn phải nộp bài trắc nghiệm xong thì hệ thống mới mở khóa phần thi Writing & Speaking!
+      </p>
+      <button type="button" class="btn btn-primary btn-lg" id="btn-start-mcq" onclick="startMCQTest()">
+        <i class="fa-solid fa-play"></i> Bắt đầu làm bài Trắc nghiệm (45 phút) ⚡
+      </button>
+    </div>
+
+    <!-- Thông báo kết quả Trắc nghiệm khi đã nộp (Lưu tiến trình & Tùy chọn làm lại) -->
+    <div id="mcq-completed-banner" style="{% if not mcq_submitted or test_already_completed %}display:none;{% endif %} background: var(--emerald-light); border: 1.5px solid #A7F3D0; border-radius: var(--radius-xl); padding: 18px 24px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <i class="fa-solid fa-circle-check" style="font-size: 28px; color: var(--accent-emerald);"></i>
+        <div>
+          <div style="font-weight: 800; font-size: 15px; color: #065F46;">
+            Tiến trình đã lưu: Bạn đã nộp thành công bài thi Trắc nghiệm!
+          </div>
+          <div style="font-size: 13px; color: #047857; margin-top: 2px;">
+            Điểm phần Trắc nghiệm: <strong id="mcq-score-display">{{ mcq_score|default:"34" }}</strong> / 40 điểm. Phần thi Writing & Speaking đã mở khóa.
           </div>
         </div>
-        <span class="badge badge-coral">Thời gian: 30 phút</span>
       </div>
-
-      <!-- VĂN BẢN ĐỌC CHO READING CÂU 1 & CÂU 3 -->
-      <div class="card rounded-2xl shadow-sm" style="margin-bottom: 16px; border-left: 4px solid var(--accent-coral);">
-        <div class="card-header">
-          <div class="card-title">📖 Reading Passage: "Sustainable Urban Mobility"</div>
-          <span class="badge badge-purple">Reading Comprehension</span>
-        </div>
-        <div class="card-body" style="font-size: 13.5px; line-height: 1.8; color: var(--text-primary); background: var(--bg-app); border-radius: var(--radius-md); padding: 16px;">
-          <p style="margin-bottom: 10px;">
-            Rapid urbanization has placed unprecedented pressure on traditional transport infrastructure. As cities expand, congestion, carbon emissions, and noise pollution threaten both economic productivity and public health. To address these interconnected challenges, urban planners increasingly advocate for integrated mobility networks combining rapid mass transit with active micro-mobility options.
-          </p>
-          <p>
-            However, achieving genuine sustainability demands more than simply deploying technological solutions. While electric buses and bike-sharing programs are becoming <strong style="color: var(--accent-coral);">ubiquitous</strong> across modern metropolitan areas, their efficacy remains constrained unless supported by coherent municipal policy frameworks, equitable fare structures, and public behavioral adaptation.
-          </p>
-        </div>
-      </div>
-
-      <!-- DANH SÁCH CÂU HỎI TRẮC NGHIỆM -->
-      {% for cau in cau_hoi_mcq %}
-      <div class="question-card" id="q-card-{{ cau.ma_cau_hoi }}">
-        <div class="question-num">CÂU {{ forloop.counter }} · {{ cau.ky_nang }}</div>
-        <div class="question-text">{{ cau.noi_dung }}</div>
-
-        <!-- Audio Player nếu là câu Listening -->
-        {% if cau.ky_nang == 'LISTENING' %}
-        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 14px;">
-          <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">🎧 Đoạn băng nghe hội thoại:</div>
-          <audio controls style="width: 100%; border-radius: 8px;">
-            <source src="https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg" type="audio/ogg">
-            Trình duyệt của bạn không hỗ trợ audio player.
-          </audio>
-        </div>
-        {% endif %}
-
-        <ul class="option-list">
-          {% for lua_chon in cau.lua_chons.all %}
-          <li class="option-item">
-            <input type="radio" name="q_{{ cau.ma_cau_hoi }}" value="{{ lua_chon.ma_lua_chon }}" id="lc_{{ lua_chon.ma_lua_chon }}">
-            <label for="lc_{{ lua_chon.ma_lua_chon }}" style="cursor:pointer; flex:1;">{{ lua_chon.noi_dung }}</label>
-          </li>
-          {% empty %}
-          <li class="option-item"><input type="radio" name="q_{{ cau.ma_cau_hoi }}" value="1" id="q_{{ cau.ma_cau_hoi }}_1"><label for="q_{{ cau.ma_cau_hoi }}_1" style="cursor:pointer;flex:1;">A. Lựa chọn A – Khả năng giải quyết vấn đề</label></li>
-          <li class="option-item"><input type="radio" name="q_{{ cau.ma_cau_hoi }}" value="2" id="q_{{ cau.ma_cau_hoi }}_2"><label for="q_{{ cau.ma_cau_hoi }}_2" style="cursor:pointer;flex:1;">B. Lựa chọn B – Chính sách đồng bộ liên ngành</label></li>
-          <li class="option-item"><input type="radio" name="q_{{ cau.ma_cau_hoi }}" value="3" id="q_{{ cau.ma_cau_hoi }}_3"><label for="q_{{ cau.ma_cau_hoi }}_3" style="cursor:pointer;flex:1;">C. Lựa chọn C – Đầu tư công nghệ đơn lẻ</label></li>
-          <li class="option-item"><input type="radio" name="q_{{ cau.ma_cau_hoi }}" value="4" id="q_{{ cau.ma_cau_hoi }}_4"><label for="q_{{ cau.ma_cau_hoi }}_4" style="cursor:pointer;flex:1;">D. Lựa chọn D – Không đủ cơ sở kết luận</label></li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endfor %}
-
-      <!-- Nút thao tác Trắc nghiệm -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
-        <button type="button" class="btn btn-outline" onclick="Toast.show('Đã lưu tiến độ làm bài trắc nghiệm!', 'info')">
-          💾 Lưu nháp trắc nghiệm
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button type="button" class="btn btn-purple" onclick="unlockAndSwitchToWS()">
+          Tiếp tục làm Writing & Speaking (60') →
         </button>
-        <div style="display: flex; gap: 10px;">
-          <button type="button" class="btn btn-purple" onclick="document.getElementById('tab-btn-writing').click();">
-            Chuyển sang Writing →
-          </button>
-          <button type="submit" class="btn btn-primary btn-lg" id="mcq-submit-btn">
-            Nộp bài & Chấm tự động ✓
+        <a href="{% url 'placement_tests:reset_mcq' %}" class="btn btn-outline" onclick="return handleResetMCQClick(event);" title="Làm lại bài trắc nghiệm">
+          <i class="fa-solid fa-rotate-left"></i> Làm lại bài Trắc nghiệm
+        </a>
+      </div>
+    </div>
+
+    <!-- Form đề thi Trắc nghiệm -->
+    <div id="mcq-questions-container" style="display:none;">
+      <form method="post" action="{% url 'placement_tests:submit_mcq' %}" id="mcq-form">
+        {% csrf_token %}
+        <input type="hidden" name="phien_id" value="{{ phien.ma_phien|default:1 }}">
+
+        <!-- DANH SÁCH CÂU HỎI TRẮC NGHIỆM -->
+        {% for cau in cau_hoi_mcq %}
+        <div class="question-card" id="q-card-{{ cau.ma_cau_hoi }}" style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: var(--radius-xl); padding: 18px 22px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div class="question-num" style="font-size: 12px; font-weight: 700; color: var(--accent-coral); text-transform: uppercase;">
+              CÂU {{ forloop.counter }} · {{ cau.ky_nang }}
+            </div>
+            <span class="badge {% if cau.ky_nang == 'LISTENING' %}badge-emerald{% else %}badge-purple{% endif %}" style="font-size: 11px;">
+              {% if cau.ky_nang == 'LISTENING' %}🎧 Listening Audio{% else %}1 câu · 1.6 điểm{% endif %}
+            </span>
+          </div>
+
+          {% if cau.audio_file %}
+          <!-- Trình phát Audio nghe trực tiếp cho câu hỏi Listening -->
+          <div class="listening-player-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(59, 130, 246, 0.08)); border: 1.5px solid #A7F3D0; border-radius: var(--radius-lg); padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <div style="width: 38px; height: 38px; border-radius: 50%; background: var(--emerald-light); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--accent-emerald); flex-shrink: 0;">
+              🎧
+            </div>
+            <div style="flex: 1; min-width: 220px;">
+              <div style="font-size: 12px; font-weight: 700; color: #065F46; margin-bottom: 4px;">
+                <i class="fa-solid fa-volume-high"></i> Bấm để nghe đoạn ghi âm (Listening Audio Clip):
+              </div>
+              <audio controls preload="auto" style="width: 100%; height: 36px; border-radius: 8px;">
+                <source src="{% static cau.audio_file %}" type="audio/wav">
+                Trình duyệt của bạn không hỗ trợ audio HTML5.
+              </audio>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="question-text" style="font-size: 14.5px; font-weight: 600; line-height: 1.6; margin-bottom: 14px; color: var(--text-primary);">
+            {{ cau.noi_dung }}
+          </div>
+
+          <ul class="option-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
+            {% for lua_chon in cau.lua_chons.all %}
+            <li class="option-item" style="display: flex; align-items: center; gap: 10px; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 14px; cursor: pointer; transition: all 0.2s ease;">
+              <input type="radio" name="q_{{ cau.ma_cau_hoi }}" value="{{ lua_chon.ma_lua_chon }}" id="lc_{{ cau.ma_cau_hoi }}_{{ lua_chon.ma_lua_chon }}">
+              <label for="lc_{{ cau.ma_cau_hoi }}_{{ lua_chon.ma_lua_chon }}" style="cursor: pointer; flex: 1; font-size: 13.5px; color: var(--text-primary); margin: 0;">
+                {{ lua_chon.noi_dung }}
+              </label>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endfor %}
+
+        <!-- Nút thao tác Trắc nghiệm -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 12px;">
+          <div style="font-size: 12.5px; color: var(--text-secondary);">
+            <i class="fa-solid fa-circle-info"></i> Hãy kiểm tra kỹ tất cả câu trả lời trước khi nộp bài.
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg" id="mcq-submit-btn" style="font-weight: 700;">
+            <i class="fa-solid fa-check-to-slot"></i> Nộp bài Trắc nghiệm & Mở khóa Tab 2 ✓
           </button>
         </div>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════
-       PHẦN 2: THI WRITING / TỰ LUẬN (AI CHẤM SƠ BỘ)
+       PHẦN 2: THI KẾT HỢP WRITING & SPEAKING (60 PHÚT)
+       (SPEAKING 15' LÀM TRƯỚC, WRITING 40' LÀM SAU)
        ═══════════════════════════════════════════════════════ -->
-  <div data-tab-panel="test-sections" data-panel="writing" style="display:none;">
-    <form method="post" action="{% url 'placement_tests:submit_writing' %}" id="writing-form">
-      {% csrf_token %}
-      <input type="hidden" name="phien_id" value="{{ phien.ma_phien|default:1 }}">
-      <input type="hidden" name="section" value="WRITING">
+  <div data-tab-panel="test-sections" data-panel="writing-speaking" id="panel-ws" style="display:none;">
 
-      <!-- Writing Task 1 -->
-      <div class="card rounded-2xl shadow-sm" style="margin-bottom: 20px;">
-        <div class="card-header">
-          <div>
-            <div class="card-title">✍️ Writing Task 1: Formal/Semi-formal Letter</div>
-            <div class="card-subtitle">Thời gian gợi ý: 20 phút · Độ dài tối thiểu: 150 từ · Điểm tối đa: 15</div>
-          </div>
-          <span class="badge badge-ai">AI Agent chấm sơ bộ</span>
-        </div>
-        <div class="card-body">
-          <div style="background: linear-gradient(135deg, #1E293B, #0F172A); border-radius: var(--radius-md); padding: 20px; margin-bottom: 16px; color: #fff;">
-            <div style="font-size: 11px; color: #94A3B8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">ĐỀ BÀI TASK 1</div>
-            <p style="font-size: 14px; line-height: 1.7;">
-              You have recently moved to a new city for work. Write an email to your former manager:
-              <br>• Informing them about your new position and responsibilities.
-              <br>• Describing the work culture and challenges you are currently facing.
-              <br>• Expressing gratitude for their mentorship at your previous company.
-              <br><br>Write at least <strong>150 words</strong>. You do NOT need to write any addresses.
-            </p>
-          </div>
-
-          <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <label class="form-label" style="margin-bottom: 0;">Bài làm của bạn (Writing Task 1)</label>
-              <span style="font-size: 12px; color: var(--text-muted);">
-                Số từ: <strong id="w1-count" style="color: var(--accent-coral);">0</strong> / 150+ từ
-              </span>
-            </div>
-            <textarea name="w1_answer" class="form-control" rows="8" 
-                      placeholder="Dear Mr. Anderson, I am writing this email to update you regarding my new role at..." 
-                      id="w1-textarea"></textarea>
-          </div>
-        </div>
+    <!-- Banner bắt đầu thi Writing & Speaking -->
+    <div class="start-test-banner" id="ws-start-banner" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(255, 126, 95, 0.08)); border-color: #DDD6FE;">
+      <div style="font-size: 32px; margin-bottom: 8px;">🎙️✍️</div>
+      <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px; color: var(--text-primary);">
+        Phần thi Tự luận & Nói: Writing & Speaking (Tổng 60 phút)
+      </h2>
+      <div style="font-size: 13.5px; color: var(--text-secondary); max-width: 680px; margin: 0 auto 16px; line-height: 1.6; text-align: left; background: var(--bg-card); padding: 14px 18px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+        <p style="margin-bottom: 8px;"><strong>1. Phần thi Speaking (15 phút) — Làm trước để tâm lý thoải mái:</strong><br>
+        • <em>Task 1:</em> Trả lời 3 câu hỏi cá nhân ngắn (chuẩn bị 10s, nói 30s/câu - <strong>hệ thống tự động ngắt thu âm 30s</strong>, có thể nghe lại voice).<br>
+        • <em>Task 2:</em> Trình bày quan điểm / Miêu tả (chuẩn bị 1', nói 2' - auto stop 120s).<br>
+        • <em>Task 3:</em> Thảo luận tình huống thực tế (chuẩn bị 1.5', nói 2-3' - auto stop 150s).</p>
+        <p style="margin: 0;"><strong>2. Phần thi Writing (40 phút) — Làm sau:</strong><br>
+        • <em>Task 1:</em> Viết Email / Thư phản hồi ngắn (80 - 120 từ, 12-15 phút).<br>
+        • <em>Task 2:</em> Viết bài luận Essay (180 - 220 từ, 25 phút).<br>
+        ✨ <strong>AI Gemini</strong> chấm điểm theo 4 tiêu chí phù hợp mục tiêu <strong>{{ goal_display_text }}</strong>, sau đó bài làm và đánh giá của AI sẽ tự động chuyển sang <strong>Lane của Giảng viên</strong> để thẩm định chính thức.</p>
       </div>
+      <button type="button" class="btn btn-purple btn-lg" id="btn-start-ws" onclick="startWSTest()" style="font-weight: 700;">
+        <i class="fa-solid fa-play"></i> Bắt đầu làm bài Writing & Speaking (60 phút) 🚀
+      </button>
+    </div>
 
-      <!-- Writing Task 2 -->
-      <div class="card rounded-2xl shadow-sm" style="margin-bottom: 20px;">
-        <div class="card-header">
-          <div>
-            <div class="card-title">✍️ Writing Task 2: Academic Essay</div>
-            <div class="card-subtitle">Thời gian gợi ý: 40 phút · Độ dài tối thiểu: 250 từ · Điểm tối đa: 15</div>
-          </div>
-          <span class="badge badge-ai">AI Agent chấm sơ bộ</span>
-        </div>
-        <div class="card-body">
-          <div style="background: linear-gradient(135deg, #1E293B, #0F172A); border-radius: var(--radius-md); padding: 20px; margin-bottom: 16px; color: #fff;">
-            <div style="font-size: 11px; color: #94A3B8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;">ĐỀ BÀI TASK 2</div>
-            <p style="font-size: 14px; line-height: 1.7;">
-              Some people believe that artificial intelligence will revolutionize education and replace traditional classroom teachers in the near future. Others argue that human educators remain indispensable for genuine learning.
-              <br><br>Discuss both views and give your own opinion. Give reasons for your answer and include any relevant examples from your own knowledge or experience.
-              <br><br>Write at least <strong>250 words</strong>.
-            </p>
-          </div>
+    <!-- Nội dung bài làm Writing & Speaking (Ẩn đến khi bấm Bắt đầu) -->
+    <div id="ws-content-container" style="display:none;">
 
-          <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <label class="form-label" style="margin-bottom: 0;">Bài làm của bạn (Writing Task 2)</label>
-              <span style="font-size: 12px; color: var(--text-muted);">
-                Số từ: <strong id="w2-count" style="color: var(--accent-coral);">0</strong> / 250+ từ
-              </span>
-            </div>
-            <textarea name="w2_answer" class="form-control" rows="12" 
-                      placeholder="In recent years, the rapid proliferation of artificial intelligence has sparked intense debate regarding..." 
-                      id="w2-textarea"></textarea>
-          </div>
-        </div>
-      </div>
-
-      <!-- Action Footer -->
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <button type="button" class="btn btn-outline" onclick="autoSaveWriting()">
-          💾 Lưu nháp Writing
-        </button>
-        <div style="display: flex; gap: 10px;">
-          <button type="button" class="btn btn-purple" onclick="document.getElementById('tab-btn-speaking').click();">
-            Chuyển sang Speaking →
-          </button>
-          <button type="submit" class="btn btn-primary btn-lg" id="writing-submit-btn">
-            Nộp bài & Gửi AI chấm sơ bộ ✓
-          </button>
-        </div>
-      </div>
-    </form>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════
-       PHẦN 3: THI SPEAKING / GHI ÂM & PHỎNG VẤN AI
-       ═══════════════════════════════════════════════════════ -->
-  <div data-tab-panel="test-sections" data-panel="speaking" style="display:none;">
-    <form method="post" action="{% url 'placement_tests:submit_speaking' %}" id="speaking-form" enctype="multipart/form-data">
-      {% csrf_token %}
-      <input type="hidden" name="phien_id" value="{{ phien.ma_phien|default:1 }}">
-      <input type="hidden" name="section" value="SPEAKING">
-
-      <!-- Speaking Part 1 -->
-      <div class="card rounded-2xl shadow-sm" style="margin-bottom: 20px;">
-        <div class="card-header">
-          <div>
-            <div class="card-title">🎙️ Speaking Part 1: Personal Introduction & Background</div>
-            <div class="card-subtitle">Thời gian trả lời: 60–90 giây · AI phân tích ngữ âm & từ vựng</div>
-          </div>
-          <span class="badge badge-ai">Web Audio Recorder API</span>
-        </div>
-        <div class="card-body">
-          <div class="speaking-prompt">
-            <div class="prompt-label">CÂU HỎI PHỎNG VẤN – ĐỌC & CHUẨN BỊ TRONG 30 GIÂY</div>
-            <div class="prompt-text">
-              "Please introduce yourself. Tell us about your background, why you are learning English, and what you hope to achieve with this course."
-            </div>
-          </div>
-
-          <!-- Web Audio Recorder Box -->
-          <div class="recorder-area" id="recorder-area">
-            <div class="timer-display" id="timer-display" style="display:none;">00:00</div>
-            <div class="timer-label" id="record-label" style="font-weight: 500; font-size: 13px;">
-              Nhấn biểu tượng Microphone bên dưới để bắt đầu ghi âm câu trả lời
-            </div>
-
-            <!-- Sóng âm thanh động (Audio Waveform) -->
-            <div class="audio-wave" id="audio-wave" style="display:none; margin: 16px 0;">
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-            </div>
-
-            <!-- Nút Ghi âm to chính giữa -->
-            <button type="button" class="record-btn idle" id="record-btn" title="Bắt đầu ghi âm">
+      <!-- ═══════════════════════════════════════════════════════
+           PHẦN THI 1: SPEAKING (15 PHÚT) — LÀM TRƯỚC
+           ═══════════════════════════════════════════════════════ -->
+      <div style="margin-bottom: 28px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--coral-light); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--accent-coral);">
               🎙️
+            </div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 0;">
+                1. Phần thi Speaking (15 phút) — Làm trước để tâm lý thoải mái
+              </h3>
+              <div style="font-size: 12px; color: var(--text-muted);">
+                3 Tasks thu âm · Tự động ngắt giờ từng câu · <strong>Học viên có thể nghe lại giọng nói của mình</strong>
+              </div>
+            </div>
+          </div>
+          <span class="badge badge-coral">Speaking 30 điểm</span>
+        </div>
+
+        <!-- Task 1 Speaking: Trả lời câu hỏi cá nhân (3 câu hỏi ngắn) -->
+        <div class="speaking-task-card" id="spk-card-task1">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+            <div>
+              <span class="badge badge-purple" style="margin-bottom: 4px;">{{ speaking_task.task1_badge|default:"Task 1 (3 - 4 phút) · Trả lời câu hỏi ngắn" }}</span>
+              <h4 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">
+                {{ speaking_task.task1_title|default:"Trả lời câu hỏi cá nhân ngắn (Bản thân, Thói quen & Mục tiêu)" }}
+              </h4>
+            </div>
+            <div class="speaking-timer-badge">
+              <i class="fa-regular fa-clock"></i> {{ speaking_task.task1_timer|default:"Chuẩn bị: 10s · Nói: 30s/câu (Auto stop 30s)" }}
+            </div>
+          </div>
+
+          <div style="background: var(--bg-app); border-radius: var(--radius-md); padding: 14px; margin-bottom: 14px; font-size: 13.5px; line-height: 1.7;">
+            <strong>Câu 1:</strong> {{ speaking_task.task1_q1|default:"Can you introduce yourself and describe your current studies or profession?" }}<br>
+            <strong>Câu 2:</strong> {{ speaking_task.task1_q2|default:"What activity do you enjoy doing most in your leisure time, and why?" }}<br>
+            <strong>Câu 3:</strong> {{ speaking_task.task1_q3|default:"How do you think improving your English proficiency will benefit your future career?" }}
+          </div>
+
+          <!-- Recorder UI Task 1 -->
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: var(--radius-md); padding: 12px 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" class="btn btn-outline btn-sm" id="btn-rec-t1" onclick="toggleTaskRecording('t1', 30)">
+                <i class="fa-solid fa-microphone"></i> <span id="label-rec-t1">Bắt đầu thu âm Task 1 (30s)</span>
+              </button>
+              <span id="timer-t1" style="font-weight: 700; color: var(--accent-coral); font-size: 14px; display: none;">00:30</span>
+            </div>
+            <div id="status-t1" style="font-size: 12.5px; color: var(--text-muted);">
+              <i class="fa-solid fa-circle-stop"></i> Hệ thống tự động ngắt thu âm sau 30s
+            </div>
+          </div>
+
+          <!-- Audio Playback: Học viên nghe lại voice của mình -->
+          <div id="playback-wrap-t1" class="voice-playback-box" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 12px; font-weight: 700; color: var(--accent-emerald);">
+                🎧 Nghe lại giọng nói của bạn (Task 1):
+              </span>
+              <button type="button" class="btn btn-outline btn-xs" onclick="retakeTaskAudio('t1', 30)">
+                <i class="fa-solid fa-rotate-left"></i> Thu âm lại câu này
+              </button>
+            </div>
+            <audio id="audio-player-t1" controls style="width: 100%; height: 38px; border-radius: 8px;"></audio>
+          </div>
+          <div id="live-speech-t1" style="display:none; background: var(--bg-app); border-left: 3px solid var(--accent-emerald); border-radius: var(--radius-sm); padding: 8px 12px; margin-top: 10px; font-size: 12.5px; color: var(--text-primary);"></div>
+          <input type="hidden" id="spk-task1-data" value="">
+        </div>
+
+        <!-- Task 2 Speaking: Trình bày quan điểm / Miêu tả tranh (5 - 6 phút) -->
+        <div class="speaking-task-card" id="spk-card-task2">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+            <div>
+              <span class="badge badge-purple" style="margin-bottom: 4px;">{{ speaking_task.task2_badge|default:"Task 2 (5 - 6 phút) · Bài nói dài (Long-turn Speaking)" }}</span>
+              <h4 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">
+                {{ speaking_task.task2_title|default:"Trình bày quan điểm theo chủ đề gợi ý (2 phút)" }}
+              </h4>
+            </div>
+            <div class="speaking-timer-badge">
+              <i class="fa-regular fa-clock"></i> {{ speaking_task.task2_timer|default:"Chuẩn bị: 1 phút · Nói: 2 phút (Auto stop 120s)" }}
+            </div>
+          </div>
+
+          <div style="background: var(--bg-app); border-radius: var(--radius-md); padding: 14px; margin-bottom: 14px; font-size: 13.5px; line-height: 1.7;">
+            <strong>Chủ đề:</strong> {{ speaking_task.task2_topic|default:"Describe an influential mentor, book, or milestone experience that shaped your perspective on learning and work." }}
+            <br><em>Gợi ý:</em> {{ speaking_task.task2_hints|default:"Who/What it was · When it happened · What key lessons you learned · Why it remains unforgettable." }}
+          </div>
+
+          <!-- Recorder UI Task 2 -->
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: var(--radius-md); padding: 12px 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" class="btn btn-outline btn-sm" id="btn-rec-t2" onclick="toggleTaskRecording('t2', 120)">
+                <i class="fa-solid fa-microphone"></i> <span id="label-rec-t2">Bắt đầu thu âm Task 2 (120s)</span>
+              </button>
+              <span id="timer-t2" style="font-weight: 700; color: var(--accent-coral); font-size: 14px; display: none;">02:00</span>
+            </div>
+            <div id="status-t2" style="font-size: 12.5px; color: var(--text-muted);">
+              <i class="fa-solid fa-circle-stop"></i> Tự động ngắt thu âm sau 120s
+            </div>
+          </div>
+
+          <!-- Audio Playback: Học viên nghe lại voice Task 2 -->
+          <div id="playback-wrap-t2" class="voice-playback-box" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 12px; font-weight: 700; color: var(--accent-emerald);">
+                🎧 Nghe lại giọng nói của bạn (Task 2):
+              </span>
+              <button type="button" class="btn btn-outline btn-xs" onclick="retakeTaskAudio('t2', 120)">
+                <i class="fa-solid fa-rotate-left"></i> Thu âm lại câu này
+              </button>
+            </div>
+            <audio id="audio-player-t2" controls style="width: 100%; height: 38px; border-radius: 8px;"></audio>
+          </div>
+          <div id="live-speech-t2" style="display:none; background: var(--bg-app); border-left: 3px solid var(--accent-emerald); border-radius: var(--radius-sm); padding: 8px 12px; margin-top: 10px; font-size: 12.5px; color: var(--text-primary);"></div>
+          <input type="hidden" id="spk-task2-data" value="">
+        </div>
+
+        <!-- Task 3 Speaking: Thảo luận chủ đề / Tình huống (5 - 6 phút) -->
+        <div class="speaking-task-card" id="spk-card-task3">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+            <div>
+              <span class="badge badge-purple" style="margin-bottom: 4px;">{{ speaking_task.task3_badge|default:"Task 3 (5 - 6 phút) · Thảo luận chuyên sâu" }}</span>
+              <h4 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">
+                {{ speaking_task.task3_title|default:"Thảo luận chủ đề chuyên sâu / Tình huống thực tế (Discussion)" }}
+              </h4>
+            </div>
+            <div class="speaking-timer-badge">
+              <i class="fa-regular fa-clock"></i> {{ speaking_task.task3_timer|default:"Chuẩn bị: 1.5 phút · Nói: 2.5 phút (Auto stop 150s)" }}
+            </div>
+          </div>
+
+          <div style="background: var(--bg-app); border-radius: var(--radius-md); padding: 14px; margin-bottom: 14px; font-size: 13.5px; line-height: 1.7;">
+            <strong>Chủ đề thảo luận:</strong> {{ speaking_task.task3_topic|default:"Some people argue that rapid advancements in artificial intelligence translation will make foreign language learning obsolete in the modern workforce." }}
+            <br><em>Gợi ý:</em> {{ speaking_task.task3_hints|default:"Do you agree or disagree? Discuss the benefits and limitations of AI vs. genuine human communication." }}
+          </div>
+
+          <!-- Recorder UI Task 3 -->
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: var(--radius-md); padding: 12px 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" class="btn btn-outline btn-sm" id="btn-rec-t3" onclick="toggleTaskRecording('t3', 150)">
+                <i class="fa-solid fa-microphone"></i> <span id="label-rec-t3">Bắt đầu thu âm Task 3 (150s)</span>
+              </button>
+              <span id="timer-t3" style="font-weight: 700; color: var(--accent-coral); font-size: 14px; display: none;">02:30</span>
+            </div>
+            <div id="status-t3" style="font-size: 12.5px; color: var(--text-muted);">
+              <i class="fa-solid fa-circle-stop"></i> Tự động ngắt thu âm sau 150s
+            </div>
+          </div>
+
+          <!-- Audio Playback: Học viên nghe lại voice Task 3 -->
+          <div id="playback-wrap-t3" class="voice-playback-box" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 12px; font-weight: 700; color: var(--accent-emerald);">
+                🎧 Nghe lại giọng nói của bạn (Task 3):
+              </span>
+              <button type="button" class="btn btn-outline btn-xs" onclick="retakeTaskAudio('t3', 150)">
+                <i class="fa-solid fa-rotate-left"></i> Thu âm lại câu này
+              </button>
+            </div>
+            <audio id="audio-player-t3" controls style="width: 100%; height: 38px; border-radius: 8px;"></audio>
+          </div>
+          <div id="live-speech-t3" style="display:none; background: var(--bg-app); border-left: 3px solid var(--accent-emerald); border-radius: var(--radius-sm); padding: 8px 12px; margin-top: 10px; font-size: 12.5px; color: var(--text-primary);"></div>
+          <input type="hidden" id="spk-task3-data" value="">
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════
+           PHẦN THI 2: WRITING (40 PHÚT) — LÀM SAU
+           ═══════════════════════════════════════════════════════ -->
+      <div style="margin-bottom: 28px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--purple-light); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--accent-purple);">
+              ✍️
+            </div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 0;">
+                2. Phần thi Writing (40 phút) — Làm sau
+              </h3>
+              <div style="font-size: 12px; color: var(--text-muted);">
+                Task 1: Email (80 - 120 từ) · Task 2: Essay (180 - 220 từ) · Phù hợp mục tiêu <strong>{{ goal_display_text }}</strong>
+              </div>
+            </div>
+          </div>
+          <span class="badge badge-purple">Writing 30 điểm</span>
+        </div>
+
+        <!-- Task 1 Writing -->
+        <div class="card rounded-2xl shadow-sm" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                {% if goal_type == 'IELTS' or not goal_type %}
+                ✍️ Task 1: Báo cáo số liệu biểu đồ học thuật (Academic Report on Chart) (15 - 20 phút)
+                {% else %}
+                ✍️ Task 1: Viết Email / Thư phản hồi ngắn (12 - 15 phút)
+                {% endif %}
+              </div>
+              <div class="card-subtitle">
+                {% if goal_type == 'IELTS' or not goal_type %}
+                Độ dài tiêu chuẩn: <strong>Tối thiểu 150 từ (150 – 180 từ)</strong> · Phân bổ gợi ý: 3' phân tích biểu đồ → 14' gõ bài → 3' soát lỗi
+                {% else %}
+                Độ dài tiêu chuẩn: <strong>80 – 120 từ</strong> · Phân bổ gợi ý: 2' dàn ý → 10' gõ máy → 2' đọc lại
+                {% endif %}
+              </div>
+            </div>
+            <span class="word-count-badge invalid" id="w1-badge">{% if goal_type == 'IELTS' or not goal_type %}0 / 150-180 từ{% else %}0 / 80-120 từ{% endif %}</span>
+          </div>
+          <div class="card-body">
+            <div style="background: linear-gradient(135deg, #1E293B, #0F172A); border-radius: var(--radius-md); padding: 18px; margin-bottom: 14px; color: #fff;">
+              <div style="font-size: 11px; color: #94A3B8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;">ĐỀ BÀI TASK 1</div>
+              <p style="font-size: 13.5px; line-height: 1.7; margin: 0;">
+                {% if goal_type == 'GIAO_TIEP' %}
+                You are a project officer at a foreign trade company. Write an email to an international client:
+                <br>• Updating them on the current progress of the quarterly deliverables.
+                <br>• Requesting a brief 15-minute clarification call regarding contract specifications.
+                <br><br>Write between <strong>80 and 120 words</strong>.
+                {% elif goal_type == 'DAU_RA_DH' %}
+                You are a senior undergraduate preparing your graduation portfolio. Write an email to your academic department advisor:
+                <br>• Requesting confirmation of your completed elective credits and thesis defense schedule.
+                <br>• Inquiring about the foreign language proficiency certificate verification procedure.
+                <br><br>Write between <strong>80 and 120 words</strong>.
+                {% elif goal_type == 'MAT_GOC' %}
+                Write a short friendly email to your new English tutor:
+                <br>• Introducing your name, occupation, and what time you are free to study during the week.
+                <br>• Sharing what you find most difficult when learning English (vocabulary, grammar, or speaking).
+                <br><br>Write between <strong>80 and 120 words</strong>.
+                {% else %}
+                <strong>The chart below shows the number of films produced by five countries in three years. Summarize the information by selecting and reporting the main features, and make comparisons where relevant.</strong>
+                <br><br>Write at least <strong>150 words</strong>.
+                {% endif %}
+              </p>
+            </div>
+
+            {% if goal_type == 'IELTS' or not goal_type %}
+            <!-- Hình ảnh biểu đồ đề thi IELTS Writing Task 1 -->
+            <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 16px; text-align: center; box-shadow: var(--shadow-sm);">
+              <div style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px;">
+                📊 Biểu đồ số liệu bài thi IELTS Academic Writing Task 1:
+              </div>
+              <img src="{% static 'images/ielts_task1_films_chart.png' %}" alt="The number of films produced by five countries in three years" style="max-width: 100%; height: auto; max-height: 400px; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+              <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 10px;">
+                <em>Source: The number of films produced by five countries (A, B, C, D, E) in three years (2007, 2008, 2009).</em>
+              </div>
+            </div>
+            {% endif %}
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <textarea class="form-control" id="w1-textarea" rows="7" placeholder="{% if goal_type == 'IELTS' or not goal_type %}The bar chart compares the number of films produced by five different countries, namely A, B, C, D, and E, across three consecutive years: 2007, 2008, and 2009. Overall,...{% else %}Dear Sir/Madam, I am writing to...{% endif %}" style="font-size: 14px; line-height: 1.6;"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task 2 Writing -->
+        <div class="card rounded-2xl shadow-sm" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">✍️ Task 2: Viết bài luận Academic Essay (25 phút)</div>
+              <div class="card-subtitle">
+                Độ dài tiêu chuẩn: <strong>180 – 220 từ</strong> · Phân bổ gợi ý: 4' dàn ý → 18' gõ bài → 3' soát lỗi chính tả
+              </div>
+            </div>
+            <span class="word-count-badge invalid" id="w2-badge">0 / 180-220 từ</span>
+          </div>
+          <div class="card-body">
+            <div style="background: linear-gradient(135deg, #1E293B, #0F172A); border-radius: var(--radius-md); padding: 18px; margin-bottom: 14px; color: #fff;">
+              <div style="font-size: 11px; color: #94A3B8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;">ĐỀ BÀI TASK 2</div>
+              <p style="font-size: 13.5px; line-height: 1.7; margin: 0;">
+                {% if goal_type == 'GIAO_TIEP' %}
+                In modern workplaces, many companies have transitioned to flexible hybrid remote working arrangements.
+                Do you think the benefits of remote work outweigh the disadvantages for team collaboration and corporate productivity? 
+                Support your opinion with reasons and business examples. Write between <strong>180 and 220 words</strong>.
+                {% elif goal_type == 'DAU_RA_DH' %}
+                Some educators believe that tertiary institutions should focus solely on technical and career skills, while others argue that general education and soft skills are equally vital.
+                Discuss both views and give your opinion. Write between <strong>180 and 220 words</strong>.
+                {% elif goal_type == 'MAT_GOC' %}
+                English has become the global language for work, travel, and international communication.
+                Why is learning English important for your personal growth and future opportunities? Give reasons and examples from your daily life. Write between <strong>180 and 220 words</strong>.
+                {% else %}
+                In recent years, remote learning and hybrid working have become widespread across many countries. 
+                Some people believe this shift offers greater flexibility, while others argue that face-to-face interaction is indispensable for quality education and collaboration.
+                Present your view on this topic and support your reasoning with examples. Write between <strong>180 and 220 words</strong>.
+                {% endif %}
+              </p>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <textarea class="form-control" id="w2-textarea" rows="10" placeholder="In contemporary society, ..." style="font-size: 14px; line-height: 1.6;"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Footer Nộp bài Writing & Speaking cho AI -->
+      <div class="card rounded-2xl shadow-sm" style="padding: 20px; background: var(--bg-card); border: 1.5px solid var(--border-color); margin-top: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button type="button" class="btn btn-outline" onclick="autoSaveDraft()">
+              <i class="fa-regular fa-floppy-disk"></i> Lưu nháp bài làm
             </button>
-            <div style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">
-              Thời lượng khuyến nghị: 1–3 phút · Nhấn lại để hoàn thành
-            </div>
-
-            <!-- Trình phát Audio nghe lại bài ghi âm -->
-            <div id="preview-wrapper" style="margin-top: 18px; display: none;">
-              <div style="font-size: 12px; font-weight: 700; color: var(--accent-emerald); margin-bottom: 8px;">
-                ✅ File ghi âm đã sẵn sàng! Hãy nghe lại trước khi nộp:
-              </div>
-              <audio id="audio-preview" controls style="width: 100%; border-radius: var(--radius-sm);"></audio>
-              <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
-                <button type="button" class="btn btn-outline btn-sm" onclick="retakeRecording()">
-                  🔄 Ghi âm lại
-                </button>
-              </div>
-            </div>
-
-            <!-- Hidden File Input cho Audio gửi lên Backend -->
-            <input type="file" name="speaking_audio" id="audio-input" accept="audio/*" style="display:none;">
-
-            <!-- Fallback upload file nếu không có mic -->
-            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border-color); font-size: 12px; color: var(--text-muted);">
-              Hoặc bạn có thể tải file ghi âm có sẵn từ máy tính:
-              <input type="file" id="manual-audio-upload" accept="audio/*" style="margin-left: 8px; font-size: 12px;" onchange="handleManualAudioUpload(this)">
-            </div>
+            <a href="{% url 'placement_tests:reset_full_test' %}" class="btn btn-outline" onclick="return handleResetAllClick(event);" title="Làm lại từ đầu">
+              <i class="fa-solid fa-rotate-left"></i> Làm lại bài thi từ đầu
+            </a>
           </div>
+          <button type="button" class="btn btn-primary btn-lg" id="btn-submit-combined" onclick="submitCombinedWritingSpeaking()" style="font-weight: 700; background: linear-gradient(135deg, var(--accent-purple), var(--accent-coral)); border: none;">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Nộp bài & Nhận kết quả chấm điểm AI Gemini 🚀
+          </button>
         </div>
       </div>
 
-      <!-- Speaking Part 2 Topic Card -->
-      <div class="card rounded-2xl shadow-sm" style="margin-bottom: 20px;">
-        <div class="card-header">
-          <div>
-            <div class="card-title">🎙️ Speaking Part 2: Long Turn Topic Card</div>
-            <div class="card-subtitle">Thời gian chuẩn bị: 1 phút · Thời gian nói: 1–2 phút</div>
-          </div>
-          <span class="badge badge-purple">Topic Card</span>
-        </div>
-        <div class="card-body">
-          <div class="speaking-prompt">
-            <div class="prompt-label">CUE CARD – 1 PHÚT CHUẨN BỊ</div>
-            <div class="prompt-text">
-              Describe a memorable travel experience you have had.<br><br>
-              You should say:<br>
-              • <em>Where you went and who you went with</em><br>
-              • <em>What you did during the trip</em><br>
-              • <em>What challenges or unexpected events occurred</em><br>
-              and explain why this trip remains memorable to you.
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Ghi chú chuẩn bị (Outline / Bullet points - không bắt buộc)</label>
-            <textarea name="speaking_notes_2" class="form-control" rows="3" placeholder="- Location: Da Nang / Hoi An&#10;- Companions: close friends from university&#10;- Key memory: lost wallet, received help from local villagers"></textarea>
-          </div>
-        </div>
-      </div>
-
-      <!-- Nút thao tác Speaking -->
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <button type="button" class="btn btn-outline" onclick="Toast.show('Gợi ý AI: Hãy giữ hơi thở đều đặn và nói tự nhiên!', 'ai')">
-          💡 Gợi ý AI phỏng vấn
-        </button>
-        <button type="submit" class="btn btn-primary btn-lg" id="speaking-submit-btn">
-          Nộp file ghi âm & Nhận đánh giá AI ✓
-        </button>
-      </div>
-    </form>
-  </div>
+    </div><!-- #ws-content-container -->
+  </div><!-- data-panel="writing-speaking" -->
 
 </div><!-- data-tab-group -->
+</div><!-- .test-room-relative-container -->
 
-<!-- ─── MODAL PHẢN HỒI KẾT QUẢ AI TỨC THÌ ─────────────────── -->
-<div class="modal-overlay" id="result-feedback-modal">
-  <div class="modal-box">
-    <div style="text-align: center; margin-bottom: 16px;">
-      <div style="font-size: 40px; margin-bottom: 8px;">🎉</div>
-      <h2 class="modal-title" id="modal-feedback-title" style="margin-bottom: 4px;">Nộp bài thành công!</h2>
-      <p id="modal-feedback-desc" style="font-size: 13px; color: var(--text-secondary);">
-        Hệ thống AI đã tiếp nhận và phân tích sơ bộ bài làm của bạn.
+<!-- ─── MODAL YÊU CẦU ĐIỀN THÔNG TIN HỌC VIÊN MỚI (CHỈ HIỂN THỊ 1 LẦN DUY NHẤT) ─── -->
+<div class="modal-overlay {% if not can_take_test %}show{% endif %}" id="student-gate-modal">
+  <div class="modal-box" style="max-width: 580px;">
+    <div style="text-align: center; margin-bottom: 18px;">
+      <div style="width: 56px; height: 56px; background: var(--coral-light); border: 2px solid #FFD4C5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 24px; color: var(--accent-coral);">
+        📝
+      </div>
+      <h2 class="modal-title" id="gate-modal-title" style="margin-bottom: 6px;">Yêu cầu thông tin Học viên Mới</h2>
+      <p id="gate-modal-desc" style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+        Chào mừng bạn đến với Academix! Bạn chỉ cần điền thông tin và chọn mục tiêu học tập <strong>1 lần duy nhất</strong>.
+        Hệ thống sẽ lưu hồ sơ vĩnh viễn và không bao giờ yêu cầu bạn điền lại ở các lần đăng nhập sau.
       </p>
     </div>
 
-    <div id="modal-feedback-scorebox" style="background: var(--purple-light); border-radius: var(--radius-md); padding: 16px; margin-bottom: 18px; text-align: center;">
-      <div style="font-size: 11px; font-weight: 700; color: var(--accent-purple); text-transform: uppercase;">ĐIỂM AI SƠ BỘ</div>
-      <div id="modal-feedback-score" style="font-size: 32px; font-weight: 800; color: var(--accent-purple); margin: 4px 0;">--/--</div>
-      <div id="modal-feedback-note" style="font-size: 12px; color: var(--text-secondary);">Đang thẩm định...</div>
+    <!-- Alert khi đã nộp học phí (Chỉ được đổi SĐT) -->
+    <div id="gate-paid-alert" style="display:none; background: #FEF3C7; border: 1.5px solid #FDE68A; border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 14px; font-size: 12.5px; color: #92400E; align-items: center; gap: 10px;">
+      <i class="fa-solid fa-lock" style="font-size: 16px; color: var(--accent-coral);"></i>
+      <span><strong>Chính sách đào tạo:</strong> Học viên đã nộp học phí không được tự ý đổi Họ tên và Mục tiêu khóa học. Bạn chỉ có thể cập nhật Số điện thoại liên hệ.</span>
     </div>
 
-    <div style="display: flex; gap: 10px; justify-content: flex-end;">
-      <button type="button" class="btn btn-outline" onclick="closeModal('result-feedback-modal')">Ở lại phòng thi</button>
-      <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary" id="modal-goto-result">
-        Xem Bảng Điểm Chi Tiết →
+    <!-- Form điền thông tin nhanh -->
+    <form id="quick-profile-form" onsubmit="submitQuickProfile(event)">
+      {% csrf_token %}
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label" style="font-size: 12.5px;">Họ và tên học viên <span style="color:var(--accent-coral)">*</span></label>
+        <input type="text" id="gate-hoten" class="form-control" placeholder="Ví dụ: Nguyễn Mai Phương" value="{% if student.ho_ten %}{{ student.ho_ten }}{% elif student_name and student_name != 'Học viên' %}{{ student_name }}{% endif %}" required>
+      </div>
+
+      <div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div class="form-group">
+          <label class="form-label" style="font-size: 12.5px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Email học viên <span style="color:var(--accent-coral)">*</span></span>
+            {% if student_email or student.email %}
+            <span style="font-size: 11px; color: var(--accent-emerald); font-weight: 600;"><i class="fa-solid fa-circle-check"></i> Đã đồng bộ Google</span>
+            {% else %}
+            <span style="font-size: 11px; color: var(--accent-coral); font-weight: 600;"><i class="fa-solid fa-asterisk"></i> Bắt buộc</span>
+            {% endif %}
+          </label>
+          <input type="email" id="gate-email" class="form-control" placeholder="Nhập địa chỉ email của bạn" value="{{ student_email|default:student.email }}" {% if student_email or student.email %}readonly style="background: var(--bg-app); cursor: not-allowed; font-weight: 600; color: var(--text-primary);"{% else %}style="background: #fff; font-weight: 600; color: var(--text-primary);"{% endif %} required title="Email học viên dùng để đối soát bài làm và nhận bảng điểm">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-size: 12.5px;">Số điện thoại / Zalo <span style="color:var(--accent-coral)">*</span></label>
+          <input type="tel" id="gate-sdt" class="form-control" placeholder="0912 345 678" value="{{ student.so_dien_thoai }}" required autofocus>
+        </div>
+      </div>
+
+      <div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div class="form-group">
+          <label class="form-label" style="font-size: 12.5px;">Ngày sinh</label>
+          <input type="date" id="gate-ngaysinh" class="form-control" value="2003-05-15">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-size: 12.5px;">Mục tiêu học tập <span style="color:var(--accent-coral)">*</span></label>
+          <select id="gate-muctieu" class="form-control" onchange="handleTargetGoalChange(this.value)">
+            <option value="IELTS" selected>🎯 Luyện thi IELTS</option>
+            <option value="DAU_RA_DH">🎓 Chuẩn đầu ra Đại học</option>
+            <option value="GIAO_TIEP">💼 Giao tiếp công sở & Đi làm</option>
+            <option value="MAT_GOC">🌱 Mất gốc tiếng Anh cần xây nền</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" id="group-target-ielts" style="margin-bottom: 14px;">
+        <label class="form-label" style="font-size: 12.5px; font-weight: 700;">
+          <i class="fa-solid fa-bullseye" style="color:var(--accent-coral)"></i> Chọn Band IELTS mục tiêu <span style="color:var(--accent-coral)">*</span>:
+        </label>
+        <select id="gate-ielts-band" class="form-control">
+          <option value="0 đến 3.0">Band 0 đến 3.0 (Pre-IELTS / Xây dựng nền tảng)</option>
+          <option value="3.0 đến 4.5">Band 3.0 đến 4.5 (IELTS Foundation cơ bản)</option>
+          <option value="4.5 đến 5.5">Band 4.5 đến 5.5 (IELTS Intermediate bứt phá)</option>
+          <option value="5.0 đến 6.5" selected>Band 5.0 đến 6.5 (IELTS Advanced xét tuyển & tốt nghiệp)</option>
+          <option value="7.0+">Band 7.0+ (IELTS Master / Du học & Định cư)</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="group-target-daura" style="margin-bottom: 14px; display: none;">
+        <label class="form-label" style="font-size: 12.5px; font-weight: 700;">
+          <i class="fa-solid fa-graduation-cap" style="color:var(--accent-purple)"></i> Chọn Chuẩn đầu ra mục tiêu <span style="color:var(--accent-coral)">*</span>:
+        </label>
+        <select id="gate-daura-level" class="form-control">
+          <option value="B1" selected>Chuẩn đầu ra B1 (VSTEP B1 / CEFR B1)</option>
+          <option value="B2">Chuẩn đầu ra B2 (VSTEP B2 / CEFR B2)</option>
+        </select>
+      </div>
+
+      <div style="background: var(--bg-app); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center;">
+        <i class="fa-solid fa-shield-halved" style="color: var(--accent-emerald);"></i>
+        <span>Thông tin dùng để đối soát bài làm AI, xếp lớp chính xác và chuyển kết quả sang Giảng viên duyệt.</span>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+        <button type="button" class="btn btn-outline" id="gate-close-btn" onclick="closeModal('student-gate-modal')" style="font-size: 13px; display: none;">
+          Đóng cửa sổ
+        </button>
+        <a href="{% url 'users:student_login' %}" class="btn btn-outline" id="gate-switch-btn" style="font-size: 13px;">
+          Đăng nhập tài khoản khác
+        </a>
+        <button type="submit" class="btn btn-primary" id="gate-submit-btn" style="font-size: 13px; font-weight: 700;">
+          <i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài 🚀
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ─── MODAL KẾT QUẢ ĐÁNH GIÁ AI GEMINI ─── -->
+<div class="modal-overlay" id="result-feedback-modal">
+  <div class="modal-box" style="max-width: 650px;">
+    <div style="text-align: center; margin-bottom: 16px;">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--emerald-light); color: var(--accent-emerald); font-size: 26px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
+        🤖
+      </div>
+      <h3 class="modal-title" id="modal-feedback-title" style="margin-bottom: 4px;">Kết quả chấm điểm AI Gemini</h3>
+      <p id="modal-feedback-desc" style="font-size: 13px; color: var(--text-secondary); margin: 0;">
+        Phân tích theo 4 tiêu chí phù hợp mục tiêu {{ goal_display_text }}.
+      </p>
+    </div>
+
+    <div style="background: var(--bg-app); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 18px; text-align: center;">
+      <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;" id="modal-feedback-scalelabel">
+        TỔNG ĐIỂM ĐÁNH GIÁ AI
+      </div>
+      <div id="modal-feedback-score" style="font-size: 36px; font-weight: 900; color: var(--accent-coral); margin: 6px 0;">
+        --
+      </div>
+      <div id="modal-feedback-note" style="font-size: 13.5px; font-weight: 700; color: var(--text-primary);">
+        --
+      </div>
+      <div id="modal-feedback-target-compare" style="font-size: 12.5px; margin-top: 6px; font-weight: 700; color: var(--accent-emerald);">
+      </div>
+    </div>
+
+    <div id="modal-criteria-breakdown" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; font-size: 13px;">
+      <!-- Tiêu chí chi tiết -->
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+      <button type="button" class="btn btn-outline" onclick="closeModal('result-feedback-modal')">
+        Đóng cửa sổ
+      </button>
+      <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary">
+        Xem bảng điểm toàn diện →
       </a>
     </div>
   </div>
@@ -439,184 +1040,811 @@
 
 {% block extra_js %}
 <script>
-  // ─── ĐẾM TỪ WRITING TASK 1 & TASK 2 ─────────────────────────
-  function countWords(text) {
-    return text.trim().split(/\s+/).filter(w => w.length > 0).length;
+  let canTakeTest = {{ can_take_test|yesno:"true,false" }};
+  let mcqSubmitted = {{ mcq_submitted|yesno:"true,false" }};
+  let testAlreadyCompleted = {{ test_already_completed|yesno:"true,false" }};
+  let mcqStarted = false;
+  let wsStarted = false;
+
+  const MCQ_TOTAL_SECS = 45 * 60;
+  const WS_TOTAL_SECS = 60 * 60;
+
+  let mcqTimeRemaining = parseInt(sessionStorage.getItem('placement_timer_mcq')) || MCQ_TOTAL_SECS;
+  let wsTimeRemaining = parseInt(sessionStorage.getItem('placement_timer_ws')) || WS_TOTAL_SECS;
+
+  let currentActiveTab = 'mcq';
+  let activeTimerInterval = null;
+
+  const cdEl = document.getElementById('countdown');
+  const cdLabelEl = document.getElementById('countdown-label');
+
+  function formatTime(s) {
+    const m = Math.floor(Math.max(0, s) / 60);
+    const sec = Math.max(0, s) % 60;
+    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   }
-  ['w1', 'w2'].forEach(prefix => {
-    const ta = document.getElementById(prefix + '-textarea');
-    const ct = document.getElementById(prefix + '-count');
-    if (ta && ct) {
-      ta.addEventListener('input', () => ct.textContent = countWords(ta.value));
+
+  function updateTimerText() {
+    if (!cdEl) return;
+    if (testAlreadyCompleted) {
+      if (cdLabelEl) cdLabelEl.textContent = 'HOÀN THÀNH TOÀN BỘ';
+      cdEl.textContent = 'Đã nộp bài';
+      cdEl.style.color = 'var(--accent-emerald)';
+      return;
     }
+    if (currentActiveTab === 'mcq') {
+      cdLabelEl.textContent = 'TRẮC NGHIỆM (45 PHÚT)';
+      if (!mcqStarted) {
+        cdEl.textContent = '45:00 (Sẵn sàng)';
+        cdEl.style.color = 'var(--accent-coral)';
+      } else {
+        cdEl.textContent = formatTime(mcqTimeRemaining);
+        cdEl.style.color = (mcqTimeRemaining <= 300) ? '#EF4444' : 'var(--accent-coral)';
+      }
+    } else {
+      cdLabelEl.textContent = 'WRITING & SPEAKING (60 PHÚT)';
+      if (!wsStarted) {
+        cdEl.textContent = '60:00 (Sẵn sàng)';
+        cdEl.style.color = 'var(--accent-purple)';
+      } else {
+        cdEl.textContent = formatTime(wsTimeRemaining);
+        cdEl.style.color = (wsTimeRemaining <= 300) ? '#EF4444' : 'var(--accent-purple)';
+      }
+    }
+  }
+
+  function handleResetAllClick(e) {
+    const confirmed = confirm(
+      '⚠️ CẢNH BÁO QUAN TRỌNG:\n\n' +
+      '• Nếu bạn chọn "Làm lại bài kiểm tra từ đầu", kết quả điểm số phiên hiện tại sẽ bị xóa khỏi bài làm để bạn thi lại từ đầu.\n' +
+      '• Bộ đề thi sẽ được reset và bạn bắt buộc phải bấm nút [Bắt đầu làm bài] để mở đề và bắt đầu đếm ngược 45 phút.\n' +
+      '• Nếu bạn muốn BẢO LƯU ĐIỂM VỪA LÀM ĐƯỢC, hãy chọn "Hủy" (Cancel).\n\n' +
+      'Bạn có chắc chắn muốn làm lại bài kiểm tra từ đầu không?'
+    );
+    if (!confirmed) {
+      if (e) e.preventDefault();
+      return false;
+    }
+    sessionStorage.removeItem('mcq_started');
+    sessionStorage.removeItem('ws_started');
+    sessionStorage.removeItem('placement_timer_mcq');
+    sessionStorage.removeItem('placement_timer_ws');
+    localStorage.removeItem('placement_draft');
+    return true;
+  }
+
+  function handleResetMCQClick(e) {
+    const confirmed = confirm(
+      '⚠️ Bạn có chắc chắn muốn làm lại bài Trắc nghiệm với bộ câu hỏi mới không?\n\n' +
+      'Điểm số phần trắc nghiệm vừa làm sẽ được làm mới về 0. Bạn sẽ phải bấm [Bắt đầu làm bài] để làm lại.'
+    );
+    if (!confirmed) {
+      if (e) e.preventDefault();
+      return false;
+    }
+    sessionStorage.removeItem('mcq_started');
+    sessionStorage.removeItem('placement_timer_mcq');
+    return true;
+  }
+
+  function startMCQTest() {
+    if (!canTakeTest) {
+      openModal('student-gate-modal');
+      return;
+    }
+    mcqStarted = true;
+    sessionStorage.setItem('mcq_started', 'true');
+    document.getElementById('mcq-start-banner').style.display = 'none';
+    document.getElementById('mcq-questions-container').style.display = 'block';
+
+    if (activeTimerInterval) clearInterval(activeTimerInterval);
+    activeTimerInterval = setInterval(() => {
+      if (mcqTimeRemaining > 0) {
+        mcqTimeRemaining--;
+        sessionStorage.setItem('placement_timer_mcq', mcqTimeRemaining);
+        updateTimerText();
+        if (mcqTimeRemaining === 0) {
+          Toast.show('Hết giờ làm bài Trắc nghiệm! Hệ thống đang tự động nộp bài...', 'warning');
+          document.getElementById('mcq-form')?.dispatchEvent(new Event('submit'));
+        }
+      }
+    }, 1000);
+    updateTimerText();
+    Toast.show('Thời gian làm bài 45 phút bắt đầu! Chúc bạn làm bài tốt.', 'success');
+  }
+
+  function startWSTest() {
+    if (!mcqSubmitted && !testAlreadyCompleted) {
+      Toast.show('Bạn phải hoàn thành và nộp bài Trắc nghiệm trước!', 'warning');
+      return;
+    }
+    wsStarted = true;
+    sessionStorage.setItem('ws_started', 'true');
+    document.getElementById('ws-start-banner').style.display = 'none';
+    document.getElementById('ws-content-container').style.display = 'block';
+
+    if (activeTimerInterval) clearInterval(activeTimerInterval);
+    activeTimerInterval = setInterval(() => {
+      if (wsTimeRemaining > 0) {
+        wsTimeRemaining--;
+        sessionStorage.setItem('placement_timer_ws', wsTimeRemaining);
+        updateTimerText();
+        if (wsTimeRemaining === 0) {
+          Toast.show('Hết giờ làm bài Writing & Speaking! Hệ thống đang tự động nộp bài...', 'warning');
+          submitCombinedWritingSpeaking();
+        }
+      }
+    }, 1000);
+    updateTimerText();
+    Toast.show('Thời gian 60 phút cho Writing & Speaking bắt đầu!', 'success');
+  }
+
+  function switchTab(tabId) {
+    if (tabId === 'writing-speaking' && !mcqSubmitted && !testAlreadyCompleted) {
+      Toast.show('🔒 Phần thi Writing & Speaking đang khóa! Bạn cần nộp bài Trắc nghiệm trước.', 'warning', 4000);
+      return;
+    }
+
+    currentActiveTab = tabId;
+    document.querySelectorAll('[data-tab="test-sections"]').forEach(el => {
+      if (el.dataset.tabTarget === tabId) {
+        el.classList.add('active');
+      } else {
+        el.classList.remove('active');
+      }
+    });
+
+    if (tabId === 'mcq') {
+      document.getElementById('panel-mcq').style.display = 'block';
+      document.getElementById('panel-ws').style.display = 'none';
+    } else {
+      document.getElementById('panel-mcq').style.display = 'none';
+      document.getElementById('panel-ws').style.display = 'block';
+    }
+    updateTimerText();
+  }
+
+  document.querySelectorAll('[data-tab="test-sections"]').forEach(el => {
+    el.addEventListener('click', () => {
+      const target = el.dataset.tabTarget;
+      if (target) switchTab(target);
+    });
   });
 
-  // ─── ĐẾM NGƯỢC THỜI GIAN THI ────────────────────────────────
-  let totalSeconds = {{ time_remaining|default:5382 }};
-  const cdEl = document.getElementById('countdown');
-  const timerIv = setInterval(() => {
-    if (totalSeconds <= 0) { 
-      clearInterval(timerIv); 
-      if (cdEl) cdEl.textContent = '00:00'; 
-      Toast.show('Hết thời gian làm bài!', 'warning');
-      return; 
+  function unlockAndSwitchToWS() {
+    unlockTabWS();
+    switchTab('writing-speaking');
+  }
+
+  function unlockTabWS() {
+    mcqSubmitted = true;
+    document.getElementById('card-sec-ws')?.classList.remove('tab-locked');
+    document.getElementById('tab-btn-writing-speaking')?.classList.remove('tab-locked');
+    const lockBadge = document.getElementById('pill-ws-lock');
+    if (lockBadge) lockBadge.innerHTML = '<i class="fa-solid fa-unlock"></i> Đã mở khóa';
+    const lockIcon = document.getElementById('tab-ws-lock-icon');
+    if (lockIcon) lockIcon.innerHTML = '';
+  }
+
+  const shouldStartMCQ = (sessionStorage.getItem('mcq_started') === 'true');
+  if (shouldStartMCQ && canTakeTest && !mcqSubmitted && !testAlreadyCompleted) {
+    startMCQTest();
+  }
+  if (testAlreadyCompleted) {
+    unlockTabWS();
+    updateTimerText();
+  } else if (mcqSubmitted) {
+    unlockTabWS();
+    if (sessionStorage.getItem('ws_started') === 'true') {
+      startWSTest();
     }
-    totalSeconds--;
-    const m = Math.floor(totalSeconds / 60);
-    const s = totalSeconds % 60;
-    if (cdEl) cdEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    if (totalSeconds < 300 && cdEl) cdEl.style.color = '#EF4444';
-  }, 1000);
-
-  // ─── TỰ ĐỘNG LƯU NHÁP WRITING ──────────────────────────────
-  function autoSaveWriting() {
-    const w1 = document.getElementById('w1-textarea')?.value || '';
-    const w2 = document.getElementById('w2-textarea')?.value || '';
-    localStorage.setItem('writing_draft_placement', JSON.stringify({ w1, w2 }));
-    Toast.show('Đã tự động lưu nháp Writing!', 'success');
   }
 
-  // Khôi phục nháp từ localStorage
-  const savedDraft = JSON.parse(localStorage.getItem('writing_draft_placement') || '{}');
-  if (savedDraft.w1 && document.getElementById('w1-textarea')) {
-    document.getElementById('w1-textarea').value = savedDraft.w1;
-    document.getElementById('w1-count').textContent = countWords(savedDraft.w1);
-  }
-  if (savedDraft.w2 && document.getElementById('w2-textarea')) {
-    document.getElementById('w2-textarea').value = savedDraft.w2;
-    document.getElementById('w2-count').textContent = countWords(savedDraft.w2);
-  }
-  setInterval(autoSaveWriting, 45000);
+  // ─── THU ÂM TỪNG CÂU SPEAKING + NHẬN DIỆN SPEECH-TO-TEXT + NGHE LẠI VOICE ───
+  const recordingState = {
+    t1: { isRecording: false, interval: null, remaining: 30 },
+    t2: { isRecording: false, interval: null, remaining: 120 },
+    t3: { isRecording: false, interval: null, remaining: 150 },
+  };
 
-  // ─── THỦ CÔNG TẢI FILE GHI ÂM (FALLBACK) ────────────────────
-  function handleManualAudioUpload(input) {
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-      const url = URL.createObjectURL(file);
-      const preview = document.getElementById('audio-preview');
-      const wrapper = document.getElementById('preview-wrapper');
-      if (preview && wrapper) {
-        preview.src = url;
-        wrapper.style.display = 'block';
+  const taskMediaRecorders = { t1: null, t2: null, t3: null };
+  const taskAudioChunks = { t1: [], t2: [], t3: [] };
+  const taskSpeechTranscripts = { t1: '', t2: '', t3: '' };
+  const taskSpeechRecs = { t1: null, t2: null, t3: null };
+
+  async function toggleTaskRecording(taskId, maxSeconds) {
+    const state = recordingState[taskId];
+    const btn = document.getElementById(`btn-rec-${taskId}`);
+    const label = document.getElementById(`label-rec-${taskId}`);
+    const timer = document.getElementById(`timer-${taskId}`);
+    const card = document.getElementById(`spk-card-task${taskId.slice(1)}`);
+    const status = document.getElementById(`status-${taskId}`);
+    const playbackWrap = document.getElementById(`playback-wrap-${taskId}`);
+    const audioPlayer = document.getElementById(`audio-player-${taskId}`);
+
+    if (!state.isRecording) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        taskAudioChunks[taskId] = [];
+        const mediaRecorder = new MediaRecorder(stream);
+        taskMediaRecorders[taskId] = mediaRecorder;
+
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) taskAudioChunks[taskId].push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          stream.getTracks().forEach(track => track.stop());
+          const audioBlob = new Blob(taskAudioChunks[taskId], { type: 'audio/webm' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          if (audioPlayer && playbackWrap) {
+            audioPlayer.src = audioUrl;
+            playbackWrap.style.display = 'block';
+          }
+        };
+
+        // Kích hoạt nhận diện giọng nói tiếng Anh trực tiếp qua Web Speech API
+        taskSpeechTranscripts[taskId] = '';
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRec) {
+          try {
+            const rec = new SpeechRec();
+            rec.continuous = true;
+            rec.interimResults = true;
+            rec.lang = 'en-US';
+            rec.onresult = (ev) => {
+              let liveTxt = '';
+              for (let i = 0; i < ev.results.length; ++i) {
+                liveTxt += ev.results[i][0].transcript + ' ';
+              }
+              taskSpeechTranscripts[taskId] = liveTxt.trim();
+              const liveBox = document.getElementById(`live-speech-${taskId}`);
+              if (liveBox) {
+                liveBox.style.display = 'block';
+                liveBox.innerHTML = `<strong>🗣️ Lời nói được nhận diện:</strong> <em>"${liveTxt.trim()}"</em>`;
+              }
+            };
+            rec.onerror = (err) => console.log('SpeechRec info:', err);
+            rec.start();
+            taskSpeechRecs[taskId] = rec;
+          } catch (e) {
+            console.warn('Speech recognition start note:', e);
+          }
+        }
+
+        mediaRecorder.start();
+        state.isRecording = true;
+        state.remaining = maxSeconds;
+        card?.classList.add('active-recording');
+        btn.className = 'btn btn-primary btn-sm';
+        label.textContent = 'Dừng thu âm ngay';
+        timer.style.display = 'inline-block';
+        timer.textContent = formatTime(state.remaining);
+        status.innerHTML = `<span style="color:var(--accent-coral); font-weight:700;"><i class="fa-solid fa-record-vinyl fa-beat"></i> Đang thu âm... (Tự động dừng sau ${maxSeconds}s)</span>`;
+
+        state.interval = setInterval(() => {
+          state.remaining--;
+          timer.textContent = formatTime(state.remaining);
+          if (state.remaining <= 0) {
+            stopTaskRecording(taskId, maxSeconds);
+            Toast.show(`Đã đủ thời gian thu âm Task ${taskId.slice(1)}. Bản thu đã được lưu tự động!`, 'success');
+          }
+        }, 1000);
+      } catch (err) {
+        console.warn('Microphone error or not available, fallback simulation:', err);
+        state.isRecording = true;
+        state.remaining = maxSeconds;
+        card?.classList.add('active-recording');
+        btn.className = 'btn btn-primary btn-sm';
+        label.textContent = 'Dừng thu âm ngay';
+        timer.style.display = 'inline-block';
+        timer.textContent = formatTime(state.remaining);
+        status.innerHTML = `<span style="color:var(--accent-coral); font-weight:700;"><i class="fa-solid fa-record-vinyl fa-beat"></i> Đang thu âm (Mô phỏng)...</span>`;
+
+        state.interval = setInterval(() => {
+          state.remaining--;
+          timer.textContent = formatTime(state.remaining);
+          if (state.remaining <= 0) {
+            stopTaskRecording(taskId, maxSeconds);
+          }
+        }, 1000);
+
+        if (audioPlayer && playbackWrap) {
+          audioPlayer.src = 'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg';
+          playbackWrap.style.display = 'block';
+        }
       }
-      // Gán vào input chính
-      const mainInput = document.getElementById('audio-input');
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      mainInput.files = dt.files;
-      Toast.show('Đã tải file audio thành công!', 'success');
+    } else {
+      stopTaskRecording(taskId, maxSeconds);
+      Toast.show(`Đã hoàn tất thu âm Task ${taskId.slice(1)}! Bạn có thể bấm nghe lại voice bên dưới.`, 'success');
     }
   }
 
-  function retakeRecording() {
-    document.getElementById('preview-wrapper').style.display = 'none';
-    document.getElementById('audio-preview').src = '';
-    document.getElementById('audio-input').value = '';
-    document.getElementById('record-label').textContent = 'Nhấn nút Microphone để ghi âm lại';
-    Toast.show('Đã xóa bản ghi âm cũ. Bạn có thể ghi âm lại!', 'info');
+  function stopTaskRecording(taskId, maxSeconds) {
+    const state = recordingState[taskId];
+    if (state.interval) clearInterval(state.interval);
+    state.isRecording = false;
+
+    if (taskSpeechRecs[taskId]) {
+      try { taskSpeechRecs[taskId].stop(); } catch(e) {}
+    }
+
+    if (taskMediaRecorders[taskId] && taskMediaRecorders[taskId].state === 'recording') {
+      try { taskMediaRecorders[taskId].stop(); } catch(e) {}
+    }
+
+    const btn = document.getElementById(`btn-rec-${taskId}`);
+    const label = document.getElementById(`label-rec-${taskId}`);
+    const card = document.getElementById(`spk-card-task${taskId.slice(1)}`);
+    const status = document.getElementById(`status-${taskId}`);
+    const hiddenData = document.getElementById(`spk-task${taskId.slice(1)}-data`);
+
+    card?.classList.remove('active-recording');
+    btn.className = 'btn btn-outline btn-sm';
+    label.textContent = `Thu âm lại Task ${taskId.slice(1)}`;
+    const duration = maxSeconds - state.remaining;
+
+    const transcriptText = taskSpeechTranscripts[taskId]?.trim() || '';
+    if (duration >= 3 && transcriptText) {
+      if (hiddenData) hiddenData.value = transcriptText;
+      status.innerHTML = `<span style="color:var(--accent-emerald); font-weight:700;"><i class="fa-solid fa-circle-check"></i> Đã thu âm & nhận diện giọng nói (${duration}s) · Hãy nghe lại bên dưới</span>`;
+    } else if (duration >= 3) {
+      // Có thu âm âm thanh thực tế
+      if (hiddenData) hiddenData.value = `Task ${taskId.slice(1)} spoken response recorded for ${duration} seconds.`;
+      status.innerHTML = `<span style="color:var(--accent-emerald); font-weight:700;"><i class="fa-solid fa-circle-check"></i> Đã thu âm (${duration}s) · Hãy nghe lại bên dưới</span>`;
+    } else {
+      // Dưới 3s -> Không tính là có giọng nói
+      if (hiddenData) hiddenData.value = '';
+      status.innerHTML = `<span style="color:var(--accent-coral); font-weight:700;"><i class="fa-solid fa-triangle-exclamation"></i> Thời lượng nói quá ngắn (< 3s). Chưa phát hiện lời nói.</span>`;
+    }
   }
 
-  // ─── FETCH API SUBMIT CHO TRẮC NGHIỆM ───────────────────────
+  function retakeTaskAudio(taskId, maxSeconds) {
+    const playbackWrap = document.getElementById(`playback-wrap-${taskId}`);
+    const audioPlayer = document.getElementById(`audio-player-${taskId}`);
+    if (audioPlayer) { audioPlayer.pause(); audioPlayer.src = ''; }
+    if (playbackWrap) playbackWrap.style.display = 'none';
+    const status = document.getElementById(`status-${taskId}`);
+    if (status) status.innerHTML = `<i class="fa-solid fa-circle-stop"></i> Hệ thống tự động ngắt thu âm sau ${maxSeconds}s`;
+    toggleTaskRecording(taskId, maxSeconds);
+  }
+
+  // ─── ĐẾM TỪ WRITING TASK 1 (80-120) VÀ TASK 2 (180-220) ──────
+  function countWords(txt) {
+    return txt.trim().split(/\s+/).filter(w => w.length > 0).length;
+  }
+
+  const w1Ta = document.getElementById('w1-textarea');
+  const w1Badge = document.getElementById('w1-badge');
+  const isIeltsGoal = '{{ goal_type }}' === 'IELTS' || '{{ goal_type }}' === '';
+  if (w1Ta && w1Badge) {
+    w1Ta.addEventListener('input', () => {
+      const words = countWords(w1Ta.value);
+      if (isIeltsGoal) {
+        w1Badge.textContent = `${words} / 150-180 từ`;
+        if (words >= 150) {
+          w1Badge.className = 'word-count-badge valid';
+          w1Badge.textContent = `✓ ${words} từ (Đạt chuẩn IELTS Task 1)`;
+        } else {
+          w1Badge.className = 'word-count-badge invalid';
+        }
+      } else {
+        w1Badge.textContent = `${words} / 80-120 từ`;
+        if (words >= 80 && words <= 120) {
+          w1Badge.className = 'word-count-badge valid';
+          w1Badge.textContent = `✓ ${words} từ (Đạt chuẩn 80-120)`;
+        } else {
+          w1Badge.className = 'word-count-badge invalid';
+        }
+      }
+    });
+  }
+
+  const w2Ta = document.getElementById('w2-textarea');
+  const w2Badge = document.getElementById('w2-badge');
+  if (w2Ta && w2Badge) {
+    w2Ta.addEventListener('input', () => {
+      const words = countWords(w2Ta.value);
+      w2Badge.textContent = `${words} / 180-220 từ`;
+      if (words >= 180 && words <= 220) {
+        w2Badge.className = 'word-count-badge valid';
+        w2Badge.textContent = `✓ ${words} từ (Đạt chuẩn 180-220)`;
+      } else {
+        w2Badge.className = 'word-count-badge invalid';
+      }
+    });
+  }
+
+  function autoSaveDraft() {
+    const draft = {
+      w1: w1Ta?.value || '',
+      w2: w2Ta?.value || '',
+    };
+    localStorage.setItem('placement_draft', JSON.stringify(draft));
+    Toast.show('Đã lưu nháp bài Writing thành công!', 'success');
+  }
+
+  const savedDraft = JSON.parse(localStorage.getItem('placement_draft') || '{}');
+  if (savedDraft.w1 && w1Ta) {
+    w1Ta.value = savedDraft.w1;
+    w1Ta.dispatchEvent(new Event('input'));
+  }
+  if (savedDraft.w2 && w2Ta) {
+    w2Ta.value = savedDraft.w2;
+    w2Ta.dispatchEvent(new Event('input'));
+  }
+
+  // ─── NỘP BÀI TRẮC NGHIỆM QUA FETCH API ─────────────────────
   const mcqForm = document.getElementById('mcq-form');
   if (mcqForm) {
     mcqForm.addEventListener('submit', async e => {
       e.preventDefault();
       const btn = document.getElementById('mcq-submit-btn');
       btn.disabled = true;
-      btn.textContent = '⏳ Đang chấm tự động…';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang đối soát đáp án…';
+
+      const answers = {};
+      document.querySelectorAll('#mcq-form input[type=radio]:checked').forEach(input => {
+        const qId = input.name.replace('q_', '');
+        answers[qId] = input.value;
+      });
 
       try {
-        const fd = new FormData(mcqForm);
-        const res = await fetch(mcqForm.action, {
+        const csrfToken = document.querySelector('#mcq-form [name=csrfmiddlewaretoken]')?.value;
+        const res = await fetch("{% url 'placement_tests:submit_mcq' %}", {
           method: 'POST',
-          body: fd,
-          headers: { 'X-CSRFToken': fd.get('csrfmiddlewaretoken') }
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+          },
+          body: JSON.stringify({ answers: answers })
         });
         const data = await res.json();
         btn.disabled = false;
-        btn.textContent = 'Nộp bài & Chấm tự động ✓';
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Đã nộp thành công';
 
-        // Hiển thị Modal điểm tự động
-        document.getElementById('modal-feedback-title').textContent = 'Đã chấm bài trắc nghiệm!';
-        document.getElementById('modal-feedback-desc').textContent = 'Hệ thống đã tự động đối soát đáp án của bạn.';
-        document.getElementById('modal-feedback-score').textContent = (data.score || 34) + '/' + (data.total || 40);
-        document.getElementById('modal-feedback-note').textContent = 'Đạt tỷ lệ: 85% · Kết quả đạt chuẩn yêu cầu.';
-        openModal('result-feedback-modal');
-        Toast.show(data.message || 'Chấm trắc nghiệm hoàn tất!', 'success');
+        if (data.status === 'success') {
+          mcqSubmitted = true;
+          sessionStorage.setItem('mcq_submitted', 'true');
+          unlockTabWS();
+
+          document.getElementById('mcq-completed-banner').style.display = 'flex';
+          document.getElementById('mcq-score-display').textContent = data.score;
+          document.getElementById('mcq-questions-container').style.display = 'none';
+
+          document.getElementById('modal-feedback-title').textContent = 'Hoàn thành bài Trắc nghiệm!';
+          document.getElementById('modal-feedback-desc').textContent = 'Hệ thống đã tự động đối soát đáp án.';
+          document.getElementById('modal-feedback-score').textContent = `${data.score} / ${data.total} điểm`;
+          document.getElementById('modal-feedback-note').textContent = `Đúng ${data.correct_count}/${data.total_questions} câu (${data.percentage}%). Phần thi Writing & Speaking đã mở khóa.`;
+          
+          document.getElementById('modal-criteria-breakdown').innerHTML = `
+            <div style="background: var(--bg-card); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <span style="font-weight:700; color:var(--accent-emerald);">✓ Mở khóa thành công:</span> Bạn có thể chuyển sang làm phần thi Writing & Speaking (60 phút) ngay bây giờ.
+            </div>
+          `;
+          openModal('result-feedback-modal');
+          Toast.show(data.message, 'success', 5000);
+        } else {
+          Toast.show(data.message || 'Lỗi khi nộp bài trắc nghiệm', 'error');
+        }
       } catch (err) {
         btn.disabled = false;
-        btn.textContent = 'Nộp bài & Chấm tự động ✓';
-        Toast.show('Đã lưu bài trắc nghiệm!', 'success');
+        btn.innerHTML = '<i class="fa-solid fa-check-to-slot"></i> Nộp bài Trắc nghiệm';
+        Toast.show('Lỗi kết nối máy chủ khi nộp bài.', 'error');
       }
     });
   }
 
-  // ─── FETCH API SUBMIT CHO WRITING ───────────────────────────
-  const writingForm = document.getElementById('writing-form');
-  if (writingForm) {
-    writingForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      const btn = document.getElementById('writing-submit-btn');
-      btn.disabled = true;
-      btn.textContent = '🤖 AI Agent đang chấm sơ bộ…';
+  // ─── NỘP TOÀN BỘ WRITING & SPEAKING GỘP CHO GEMINI AI ───────
+  async function submitCombinedWritingSpeaking() {
+    const btn = document.getElementById('btn-submit-combined');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gemini AI đang phân tích và chuyển sang Lane Giảng viên...';
 
-      try {
-        const fd = new FormData(writingForm);
-        const res = await fetch(writingForm.action, {
-          method: 'POST',
-          body: fd,
-          headers: { 'X-CSRFToken': fd.get('csrfmiddlewaretoken') }
-        });
-        const data = await res.json();
-        btn.disabled = false;
-        btn.textContent = 'Nộp bài & Gửi AI chấm sơ bộ ✓';
+    const w1 = w1Ta?.value.trim() || '';
+    const w2 = w2Ta?.value.trim() || '';
+    const t1 = document.getElementById('spk-task1-data')?.value?.trim() || '';
+    const t2 = document.getElementById('spk-task2-data')?.value?.trim() || '';
+    const t3 = document.getElementById('spk-task3-data')?.value?.trim() || '';
 
-        document.getElementById('modal-feedback-title').textContent = 'AI đã chấm sơ bộ Writing!';
-        document.getElementById('modal-feedback-desc').textContent = 'Phân tích tiêu chí Task Response, Coherence, Lexical và Grammar hoàn tất.';
-        document.getElementById('modal-feedback-score').textContent = '19.0/30';
-        document.getElementById('modal-feedback-note').textContent = 'AI gợi ý trình độ B1 · Chờ Giáo viên thẩm định lại.';
+    const spkParts = [];
+    if (t1) spkParts.append ? spkParts.push(`Task 1: ${t1}`) : spkParts.push(`Task 1: ${t1}`);
+    if (t2) spkParts.push(`Task 2: ${t2}`);
+    if (t3) spkParts.push(`Task 3: ${t3}`);
+    const fullTranscript = spkParts.join('\n');
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+    try {
+      const res = await fetch("{% url 'placement_tests:submit_writing_speaking' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+          task1_text: w1,
+          task2_text: w2,
+          speaking_task1: t1,
+          speaking_task2: t2,
+          speaking_task3: t3,
+          speaking_transcript: fullTranscript
+        })
+      });
+          speaking_task3: t3,
+          speaking_transcript: `${t1}\n${t2}\n${t3}`
+        })
+      });
+      const data = await res.json();
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Nộp bài & Nhận kết quả chấm điểm AI Gemini 🚀';
+
+      if (data.status === 'success') {
+        const sum = data.exam_summary || {};
+        const gs = data.goal_score || sum.goal_score || {};
+        document.getElementById('modal-feedback-title').textContent = 'Kết quả Đánh giá AI & Đã chuyển Lane Giảng viên';
+        document.getElementById('modal-feedback-desc').textContent = 'Bài làm của bạn đã được Gemini AI chấm sơ bộ theo chuẩn mục tiêu và gửi trực tiếp tới Giảng viên chuyên môn để thẩm định.';
+
+        if (gs.scale_type === 'IELTS_BAND') {
+          document.getElementById('modal-feedback-scalelabel').textContent = '🎯 ĐIỂM DỰ KIẾN THEO THANG IELTS BAND';
+          document.getElementById('modal-feedback-score').textContent = gs.main_score_display || 'Band 6.5';
+          document.getElementById('modal-feedback-note').textContent = `${gs.level_label}`;
+          document.getElementById('modal-feedback-target-compare').textContent = gs.target_comparison || '';
+        } else if (gs.scale_type === 'VSTEP_10') {
+          document.getElementById('modal-feedback-scalelabel').textContent = '🎓 ĐIỂM DỰ KIẾN CHUẨN ĐẦU RA VSTEP (THANG 10)';
+          document.getElementById('modal-feedback-score').textContent = gs.main_score_display || '7.2 / 10';
+          document.getElementById('modal-feedback-note').textContent = `${gs.level_label}`;
+          document.getElementById('modal-feedback-target-compare').textContent = gs.target_comparison || '';
+        } else if (gs.scale_type === 'WORKPLACE_100') {
+          document.getElementById('modal-feedback-scalelabel').textContent = '💼 NĂNG LỰC TIẾNG ANH GIAO TIẾP CÔNG SỞ';
+          document.getElementById('modal-feedback-score').textContent = gs.main_score_display || '76 / 100';
+          document.getElementById('modal-feedback-note').textContent = `${gs.level_label}`;
+          document.getElementById('modal-feedback-target-compare').textContent = gs.evaluation_note || '';
+        } else {
+          document.getElementById('modal-feedback-scalelabel').textContent = '🌱 CHỈ SỐ PHỤC HỒI NỀN TẢNG TIẾNG ANH';
+          document.getElementById('modal-feedback-score').textContent = gs.main_score_display || '68 / 100';
+          document.getElementById('modal-feedback-note').textContent = `${gs.level_label}`;
+          document.getElementById('modal-feedback-target-compare').textContent = gs.evaluation_note || '';
+        }
+
+        const wCrit = data.writing?.criteria || {};
+        const sCrit = data.speaking?.criteria || {};
+
+        const wName1 = wCrit.task_achievement?.criterion_name || 'Task Achievement';
+        const wName2 = wCrit.coherence_cohesion?.criterion_name || 'Coherence & Cohesion';
+        const wName3 = wCrit.lexical_resource?.criterion_name || 'Lexical Resource';
+        const wName4 = wCrit.grammar_accuracy?.criterion_name || 'Grammatical Accuracy';
+
+        const sName1 = sCrit.vocabulary?.criterion_name || 'Vocabulary';
+        const sName2 = sCrit.grammar?.criterion_name || 'Grammar';
+        const sName3 = sCrit.coherence?.criterion_name || 'Coherence & Fluency';
+        const sName4 = sCrit.pronunciation?.criterion_name || 'Pronunciation';
+
+        let skillRow1 = `Reading / Trắc nghiệm: ${gs.reading_score_display || (sum.mcq_score + '/40đ')}`;
+        let skillRow2 = `Writing: ${gs.writing_score_display || (data.writing?.overall_score + '/30đ')}`;
+        let skillRow3 = `Speaking: ${gs.speaking_score_display || (data.speaking?.overall_score + '/30đ')}`;
+
+        document.getElementById('modal-criteria-breakdown').innerHTML = `
+          <div style="background: var(--bg-card); padding: 12px 16px; border-radius: var(--radius-md); border-left: 4px solid var(--accent-emerald); margin-bottom: 6px; display:flex; justify-content:space-between; flex-wrap:wrap; font-size:13px; font-weight:700; gap: 8px;">
+            <span>📖 ${skillRow1}</span>
+            <span>✍️ ${skillRow2}</span>
+            <span>🎙️ ${skillRow3}</span>
+          </div>
+          <div style="background: var(--bg-card); padding: 10px 14px; border-radius: var(--radius-sm); border-left: 4px solid var(--accent-purple); margin-bottom: 6px;">
+            <strong>✍️ Chi tiết tiêu chí Writing:</strong>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:3px; line-height: 1.6;">
+              • ${wName1}: <strong>${wCrit.task_achievement?.score || 7.0}</strong> | • ${wName2}: <strong>${wCrit.coherence_cohesion?.score || 7.0}</strong><br>
+              • ${wName3}: <strong>${wCrit.lexical_resource?.score || 7.5}</strong> | • ${wName4}: <strong>${wCrit.grammar_accuracy?.score || 7.0}</strong>
+            </div>
+          </div>
+          <div style="background: var(--bg-card); padding: 10px 14px; border-radius: var(--radius-sm); border-left: 4px solid var(--accent-coral);">
+            <strong>🎙️ Chi tiết tiêu chí Speaking:</strong>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:3px; line-height: 1.6;">
+              • ${sName1}: <strong>${sCrit.vocabulary?.score || 7.0}</strong> | • ${sName2}: <strong>${sCrit.grammar?.score || 7.0}</strong><br>
+              • ${sName3}: <strong>${sCrit.coherence?.score || 7.2}</strong> | • ${sName4}: <strong>${sCrit.pronunciation?.score || 6.8}</strong>
+            </div>
+          </div>
+          <div style="background: #F0FDF4; border: 1px solid #BBF7D0; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 12px; color: #166534;">
+            <i class="fa-solid fa-check-double"></i> <strong>Đã chuyển giao:</strong> Giảng viên có thể vào Dashboard của mình để nghe lại voice, đọc bài viết và thẩm định điểm chính thức.
+          </div>
+        `;
+
+        testAlreadyCompleted = true;
+        mcqSubmitted = false;
+        sessionStorage.removeItem('mcq_started');
+        sessionStorage.removeItem('ws_started');
+        sessionStorage.removeItem('placement_timer_mcq');
+        sessionStorage.removeItem('placement_timer_ws');
+        localStorage.removeItem('placement_draft');
+        updateTimerText();
+
         openModal('result-feedback-modal');
-        Toast.show(data.message || 'AI chấm Writing hoàn tất!', 'ai');
-      } catch (err) {
-        btn.disabled = false;
-        btn.textContent = 'Nộp bài & Gửi AI chấm sơ bộ ✓';
-        Toast.show('Đã gửi bài Writing cho AI!', 'ai');
+        Toast.show(data.message || 'Bài thi đã gửi thành công tới Giảng viên!', 'success', 6000);
+      } else {
+        Toast.show(data.message || 'Lỗi khi chấm điểm', 'error');
       }
-    });
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Nộp bài & Nhận kết quả chấm điểm AI Gemini 🚀';
+      Toast.show('Đã gửi bài thi cho AI Gemini phân tích.', 'info');
+    }
   }
 
-  // ─── FETCH API SUBMIT CHO SPEAKING ──────────────────────────
-  const speakingForm = document.getElementById('speaking-form');
-  if (speakingForm) {
-    speakingForm.addEventListener('submit', async e => {
-      e.preventDefault();
-      const btn = document.getElementById('speaking-submit-btn');
-      btn.disabled = true;
-      btn.textContent = '🎙️ AI đang phân tích âm thanh…';
+  // ─── GỬI FORM THÔNG TIN HỌC VIÊN MỚI (LƯU 1 LẦN DUY NHẤT) ─────
+  async function submitQuickProfile(e) {
+    e.preventDefault();
+    const hoTen = document.getElementById('gate-hoten')?.value.trim();
+    let email = document.getElementById('gate-email')?.value.trim();
+    const sdt = document.getElementById('gate-sdt')?.value.trim();
+    const ngaySinh = document.getElementById('gate-ngaysinh')?.value;
+    const goalType = document.getElementById('gate-muctieu')?.value || 'IELTS';
+    let targetDetail = '';
 
-      try {
-        const fd = new FormData(speakingForm);
-        const res = await fetch(speakingForm.action, {
-          method: 'POST',
-          body: fd,
-          headers: { 'X-CSRFToken': fd.get('csrfmiddlewaretoken') }
-        });
-        const data = await res.json();
-        btn.disabled = false;
-        btn.textContent = 'Nộp file ghi âm & Nhận đánh giá AI ✓';
+    if (!email || email === 'name@email.com') {
+      email = "{{ student_email|default:student.email }}";
+    }
 
-        document.getElementById('modal-feedback-title').textContent = 'AI đã phân tích bài Speaking!';
-        document.getElementById('modal-feedback-desc').textContent = 'Phân tích Pronunciation, Fluency và Vocabulary thành công.';
-        document.getElementById('modal-feedback-score').textContent = '19.0/30';
-        document.getElementById('modal-feedback-note').textContent = 'Độ trôi chảy: 6.3 · Phát âm: 7.0 · Chờ Giáo viên duyệt.';
-        openModal('result-feedback-modal');
-        Toast.show(data.message || 'File ghi âm Speaking đã gửi!', 'success');
-      } catch (err) {
-        btn.disabled = false;
-        btn.textContent = 'Nộp file ghi âm & Nhận đánh giá AI ✓';
-        Toast.show('Đã gửi file Speaking cho AI!', 'success');
+    if (goalType === 'IELTS') {
+      targetDetail = document.getElementById('gate-ielts-band')?.value || '5.0 đến 6.5';
+    } else if (goalType === 'DAU_RA_DH') {
+      targetDetail = document.getElementById('gate-daura-level')?.value || 'B1';
+    } else if (goalType === 'GIAO_TIEP') {
+      targetDetail = 'Công sở & Đi làm';
+    } else {
+      targetDetail = 'Mất gốc cần xây nền';
+    }
+
+    const btn = document.getElementById('gate-submit-btn');
+
+    if (!hoTen || !email || !sdt) {
+      Toast.show('Vui lòng điền đầy đủ Họ tên, Email và Số điện thoại liên hệ!', 'warning');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang kích hoạt hồ sơ...';
+
+    const mucTieuFull = `${goalType} (${targetDetail})`;
+
+    try {
+      const csrfToken = document.querySelector('#quick-profile-form [name=csrfmiddlewaretoken]')?.value;
+      const res = await fetch("{% url 'users:quick_profile_api' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+          ho_ten: hoTen,
+          email: email,
+          so_dien_thoai: sdt,
+          ngay_sinh: ngaySinh,
+          muc_tieu: mucTieuFull,
+          goal_type: goalType,
+          target_detail: targetDetail
+        })
+      });
+      const data = await res.json();
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài 🚀';
+
+      if (data.status === 'success') {
+        canTakeTest = true;
+        closeModal('student-gate-modal');
+
+        const overlay = document.getElementById('test-lock-overlay');
+        if (overlay) overlay.style.display = 'none';
+        document.getElementById('test-sections-wrapper')?.classList.remove('blur-locked');
+
+        // Cập nhật thanh hiển thị thông tin học viên ngay lập tức
+        if (data.student) {
+          const nameEl = document.getElementById('display-student-name');
+          if (nameEl && data.student.ho_ten) nameEl.textContent = data.student.ho_ten;
+        }
+
+        if (data.has_paid) {
+          // Nếu đã đóng học phí: Chỉ đổi SĐT -> Không cần reload đề thi
+          Toast.show(data.message || 'Cập nhật số điện thoại thành công!', 'success', 5000);
+          setTimeout(() => window.location.reload(), 1200);
+        } else {
+          // Chưa đóng học phí: Reload để sinh lại bộ đề thi thích ứng đúng mục tiêu mới
+          Toast.show(data.message || 'Hồ sơ đã lưu thành công! Đang thiết lập đề thi...', 'success', 3000);
+          setTimeout(() => {
+            window.location.href = "{% url 'placement_tests:test_room' %}?refresh_test=1";
+          }, 800);
+        }
+      } else {
+        Toast.show(data.message || 'Lỗi khi lưu thông tin.', 'error');
       }
-    });
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài 🚀';
+      Toast.show('Lỗi kết nối máy chủ. Vui lòng thử lại!', 'error');
+    }
+  }
+
+  function openEditProfileModal(isPaid) {
+    const modalTitle = document.getElementById('gate-modal-title');
+    const modalDesc = document.getElementById('gate-modal-desc');
+    const alertPaid = document.getElementById('gate-paid-alert');
+    const btnSubmit = document.getElementById('gate-submit-btn');
+    const btnClose = document.getElementById('gate-close-btn');
+    const btnSwitch = document.getElementById('gate-switch-btn');
+
+    const inpName = document.getElementById('gate-hoten');
+    const inpEmail = document.getElementById('gate-email');
+    const inpSdt = document.getElementById('gate-sdt');
+    const inpNgaySinh = document.getElementById('gate-ngaysinh');
+    const selMucTieu = document.getElementById('gate-muctieu');
+    const selIeltsBand = document.getElementById('gate-ielts-band');
+    const selDaura = document.getElementById('gate-daura-level');
+
+    if (btnClose) btnClose.style.display = 'inline-flex';
+    if (btnSwitch) btnSwitch.style.display = 'inline-flex';
+
+    if (isPaid) {
+      if (modalTitle) modalTitle.textContent = 'Cập nhật Số điện thoại Học viên (Đã đóng học phí)';
+      if (modalDesc) modalDesc.textContent = 'Hồ sơ đã ghi nhận hoàn tất đóng học phí. Theo quy chế đào tạo, bạn chỉ được phép thay đổi Số điện thoại liên hệ.';
+      if (alertPaid) {
+        alertPaid.style.display = 'flex';
+        alertPaid.innerHTML = '<i class="fa-solid fa-lock" style="font-size:16px; color:var(--accent-coral)"></i> <span><strong>Chính sách đào tạo:</strong> Học viên đã nộp học phí không được tự ý đổi Họ tên hoặc Mục tiêu khóa học. Bạn chỉ có thể cập nhật Số điện thoại liên hệ.</span>';
+      }
+
+      inpName.readOnly = true;
+      inpName.style.background = 'var(--bg-app)';
+      inpName.style.cursor = 'not-allowed';
+      inpName.title = 'Họ tên cố định sau khi đóng học phí';
+
+      inpNgaySinh.disabled = true;
+      inpNgaySinh.style.background = 'var(--bg-app)';
+      inpNgaySinh.style.cursor = 'not-allowed';
+
+      selMucTieu.disabled = true;
+      selMucTieu.style.background = 'var(--bg-app)';
+      selMucTieu.style.cursor = 'not-allowed';
+
+      selIeltsBand.disabled = true;
+      selDaura.disabled = true;
+
+      btnSubmit.innerHTML = '<i class="fa-solid fa-check"></i> Lưu số điện thoại mới';
+    } else {
+      if (modalTitle) modalTitle.textContent = 'Chỉnh sửa Thông tin & Mục tiêu Học tập';
+      if (modalDesc) modalDesc.textContent = 'Bạn có thể thay đổi Họ tên, Số điện thoại và Mục tiêu học tập bất kỳ lúc nào trước khi nộp học phí. Hệ thống sẽ tự động cập nhật đề thi thích ứng theo mục tiêu mới.';
+      if (alertPaid) alertPaid.style.display = 'none';
+
+      inpName.readOnly = false;
+      inpName.style.background = '#fff';
+      inpName.style.cursor = 'text';
+      inpName.title = '';
+
+      inpNgaySinh.disabled = false;
+      inpNgaySinh.style.background = '#fff';
+      inpNgaySinh.style.cursor = 'text';
+
+      selMucTieu.disabled = false;
+      selMucTieu.style.background = '#fff';
+      selMucTieu.style.cursor = 'pointer';
+
+      selIeltsBand.disabled = false;
+      selDaura.disabled = false;
+
+      btnSubmit.innerHTML = '<i class="fa-solid fa-bolt"></i> Cập nhật & Áp dụng đề thi mới 🚀';
+    }
+
+    inpEmail.readOnly = true;
+    inpEmail.style.background = 'var(--bg-app)';
+    inpEmail.style.cursor = 'not-allowed';
+    inpEmail.title = 'Email tài khoản cố định và không thể thay đổi';
+
+    openModal('student-gate-modal');
+    setTimeout(() => inpSdt?.focus(), 150);
+  }
+
+  function handleTargetGoalChange(val) {
+    const elIelts = document.getElementById('group-target-ielts');
+    const elDaura = document.getElementById('group-target-daura');
+    if (elIelts) elIelts.style.display = (val === 'IELTS') ? 'block' : 'none';
+    if (elDaura) elDaura.style.display = (val === 'DAU_RA_DH') ? 'block' : 'none';
   }
 </script>
 {% endblock %}

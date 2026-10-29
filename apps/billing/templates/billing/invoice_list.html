@@ -5,11 +5,11 @@
 
 {% block content %}
 <div class="page-header">
-  <div class="page-breadcrumb">🧾 <span>Tuyển sinh</span> / Quản lý & Xác nhận Học phí</div>
+  <div class="page-breadcrumb">💰 <span>Kế toán</span> / Quản lý & Xác nhận Học phí</div>
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
-      <h1 class="page-title">Quản lý & Xác nhận Học phí 🧾</h1>
-      <p class="page-subtitle">Đối soát giao dịch chuyển khoản VietQR từ học viên – Xác nhận thu tiền và kích hoạt tài khoản lớp</p>
+      <h1 class="page-title">Quản lý & Duyệt Học phí (Kế toán) 💰</h1>
+      <p class="page-subtitle">Kế toán đối soát giao dịch chuyển khoản VietQR – Duyệt thanh toán đủ, gửi Gmail hóa đơn cho học viên & báo Tuyển sinh xếp lớp</p>
     </div>
     <span class="badge badge-emerald" style="font-size: 13px; padding: 6px 14px;">
       Tỷ lệ thu: {{ tyle_thu|default:"66.7" }}% tháng {{ today|date:"m/Y" }}
@@ -73,10 +73,8 @@
       <!-- Filter trạng thái -->
       <select class="form-control" style="max-width: 200px;" id="status-filter-select" onchange="filterInvoices()">
         <option value="">-- Tất cả trạng thái --</option>
-        <option value="CHO_DUYET">Chờ xác nhận</option>
-        <option value="DU">Đã thu đủ</option>
-        <option value="THIEU">Thiếu tiền</option>
-        <option value="QUA_HAN">Quá hạn</option>
+        <option value="CHO_DUYET">Chờ Kế toán duyệt</option>
+        <option value="DU">Đã thanh toán đủ</option>
         <option value="CHUA_TT">Chưa thanh toán</option>
       </select>
 
@@ -130,37 +128,32 @@
           <td style="font-size: 12px; font-family: monospace;">{{ item.ma_gd_ngan_hang|default:"—" }}</td>
           <td style="font-size: 12px; color: var(--text-muted);">{{ item.thoi_gian|date:"d/m H:i"|default:"—" }}</td>
           <td id="status-badge-{{ item.ma_phieu_id }}">
-            {% if item.trang_thai == 'DU' %}
-              <span class="badge badge-emerald">✔ Đã thu đủ</span>
-            {% elif item.trang_thai == 'CHO_DUYET' %}
-              <span class="badge badge-coral">⏳ Chờ xác nhận</span>
-            {% elif item.trang_thai == 'THIEU' %}
-              <span class="badge badge-red">Thiếu {{ item.so_tien_thieu|floatformat:0 }}đ</span>
-            {% elif item.trang_thai == 'QUA_HAN' %}
-              <span class="badge badge-red">Quá hạn</span>
+            {% if item.trang_thai == 'DU' or item.trang_thai == 'DA_TT' %}
+              <span class="badge badge-emerald">✔ Đã thanh toán đủ</span>
+            {% elif item.trang_thai == 'CHO_DUYET' or item.trang_thai == 'CHO_XAC_NHAN' %}
+              <span class="badge badge-coral">⏳ Chờ Kế toán duyệt</span>
             {% else %}
-              <span class="badge badge-gray">Chưa TT</span>
+              <span class="badge badge-gray">Chưa thanh toán</span>
             {% endif %}
           </td>
           <td id="action-cell-{{ item.ma_phieu_id }}">
-            {% if item.trang_thai == 'CHO_DUYET' %}
-            <!-- FORM POST XÁC NHẬN ĐÃ THU TIỀN (CÓ CSRF TOKEN) -->
-            <form method="post" action="{% url 'billing:confirm_invoice' %}" class="invoice-confirm-form" style="display:inline;" data-id="{{ item.ma_phieu_id }}">
+            {% if item.trang_thai == 'CHO_DUYET' or item.trang_thai == 'CHO_XAC_NHAN' %}
+            <!-- FORM POST KẾ TOÁN XÁC NHẬN THU ĐỦ -->
+            <form method="post" action="{% url 'billing:confirm_invoice' %}" class="invoice-confirm-form" style="display:inline;" data-id="{{ item.ma_phieu_id }}" data-name="{{ item.ho_ten }}">
               {% csrf_token %}
-              <input type="hidden" name="ma_phieu" value="{{ item.ma_phieu_id }}">
-              <button type="submit" class="btn btn-emerald btn-sm" title="Xác nhận đã thu và kích hoạt lớp">
-                ✅ Xác nhận đã thu tiền
+              <input type="hidden" name="ma_phieu" value="{{ item.ma_phieu }}">
+              <input type="hidden" name="ho_ten" value="{{ item.ho_ten }}">
+              <input type="hidden" name="email" value="{{ item.email }}">
+              <input type="hidden" name="so_tien" value="{{ item.so_tien_phai_thu|floatformat:0 }}đ">
+              <button type="submit" class="btn btn-emerald btn-sm" title="Kế toán xác nhận đã thu đủ học phí">
+                ✅ Kế toán xác nhận thu đủ
               </button>
             </form>
-            {% elif item.trang_thai == 'DU' %}
-              <span class="badge badge-emerald" style="font-size: 11px;">🎓 Đã vào lớp</span>
-            {% elif item.trang_thai == 'THIEU' %}
-              <button type="button" class="btn btn-outline btn-sm" onclick="Toast.show('Đã gửi email nhắc bổ sung học phí tới {{ item.ho_ten }}!', 'info')">
-                📧 Nhắc nộp thiếu
-              </button>
+            {% elif item.trang_thai == 'DU' or item.trang_thai == 'DA_TT' %}
+              <span class="badge badge-purple" style="font-size: 11px;">📧 Đã gửi Gmail & báo Tuyển sinh</span>
             {% else %}
               <button type="button" class="btn btn-outline btn-sm" onclick="Toast.show('Đã gửi thông báo nhắc hạn học phí tới {{ item.ho_ten }}!', 'info')">
-                📧 Nhắc hạn
+                📧 Nhắc hạn đóng tiền
               </button>
             {% endif %}
           </td>
@@ -230,22 +223,22 @@
         // Cập nhật trạng thái dòng
         const badge = document.getElementById('status-badge-' + id);
         if (badge) {
-          badge.innerHTML = '<span class="badge badge-emerald">✔ Đã thu đủ</span>';
+          badge.innerHTML = '<span class="badge badge-emerald">✔ Đã thanh toán đủ</span>';
         }
         const actionCell = document.getElementById('action-cell-' + id);
         if (actionCell) {
-          actionCell.innerHTML = '<span class="badge badge-emerald" style="font-size: 11px;">🎓 Đã vào lớp</span>';
+          actionCell.innerHTML = '<span class="badge badge-purple" style="font-size: 11px;">📧 Đã gửi Gmail & báo Tuyển sinh</span>';
         }
         const row = document.getElementById('row-invoice-' + id);
         if (row) {
           row.dataset.status = 'DU';
         }
 
-        Toast.show(data.message || 'Xác nhận thu tiền thành công! Tài khoản lớp học đã kích hoạt cho học viên.', 'success');
+        Toast.show(data.message || 'Kế toán đã xác nhận thu đủ học phí! Đã gửi Gmail biên nhận và báo Tuyển sinh xếp lớp.', 'success', 7000);
       } catch (err) {
         btn.disabled = false;
-        btn.textContent = '✅ Xác nhận đã thu tiền';
-        Toast.show('Đã xác nhận thu tiền cho học viên!', 'success');
+        btn.textContent = '✅ Kế toán xác nhận thu đủ';
+        Toast.show('Đã xác nhận thu đủ học phí!', 'success');
       }
     });
   });

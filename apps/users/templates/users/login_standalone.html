@@ -1,0 +1,569 @@
+{% load static %}
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Đăng nhập hệ thống Academix – Xác thực bảo mật bằng Google SSO cho Học viên, Giảng viên & Nhân sự">
+  <title>Đăng nhập & Đăng ký Google | Academix Anh ngữ Nhóm 10</title>
+
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Core Stylesheet -->
+  <link rel="stylesheet" href="{% static 'css/academix.css' %}">
+  <link rel="stylesheet" href="{% static 'css/components.css' %}">
+
+  <style>
+    /* ─── STANDALONE LOGIN SCREEN FULLPAGE STYLING ─── */
+    body {
+      background: var(--bg-app);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .auth-standalone-header {
+      padding: 18px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .auth-logo-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .auth-logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent-coral), var(--accent-orange));
+      color: #fff;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 20px;
+      box-shadow: 0 4px 12px rgba(255, 126, 95, 0.3);
+    }
+
+    .auth-logo-text {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .auth-logo-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .auth-standalone-main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .auth-standalone-box {
+      width: 100%;
+      max-width: 980px;
+      background: var(--bg-card);
+      border: 1.5px solid var(--border-color);
+      border-radius: var(--radius-2xl);
+      box-shadow: var(--shadow-lg);
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      overflow: hidden;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @media (max-width: 860px) {
+      .auth-standalone-box {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left Branding Banner */
+    .auth-left-banner {
+      background: linear-gradient(145deg, #1E293B, #0F172A);
+      color: #fff;
+      padding: 44px 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .auth-left-banner::after {
+      content: '';
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(255, 126, 95, 0.18), transparent 70%);
+      pointer-events: none;
+    }
+
+    .banner-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--accent-peach);
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 700;
+      width: fit-content;
+      margin-bottom: 22px;
+    }
+
+    .banner-title {
+      font-size: 25px;
+      font-weight: 800;
+      line-height: 1.35;
+      margin-bottom: 14px;
+    }
+
+    .banner-desc {
+      font-size: 13.5px;
+      color: #94A3B8;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+
+    .role-guide-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 30px;
+    }
+
+    .role-guide-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+    }
+
+    .role-guide-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .role-guide-icon.coral {
+      background: rgba(255, 126, 95, 0.2);
+      color: var(--accent-peach);
+    }
+
+    .role-guide-icon.purple {
+      background: rgba(139, 92, 246, 0.2);
+      color: #C4B5FD;
+    }
+
+    .role-guide-icon.emerald {
+      background: rgba(16, 185, 129, 0.2);
+      color: #6EE7B7;
+    }
+
+    .role-guide-name {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #F8FAFC;
+    }
+
+    .role-guide-sub {
+      font-size: 12px;
+      color: #94A3B8;
+      margin-top: 2px;
+    }
+
+    /* Right Auth Section - Google Exclusive */
+    .auth-right-form {
+      padding: 48px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .auth-badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(66, 133, 244, 0.08);
+      border: 1px solid rgba(66, 133, 244, 0.2);
+      color: #1A73E8;
+      padding: 5px 14px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 700;
+      width: fit-content;
+      margin-bottom: 14px;
+    }
+
+    [data-theme="dark"] .auth-badge-pill {
+      background: rgba(66, 133, 244, 0.15);
+      border-color: rgba(66, 133, 244, 0.35);
+      color: #8AB4F8;
+    }
+
+    .auth-alert-box {
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      margin-bottom: 22px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: fadeIn .3s ease;
+    }
+
+    .auth-alert-box.error {
+      background: #FEF2F2;
+      border: 1px solid #FCA5A5;
+      color: #991B1B;
+    }
+
+    .auth-alert-box.success {
+      background: #ECFDF5;
+      border: 1px solid #A7F3D0;
+      color: #065F46;
+    }
+
+    /* ─── GOOGLE HERO BUTTON ─── */
+    .google-hero-container {
+      margin: 24px 0 28px 0;
+    }
+
+    .btn-google-hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 16px 20px;
+      border: 1.5px solid #D1D5DB;
+      border-radius: 16px;
+      background: #FFFFFF;
+      color: #1F2937;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      box-sizing: border-box;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+
+    .btn-google-hero:hover {
+      background: #F9FAFB;
+      border-color: #4285F4;
+      box-shadow: 0 8px 24px rgba(66, 133, 244, 0.18);
+      transform: translateY(-2px);
+    }
+
+    .btn-google-hero:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    [data-theme="dark"] .btn-google-hero {
+      background: #1E293B;
+      border-color: #334155;
+      color: #F8FAFC;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    [data-theme="dark"] .btn-google-hero:hover {
+      background: #243046;
+      border-color: #60A5FA;
+      box-shadow: 0 8px 24px rgba(96, 165, 250, 0.2);
+    }
+
+    .google-btn-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .google-icon-svg {
+      width: 26px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+
+    .google-btn-text-main {
+      font-size: 15.5px;
+      font-weight: 800;
+      line-height: 1.25;
+      text-align: left;
+    }
+
+    .google-btn-text-sub {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-top: 2px;
+      text-align: left;
+    }
+
+    .google-btn-arrow {
+      color: #9CA3AF;
+      font-size: 15px;
+      transition: transform 0.2s ease, color 0.2s ease;
+    }
+
+    .btn-google-hero:hover .google-btn-arrow {
+      color: #4285F4;
+      transform: translateX(4px);
+    }
+
+    /* Policy / Info Cards */
+    .auth-policy-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: var(--bg-app);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+    }
+
+    .policy-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--text-secondary);
+    }
+
+    .policy-item strong {
+      color: var(--text-primary);
+    }
+
+    .policy-icon {
+      font-size: 14px;
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    .policy-icon.emerald {
+      color: var(--accent-emerald);
+    }
+
+    .policy-icon.purple {
+      color: #8B5CF6;
+    }
+
+    /* Footer */
+    .auth-standalone-footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-card);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Top Simple Header -->
+  <header class="auth-standalone-header">
+    <div class="auth-logo-area">
+      <div class="auth-logo-icon">A</div>
+      <div>
+        <div class="auth-logo-text">Academix</div>
+        <div class="auth-logo-sub">Trung tâm Anh ngữ · Nhóm 10 QLQTKD</div>
+      </div>
+    </div>
+
+    <!-- Theme Switcher Pill -->
+    <div class="theme-pill-toggle" title="Đổi chế độ sáng / tối" onclick="ThemeManager.toggle()">
+      <div class="theme-pill-btn active" id="theme-sun-btn" title="Giao diện Sáng">
+        <i class="fa-regular fa-sun"></i>
+      </div>
+      <div class="theme-pill-btn" id="theme-moon-btn" title="Giao diện Tối">
+        <i class="fa-regular fa-moon"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Center Section -->
+  <main class="auth-standalone-main">
+    <div class="auth-standalone-box">
+
+      <!-- ─── CỘT TRÁI: GIỚI THIỆU HỆ THỐNG & VAI TRÒ (ACADEMIX THEME) ─── -->
+      <div class="auth-left-banner">
+        <div>
+          <div class="banner-tag">
+            <i class="fa-solid fa-shield-halved"></i> Cổng Xác thực Tập trung
+          </div>
+          <h1 class="banner-title">Hệ thống Quản lý Lớp học & Đánh giá AI</h1>
+          <p class="banner-desc">
+            Nền tảng kiểm tra trình độ 4 kỹ năng tiếng Anh bằng AI, phân loại học viên chuẩn CEFR
+            và quản lý quy trình đào tạo đồng bộ cho học viên, giảng viên và tư vấn viên.
+          </p>
+
+          <div class="role-guide-list">
+            <div class="role-guide-item">
+              <div class="role-guide-icon coral"><i class="fa-solid fa-graduation-cap"></i></div>
+              <div>
+                <div class="role-guide-name">Học viên (Student Portal)</div>
+                <div class="role-guide-sub">Làm bài test 4 kỹ năng, nhận điểm AI & xem lộ trình lớp học.</div>
+              </div>
+            </div>
+
+            <div class="role-guide-item">
+              <div class="role-guide-icon purple"><i class="fa-solid fa-chalkboard-user"></i></div>
+              <div>
+                <div class="role-guide-name">Giảng viên (Teacher Portal)</div>
+                <div class="role-guide-sub">Thẩm định bài Writing/Speaking do AI chấm và phê duyệt điểm chính thức.
+                </div>
+              </div>
+            </div>
+
+            <div class="role-guide-item">
+              <div class="role-guide-icon emerald"><i class="fa-solid fa-bullseye"></i></div>
+              <div>
+                <div class="role-guide-name">Tư vấn Tuyển sinh (Staff Portal)</div>
+                <div class="role-guide-sub">Tiếp nhận hồ sơ, tư vấn khóa học, xếp lớp và theo dõi học phí.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size: 11.5px; color: #64748B;">
+          © 2026 Academix · Phân tích & Mô hình hóa quy trình kinh doanh BPMN
+        </div>
+      </div>
+
+      <!-- ─── CỘT PHẢI: DUY NHẤT XÁC THỰC GOOGLE (ĐĂNG NHẬP / ĐĂNG KÝ TỨC THÌ) ─── -->
+      <div class="auth-right-form">
+
+        <!-- Thông báo lỗi hoặc thông báo hệ thống -->
+        {% if error %}
+        <div class="auth-alert-box error">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <div>{{ error }}</div>
+        </div>
+        {% endif %}
+
+        {% if msg == 'logged_out' %}
+        <div class="auth-alert-box success">
+          <i class="fa-solid fa-circle-check"></i>
+          <div>Bạn đã đăng xuất khỏi hệ thống thành công.</div>
+        </div>
+        {% endif %}
+
+        <div>
+          <div class="auth-badge-pill">
+            <i class="fa-brands fa-google"></i> Google SSO 1 Chạm
+          </div>
+          <h2 style="font-size: 23px; font-weight: 800; color: var(--text-primary); margin-bottom: 6px;">
+            Chào mừng bạn đến với Academix 👋
+          </h2>
+          <p style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 0;">
+            Hệ thống áp dụng phương thức đăng nhập và đăng ký duy nhất qua tài khoản <strong>Google / Gmail</strong>.
+          </p>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             NÚT BẤM GOOGLE SSO DUY NHẤT - CHUYỂN HƯỚNG TỨC THÌ
+             ═══════════════════════════════════════════════════ -->
+        <div class="google-hero-container">
+          <a href="{% provider_login_url 'google' %}" class="btn-google-hero" id="btn-google-login"
+            onclick="handleGoogleClick(this)" title="Bấm vào để chuyển hướng đăng nhập bằng Google ngay lập tức">
+            <div class="google-btn-left">
+              <svg class="google-icon-svg" viewBox="0 0 24 24">
+                <path fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <div>
+                <div class="google-btn-text-main" id="btn-main-text">Đăng nhập / Đăng ký bằng Google</div>
+                <div class="google-btn-text-sub" id="btn-sub-text">Chuyển hướng an toàn qua Google Workspace & Gmail
+                </div>
+              </div>
+            </div>
+            <i class="fa-solid fa-arrow-right google-btn-arrow" id="btn-icon-arrow"></i>
+          </a>
+        </div>
+
+
+        <div style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 22px;">
+          <i class="fa-solid fa-lock" style="color: var(--accent-emerald);"></i>
+          Bảo mật tiêu chuẩn OAuth 2.0 · Không cần ghi nhớ mật khẩu
+        </div>
+
+      </div><!-- .auth-right-form -->
+
+    </div><!-- .auth-standalone-box -->
+  </main>
+
+  <!-- Footer -->
+  <footer class="auth-standalone-footer">
+    Academix – Hệ thống Quản trị Quy trình Kinh doanh Lớp học Tiếng Anh | Nhóm 10 QLQTKD
+  </footer>
+
+  <!-- Scripts -->
+  <script src="{% static 'js/academix.js' %}"></script>
+  <script>
+    function handleGoogleClick(btn) {
+      const mainText = document.getElementById('btn-main-text');
+      const subText = document.getElementById('btn-sub-text');
+      const arrowIcon = document.getElementById('btn-icon-arrow');
+
+      if (mainText) mainText.textContent = 'Đang chuyển hướng sang Google...';
+      if (subText) subText.textContent = 'Vui lòng chờ trong giây lát';
+      if (arrowIcon) {
+        arrowIcon.className = 'fa-solid fa-spinner fa-spin google-btn-arrow';
+        arrowIcon.style.color = '#4285F4';
+      }
+      btn.style.opacity = '0.85';
+      btn.style.pointerEvents = 'none';
+    }
+  </script>
+</body>
+
+</html>

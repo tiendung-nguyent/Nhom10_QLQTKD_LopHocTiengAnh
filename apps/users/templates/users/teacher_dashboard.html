@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Dashboard Giáo viên Thẩm định{% endblock %}
+{% block title %}Dashboard Giáo viên{% endblock %}
 {% block page_heading %}Dashboard Giáo viên{% endblock %}
 
 {% block content %}
@@ -9,7 +9,7 @@
   <div class="page-breadcrumb">🏫 <span>Giáo viên</span> / Dashboard Thẩm định AI</div>
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
-      <h1 class="page-title">Dashboard Giáo viên Thẩm định 📚</h1>
+      <h1 class="page-title">Dashboard Giáo viên 📚</h1>
       <p class="page-subtitle">Quản lý và thẩm định kết quả chấm điểm AI — {{ today|date:"l, d/m/Y" }}</p>
     </div>
     <a href="{% url 'placement_tests:teacher_review' %}" class="btn btn-purple btn-lg">
@@ -92,7 +92,7 @@
             <div style="font-weight: 600; font-size: 13.5px;">{{ item.ten_hoc_vien }}</div>
             <div style="font-size: 11px; color: var(--text-muted);">{{ item.email }}</div>
           </td>
-          <td>{{ item.ten_bai }}</td>
+          <td><span class="badge badge-purple" style="font-size: 11.5px; font-weight: 700;">{{ item.ten_bai }}</span></td>
           <td>{{ item.ngay_thi|date:"d/m/Y H:i" }}</td>
           <td><span class="badge badge-purple">{{ item.speaking_score }}/30</span></td>
           <td><span class="badge badge-purple">{{ item.writing_score }}/30</span></td>

@@ -9,14 +9,11 @@
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
       <h1 class="page-title">Dashboard Tư vấn Tuyển sinh 🎯</h1>
-      <p class="page-subtitle">Theo dõi tiến trình hồ sơ, xếp lớp và xác nhận học phí — {{ today|date:"l, d/m/Y" }}</p>
+      <p class="page-subtitle">Theo dõi tiến trình hồ sơ và xếp lớp học viên sau khi Kế toán xác nhận học phí — {{ today|date:"l, d/m/Y" }}</p>
     </div>
     <div style="display: flex; gap: 8px;">
       <a href="{% url 'classes:class_assignment' %}" class="btn btn-purple btn-sm">
         🎓 Xếp lớp học viên
-      </a>
-      <a href="{% url 'billing:invoice_list' %}" class="btn btn-emerald btn-sm">
-        🧾 Xác nhận học phí
       </a>
     </div>
   </div>
@@ -163,10 +160,10 @@
     <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">{{ scored_students|default:6 }} hồ sơ chờ phân lớp</div>
   </a>
 
-  <a href="{% url 'billing:invoice_list' %}" class="card rounded-2xl shadow-sm" style="text-align: center; padding: 24px; text-decoration: none; cursor: pointer;">
-    <div style="font-size: 38px; margin-bottom: 10px;">🧾</div>
-    <div style="font-weight: 700; font-size: 15px; color: var(--text-primary);">Quản lý & Thu học phí</div>
-    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">{{ paid_students|default:4 }} giao dịch chờ đối soát</div>
+  <a href="{% url 'classes:class_status' %}" class="card rounded-2xl shadow-sm" style="text-align: center; padding: 24px; text-decoration: none; cursor: pointer;">
+    <div style="font-size: 38px; margin-bottom: 10px;">🏫</div>
+    <div style="font-weight: 700; font-size: 15px; color: var(--text-primary);">Tình trạng Lớp & Sĩ số</div>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">6 lớp đang mở · 78/115 học viên</div>
   </a>
 
   <div class="card rounded-2xl shadow-sm" style="text-align: center; padding: 24px; cursor: pointer;" onclick="Toast.show('Đang xuất báo cáo doanh thu & tuyển sinh Excel!', 'success')">

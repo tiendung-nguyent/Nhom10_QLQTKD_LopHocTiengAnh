@@ -11,7 +11,8 @@
   <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
 
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -45,7 +46,7 @@
         </button>
       </div>
 
-      <!-- Quick Role Switcher Capsule (Chuyển vai trò Demo) -->
+      <!-- Quick Role Switcher Capsule (Chuyển vai trò Demo)
       <div class="role-switch-container" title="Chọn vai trò người dùng">
         <a href="?role=STUDENT" class="role-pill-btn {% if current_role == 'STUDENT' %}active{% endif %}"
           title="Cổng Học viên">Học viên</a>
@@ -53,7 +54,7 @@
           title="Cổng Giáo viên">Giáo viên</a>
         <a href="?role=STAFF" class="role-pill-btn {% if current_role == 'STAFF' %}active{% endif %}"
           title="Cổng Tuyển sinh">Tuyển sinh</a>
-      </div>
+      </div> -->
 
       <!-- Navigation Menu theo Role (DTL Syntax) -->
       <nav class="sidebar-nav">
@@ -67,12 +68,14 @@
           <span>Dashboard Học viên</span>
           <span class="nav-arrow">→</span>
         </a>
-        <a href="{% url 'placement_tests:test_room' %}" class="nav-item" data-href="{% url 'placement_tests:test_room' %}">
+        <a href="{% url 'placement_tests:test_room' %}" class="nav-item"
+          data-href="{% url 'placement_tests:test_room' %}">
           <span class="nav-icon"><i class="fa-solid fa-file-pen"></i></span>
           <span>Phòng thi kiểm tra</span>
           <span class="nav-arrow">→</span>
         </a>
-        <a href="{% url 'placement_tests:test_result' %}" class="nav-item" data-href="{% url 'placement_tests:test_result' %}">
+        <a href="{% url 'placement_tests:test_result' %}" class="nav-item"
+          data-href="{% url 'placement_tests:test_result' %}">
           <span class="nav-icon"><i class="fa-solid fa-chart-pie"></i></span>
           <span>Kết quả & Điểm số</span>
           <span class="nav-arrow">→</span>
@@ -91,7 +94,8 @@
           <span>Dashboard Giáo viên</span>
           <span class="nav-arrow">→</span>
         </a>
-        <a href="{% url 'placement_tests:teacher_review' %}" class="nav-item" data-href="{% url 'placement_tests:teacher_review' %}">
+        <a href="{% url 'placement_tests:teacher_review' %}" class="nav-item"
+          data-href="{% url 'placement_tests:teacher_review' %}">
           <span class="nav-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
           <span>Duyệt bài AI</span>
           <span class="nav-badge">{{ pending_review_count|default:7 }}</span>
@@ -106,37 +110,36 @@
           <span>Dashboard Tuyển sinh</span>
           <span class="nav-arrow">→</span>
         </a>
-        <a href="{% url 'classes:class_assignment' %}" class="nav-item" data-href="{% url 'classes:class_assignment' %}">
+        <a href="{% url 'classes:class_assignment' %}" class="nav-item"
+          data-href="{% url 'classes:class_assignment' %}">
           <span class="nav-icon"><i class="fa-solid fa-users-line"></i></span>
           <span>Xếp lớp học viên</span>
           <span class="nav-badge" style="background:var(--accent-purple);">{{ waiting_assign_count|default:6 }}</span>
           <span class="nav-arrow">→</span>
         </a>
+        <a href="{% url 'classes:class_status' %}" class="nav-item"
+          data-href="{% url 'classes:class_status' %}">
+          <span class="nav-icon"><i class="fa-solid fa-school"></i></span>
+          <span>Tình trạng Lớp & Sĩ số</span>
+          <span class="nav-badge" style="background:var(--accent-blue);">{{ open_classes_count|default:6 }}</span>
+          <span class="nav-arrow">→</span>
+        </a>
+
+        {# ── D. KẾ TOÁN (Accountant Portal) ── #}
+        {% elif request.user.role == 'ACCOUNTANT' or current_role == 'ACCOUNTANT' %}
+        <div class="sidebar-section-label">Kế toán (Accountant Portal)</div>
+        <a href="{% url 'users:accountant_dashboard' %}" class="nav-item" data-href="{% url 'users:accountant_dashboard' %}">
+          <span class="nav-icon"><i class="fa-solid fa-table-cells-large"></i></span>
+          <span>Dashboard Kế toán</span>
+          <span class="nav-arrow">→</span>
+        </a>
         <a href="{% url 'billing:invoice_list' %}" class="nav-item" data-href="{% url 'billing:invoice_list' %}">
           <span class="nav-icon"><i class="fa-solid fa-receipt"></i></span>
           <span>Quản lý học phí</span>
-          <span class="nav-badge">{{ pending_payment_count|default:4 }}</span>
+          <span class="nav-badge" style="background:var(--accent-emerald);">{{ pending_payment_count|default:3 }}</span>
           <span class="nav-arrow">→</span>
         </a>
         {% endif %}
-
-        <!-- Navigation Chuyển Cổng Nhanh (Demo All Roles) -->
-        <div class="sidebar-section-label">Khám phá cổng (Demo)</div>
-        <a href="{% url 'users:student_dashboard' %}?role=STUDENT" class="nav-item">
-          <span class="nav-icon"><i class="fa-solid fa-graduation-cap"></i></span>
-          <span>Cổng Học viên</span>
-          <span class="nav-arrow">→</span>
-        </a>
-        <a href="{% url 'users:teacher_dashboard' %}?role=TEACHER" class="nav-item">
-          <span class="nav-icon"><i class="fa-solid fa-chalkboard-user"></i></span>
-          <span>Cổng Giáo viên</span>
-          <span class="nav-arrow">→</span>
-        </a>
-        <a href="{% url 'users:staff_dashboard' %}?role=STAFF" class="nav-item">
-          <span class="nav-icon"><i class="fa-solid fa-bullseye"></i></span>
-          <span>Cổng Tuyển sinh</span>
-          <span class="nav-arrow">→</span>
-        </a>
 
         {% endblock %}
       </nav>
@@ -146,30 +149,21 @@
 
       <!-- Sidebar Footer: Cài đặt, Đăng xuất & Profile User -->
       <div class="sidebar-footer">
-        <a href="/admin/" class="nav-item sidebar-footer-item">
-          <span class="nav-icon"><i class="fa-solid fa-gear"></i></span>
-          <span>Quản trị hệ thống</span>
-          <span class="nav-arrow">→</span>
-        </a>
-        <a href="?role=STUDENT" class="nav-item sidebar-footer-item">
+        <a href="{% url 'users:student_logout' %}" class="nav-item sidebar-footer-item">
           <span class="nav-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span>
           <span>Đăng xuất</span>
         </a>
 
         <!-- Profile Mini tóm tắt ở dưới Sidebar -->
         <div class="sidebar-profile">
-          <div class="avatar">
-            {% if current_role == 'TEACHER' %}GV
-            {% elif current_role == 'STAFF' %}TS
-            {% else %}HV{% endif %}
+          <div class="avatar" id="sidebar-avatar-circle">
+            {{ user_initials|default:"HV" }}
           </div>
           <div class="profile-info">
-            <div class="profile-name">
-              {% if current_role == 'TEACHER' %}Ms. Trần Thanh Thảo
-              {% elif current_role == 'STAFF' %}Lê Văn Tư Vấn
-              {% else %}Nguyễn Văn A{% endif %}
+            <div class="profile-name" id="sidebar-user-name">
+              {{ display_user_name|default:"Người dùng" }}
             </div>
-            <div class="profile-role">
+            <div class="profile-role" id="sidebar-user-role">
               {{ role_label|default:"Học viên" }}
             </div>
           </div>
@@ -186,14 +180,14 @@
 
       <!-- Top Header (Academix Clean Topbar) -->
       <header class="top-header">
-        
+
         <!-- Left Title / Breadcrumb Box -->
         <div class="header-left">
           <button class="header-btn" id="menu-toggle" onclick="toggleSidebar()" title="Toggle Menu">
             <i class="fa-solid fa-bars"></i>
           </button>
           <div class="header-title-box">
-            <div class="header-title">{% block page_heading %}{% block header_title %}Dashboard{% endblock %}{% endblock %}</div>
+            <div class="header-title">{% block page_heading %}Dashboard{% endblock %}</div>
             <div class="header-date" id="header-live-date">23 September, 2024</div>
           </div>
         </div>
@@ -232,22 +226,28 @@
               <div class="notif-item">
                 <span style="font-size: 16px; color: var(--accent-purple);">✦</span>
                 <div>
-                  <div style="font-weight: 600; font-size: 12px; color: var(--accent-purple);">AI chấm sơ bộ hoàn tất</div>
-                  <div style="color: var(--text-muted); font-size: 11px;">Bài Speaking của Nguyễn Thị Lan đã có điểm gợi ý.</div>
+                  <div style="font-weight: 600; font-size: 12px; color: var(--accent-purple);">AI chấm sơ bộ hoàn tất
+                  </div>
+                  <div style="color: var(--text-muted); font-size: 11px;">Bài Speaking của Nguyễn Thị Lan đã có điểm gợi
+                    ý.</div>
                 </div>
               </div>
               <div class="notif-item">
                 <span style="font-size: 16px; color: var(--accent-emerald);">✅</span>
                 <div>
-                  <div style="font-weight: 600; font-size: 12px; color: var(--accent-emerald);">Giáo viên đã duyệt điểm</div>
-                  <div style="color: var(--text-muted); font-size: 11px;">Hồ sơ đã chuyển sang bộ phận Tuyển sinh để xếp lớp.</div>
+                  <div style="font-weight: 600; font-size: 12px; color: var(--accent-emerald);">Giáo viên đã duyệt điểm
+                  </div>
+                  <div style="color: var(--text-muted); font-size: 11px;">Hồ sơ đã chuyển sang bộ phận Tuyển sinh để xếp
+                    lớp.</div>
                 </div>
               </div>
               <div class="notif-item">
                 <span style="font-size: 16px; color: var(--accent-orange);">💰</span>
                 <div>
-                  <div style="font-weight: 600; font-size: 12px; color: var(--accent-orange);">Học viên đã chuyển khoản</div>
-                  <div style="color: var(--text-muted); font-size: 11px;">Giao dịch 4.500.000đ từ Nguyễn Thị Lan đang chờ xác nhận.</div>
+                  <div style="font-weight: 600; font-size: 12px; color: var(--accent-orange);">Học viên đã chuyển khoản
+                  </div>
+                  <div style="color: var(--text-muted); font-size: 11px;">Giao dịch 4.500.000đ từ Nguyễn Thị Lan đang
+                    chờ xác nhận.</div>
                 </div>
               </div>
             </div>
@@ -256,45 +256,30 @@
           <!-- User Capsule Profile in Header (Like Academix Image 2) -->
           <div class="dropdown-wrapper">
             <div class="header-user-capsule" id="user-avatar-btn" title="Tài khoản người dùng">
-              <div class="user-avatar-circle">
-                {% if current_role == 'TEACHER' %}GV
-                {% elif current_role == 'STAFF' %}TS
-                {% else %}HV{% endif %}
+              <div class="user-avatar-circle" id="header-avatar-circle">
+                {{ user_initials|default:"HV" }}
               </div>
               <div class="user-text">
-                <span class="user-text-name">
-                  {% if current_role == 'TEACHER' %}Ms. Thanh Thảo
-                  {% elif current_role == 'STAFF' %}Lê Văn Tư Vấn
-                  {% else %}Nguyễn Văn A{% endif %}
+                <span class="user-text-name" id="header-user-name">
+                  {{ display_user_name|default:"Người dùng" }}
                 </span>
-                <span class="user-text-role">{{ role_label|default:"Học viên" }}</span>
+                <span class="user-text-role" id="header-user-role">{{ role_label|default:"Học viên" }}</span>
               </div>
               <i class="fa-solid fa-chevron-down user-chevron"></i>
             </div>
 
             <div class="user-dropdown-menu" id="user-dropdown">
               <div class="user-dropdown-header">
-                <div style="font-weight: 700; font-size: 13px;">
-                  {% if current_role == 'TEACHER' %}Ms. Trần Thanh Thảo
-                  {% elif current_role == 'STAFF' %}Lê Văn Tư Vấn
-                  {% else %}Nguyễn Văn A{% endif %}
+                <div style="font-weight: 700; font-size: 13px;" id="dropdown-user-name">
+                  {{ display_user_name|default:"Người dùng" }}
                 </div>
                 <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
-                  Vai trò: <span class="badge badge-purple">{{ role_label|default:"Học viên" }}</span>
+                  Vai trò: <span class="badge badge-purple" id="dropdown-user-role">{{ role_label|default:"Học viên" }}</span>
                 </div>
               </div>
-              <a href="{% url 'users:student_dashboard' %}?role=STUDENT" class="user-dropdown-link">
-                🎒 Chuyển sang Cổng Học viên
-              </a>
-              <a href="{% url 'users:teacher_dashboard' %}?role=TEACHER" class="user-dropdown-link">
-                👩‍🏫 Chuyển sang Cổng Giáo viên
-              </a>
-              <a href="{% url 'users:staff_dashboard' %}?role=STAFF" class="user-dropdown-link">
-                🎯 Chuyển sang Cổng Tuyển sinh
-              </a>
-              <div style="border-top: 1px solid var(--border-color); margin: 4px 0;"></div>
-              <a href="/admin/" class="user-dropdown-link">
-                ⚙️ Trang quản trị Admin
+              <div style="border-top: 1px solid var(--border-color); margin: 6px 0;"></div>
+              <a href="{% url 'users:student_logout' %}" class="user-dropdown-link" style="color: #EF4444;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất
               </a>
             </div>
           </div>

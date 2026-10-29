@@ -11,9 +11,14 @@
       <h1 class="page-title">Quản lý Hồ sơ & Xếp lớp Học viên 🎓</h1>
       <p class="page-subtitle">Danh sách học viên đã có điểm chính thức qua GV duyệt – Phân lớp dựa trên khung năng lực</p>
     </div>
-    <span class="badge badge-purple" style="font-size: 13px; padding: 6px 14px;">
-      ✦ Khung năng lực CEFR: A1 – A2 – B1 – B2 – C1
-    </span>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <a href="{% url 'classes:class_status' %}" class="btn btn-outline btn-sm">
+        🏫 Xem Tình trạng Lớp & Sĩ số
+      </a>
+      <span class="badge badge-purple" style="font-size: 13px; padding: 6px 14px;">
+        ✦ CEFR: A1 – A2 – B1 – B2 – C1
+      </span>
+    </div>
   </div>
 </div>
 
@@ -43,6 +48,10 @@
         <option value="chua">Chờ xếp lớp</option>
         <option value="da">Đã xếp lớp</option>
       </select>
+
+      <button type="button" class="btn btn-outline btn-sm" onclick="resetFilters()">
+        ↺ Đặt lại
+      </button>
     </div>
   </div>
 </div>
@@ -114,46 +123,6 @@
   </div>
 </div>
 
-<!-- ─── DANH SÁCH LỚP HỌC ĐANG MỞ & TÌNH TRẠNG SĨ SỐ ──────── -->
-<div class="card rounded-2xl shadow-sm">
-  <div class="card-header">
-    <div>
-      <div class="card-title">🏫 Tình trạng các Lớp học đang mở & Sĩ số tuyển sinh</div>
-      <div class="card-subtitle">Theo dõi tỷ lệ lấp đầy sĩ số các lớp để tư vấn phù hợp</div>
-    </div>
-    <span class="badge badge-blue">{{ lop_hocs|length|default:6 }} lớp mở</span>
-  </div>
-  <div class="card-body">
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px;">
-      {% for lop in lop_hocs %}
-      <div class="class-card {% if lop.ty_le < 60 %}available{% elif lop.ty_le < 90 %}nearly-full{% else %}full{% endif %}">
-        <div style="flex: 1;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">{{ lop.ten_lop }}</div>
-            {% if lop.ty_le >= 100 %}
-              <span class="badge badge-red" style="font-size: 10px;">Đã đầy</span>
-            {% elif lop.ty_le >= 80 %}
-              <span class="badge badge-coral" style="font-size: 10px;">Sắp đầy</span>
-            {% else %}
-              <span class="badge badge-emerald" style="font-size: 10px;">Còn chỗ</span>
-            {% endif %}
-          </div>
-          <div style="font-size: 12px; color: var(--text-muted); margin: 3px 0 8px;">{{ lop.lich_hoc }}</div>
-
-          <div class="capacity-bar">
-            <div class="capacity-fill {% if lop.ty_le < 60 %}low{% elif lop.ty_le < 90 %}mid{% else %}high{% endif %}" style="width: {{ lop.ty_le }}%;"></div>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px;">
-            <span>Sĩ số: <strong>{{ lop.si_so_hien_tai }}/{{ lop.si_so_toi_da }}</strong> học viên</span>
-            <span>{{ lop.ty_le }}% lấp đầy</span>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</div>
-
 <!-- ─── MODAL DROPDOWN XẾP LỚP (FETCH API POST) ────────────── -->
 <div class="modal-overlay" id="assign-modal">
   <div class="modal-box">
@@ -211,6 +180,20 @@
 
 {% block extra_js %}
 <script>
+  // Tự động đọc tham số ?level= trên URL nếu có (từ trang Tình trạng Lớp chuyển sang)
+  window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const levelParam = urlParams.get('level');
+    if (levelParam) {
+      const levelSelect = document.getElementById('level-filter');
+      if (levelSelect) {
+        levelSelect.value = levelParam;
+        filterStudents();
+        Toast.show(`Đang lọc học viên trình độ ${levelParam} theo đề xuất`, 'info');
+      }
+    }
+  });
+
   // ─── MỞ MODAL XẾP LỚP ──────────────────────────────────────
   function openAssignModal(id, name, trinh_do, khoa) {
     document.getElementById('modal-hstv-id').value = id;
@@ -235,6 +218,17 @@
   }
 
   document.getElementById('student-search-input')?.addEventListener('input', filterStudents);
+
+  function resetFilters() {
+    const searchInput = document.getElementById('student-search-input');
+    const levelSelect = document.getElementById('level-filter');
+    const statusSelect = document.getElementById('status-filter');
+    if (searchInput) searchInput.value = '';
+    if (levelSelect) levelSelect.value = '';
+    if (statusSelect) statusSelect.value = '';
+    filterStudents();
+    Toast.show('Đã đặt lại bộ lọc danh sách học viên', 'info');
+  }
 
   // ─── XỬ LÝ SUBMIT XẾP LỚP QUA FETCH API ────────────────────
   const assignForm = document.getElementById('assign-form');

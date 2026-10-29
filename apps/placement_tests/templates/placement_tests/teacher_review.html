@@ -13,7 +13,8 @@
       <p class="page-subtitle">
         Học viên: <strong style="color: var(--text-primary);">{{ hoc_vien_name|default:"Nguyễn Thị Lan" }}</strong> · 
         Phiên thi: <strong>#{{ phien.ma_phien|default:"001" }}</strong> · 
-        Thi ngày: {{ phien.hoan_thanh|date:"d/m/Y H:i"|default:"28/10/2026 10:45" }}
+        Thi ngày: {% if phien.hoan_thanh %}{{ phien.hoan_thanh|date:"d/m/Y H:i" }}{% else %}28/10/2026 10:45{% endif %} · 
+        Mục tiêu: <span class="badge badge-coral" style="font-size: 11.5px; font-weight: 700;">{{ ten_bai|default:"IELTS (5.0 - 6.5)" }}</span>
       </p>
     </div>
     <!-- Badge kỹ năng đang xét -->

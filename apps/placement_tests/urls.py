@@ -10,5 +10,8 @@ urlpatterns = [
     path('submit/mcq/', views.submit_mcq, name='submit_mcq'),
     path('submit/writing/', views.submit_writing, name='submit_writing'),
     path('submit/speaking/', views.submit_speaking, name='submit_speaking'),
+    path('submit/writing-speaking/', views.submit_writing_speaking, name='submit_writing_speaking'),
+    path('reset/mcq/', views.reset_mcq, name='reset_mcq'),
+    path('reset/all/', views.reset_full_test, name='reset_full_test'),
     path('approve/', views.approve_skill, name='approve_skill'),
 ]

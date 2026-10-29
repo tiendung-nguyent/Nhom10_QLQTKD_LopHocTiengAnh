@@ -9,9 +9,9 @@ class PhieuHocPhi(models.Model):
 
     class TrangThai(models.TextChoices):
         CHUA_TT = 'CHUA_TT', 'Chưa thanh toán'
-        THIEU = 'THIEU', 'Thiếu'
-        DU = 'DU', 'Đủ'
-        QUA_HAN = 'QUA_HAN', 'Quá hạn'
+        CHO_XAC_NHAN = 'CHO_XAC_NHAN', 'Chờ kế toán xác nhận'
+        DA_TT = 'DA_TT', 'Đã thanh toán'
+        DU = 'DU', 'Đã thanh toán'
 
     ghi_danh = models.ForeignKey(
         GhiDanh,
@@ -28,7 +28,7 @@ class PhieuHocPhi(models.Model):
     so_tien = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Số tiền')
     han_thanh_toan = models.DateField(verbose_name='Hạn thanh toán')
     trang_thai = models.CharField(
-        max_length=10,
+        max_length=20,
         choices=TrangThai.choices,
         default=TrangThai.CHUA_TT,
         verbose_name='Trạng thái',
@@ -73,7 +73,7 @@ class GiaoDichThanhToan(models.Model):
     so_tien = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Số tiền')
     thoi_gian = models.DateTimeField(verbose_name='Thời gian giao dịch')
     nguon = models.CharField(
-        max_length=10,
+        max_length=20,
         choices=Nguon.choices,
         default=Nguon.WEBHOOK,
         verbose_name='Nguồn',

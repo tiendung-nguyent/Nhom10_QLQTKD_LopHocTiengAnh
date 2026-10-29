@@ -16,8 +16,7 @@ import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -42,6 +41,14 @@ INSTALLED_APPS = [
     'apps.placement_tests',
     'apps.classes',
     'apps.billing',
+# 1. Thêm app sites bắt buộc của Django
+    'django.contrib.sites',
+
+    # 2. Thêm các app của allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 ]
 
 MIDDLEWARE = [
@@ -53,6 +60,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
+    'apps.users.middleware.RequireLoginMiddleware',
     ]
 
 ROOT_URLCONF = 'config.urls'
@@ -130,3 +139,51 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Site ID cấu hình cho Django Sites & allauth
+# Site 2 = 127.0.0.1:8000, Site 3 = nhom10-qlqtkd-lophoctienganh.onrender.com
+if 'RENDER' in os.environ:
+    SITE_ID = 3
+else:
+    SITE_ID = int(os.environ.get('DJANGO_SITE_ID', 2))
+
+# Cấu hình allauth Google SSO:
+# Bật SOCIALACCOUNT_LOGIN_ON_GET = True để khi bấm vào nút Google là lập tức chuyển hướng đăng nhập
+SOCIALACCOUNT_LOGIN_ON_GET = True
+ACCOUNT_LOGOUT_ON_GET = True
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*']
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_UNIQUE_EMAIL = True
+SOCIALACCOUNT_QUERY_EMAIL = True
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+        'FETCH_USERINFO': True,
+    }
+}
+
+# Đường dẫn trang đăng nhập mặc định khi chưa xác thực
+LOGIN_URL = '/login/'
+
+# Đường dẫn chuyển hướng sau khi đăng nhập thành công
+LOGIN_REDIRECT_URL = '/users/redirect-by-role/'
+
+# Đường dẫn chuyển hướng sau khi đăng xuất
+LOGOUT_REDIRECT_URL = '/'
+
+# Cấu hình gửi email thông báo kết quả bài test & học phí qua SMTP Gmail
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'academixenglishcenter@gmail.com'
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = 'Academix English Center <academixenglishcenter@gmail.com>'

@@ -17,16 +17,20 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import redirect
+from apps.users import views as user_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 
     # App URLs
+    path('login/', user_views.student_auth, name='login'),
+    path('accounts/', include('allauth.urls')),
     path('users/', include('apps.users.urls')),
     path('tests/', include('apps.placement_tests.urls')),
+    path('placement/<path:subpath>', lambda request, subpath: redirect(f'/tests/{subpath}')),
     path('classes/', include('apps.classes.urls')),
     path('billing/', include('apps.billing.urls')),
 
-    # Root redirect → Student Dashboard (default demo page)
-    path('', lambda request: redirect('users:student_dashboard')),
+    # Trang đầu tiên khi bấm vào: hiển thị trực tiếp màn hình Đăng nhập / Đăng ký Google
+    path('', user_views.student_auth, name='home'),
 ]
