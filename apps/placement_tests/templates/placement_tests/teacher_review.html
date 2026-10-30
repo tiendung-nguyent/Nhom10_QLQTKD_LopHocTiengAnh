@@ -5,58 +5,70 @@
 {% block page_heading %}Thẩm định & Duyệt bài AI{% endblock %}
 
 {% block content %}
+
+{# ══════════════════════════════════════════════════════════════ #}
+{# PHẦN 1: GIAO DIỆN CHI TIẾT CHẤM CHỮA (KHI ĐÃ BẤM "DUYỆT" 1 BÀI) #}
+{# ══════════════════════════════════════════════════════════════ #}
+{% if is_detail_view and detail %}
+
 {% if is_approved_now %}
 <div style="background: var(--emerald-light); border: 1.5px solid #A7F3D0; border-radius: var(--radius-xl); padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
   <i class="fa-solid fa-circle-check" style="font-size: 24px; color: var(--accent-emerald);"></i>
   <div>
-    <strong>Phê duyệt & Điều chỉnh điểm thành công!</strong>
-    <div style="font-size: 13px; margin-top: 2px;">Điểm số chính thức của kỹ năng <strong>{{ current_skill }}</strong> cho phiên thi #{{ phien.ma_phien }} đã được khóa và tự động đồng bộ sang bộ phận Tuyển sinh để phân lớp và thu học phí.</div>
+    <strong>Phê duyệt &amp; Điều chỉnh điểm thành công!</strong>
+    <div style="font-size: 13px; margin-top: 2px;">Điểm số chính thức của kỹ năng <strong>{{ detail.current_skill }}</strong> cho phiên thi #{{ detail.ma_phien }} đã được khóa và tự động đồng bộ sang bộ phận Tuyển sinh để phân lớp và thu học phí.</div>
   </div>
 </div>
 {% endif %}
 
 <div class="page-header">
-  <div class="page-breadcrumb">🤖 <span>Giáo viên</span> / Thẩm định bài thi AI</div>
+  <div class="page-breadcrumb">🤖 <span>Giáo viên</span> / <a href="{% url 'placement_tests:teacher_review' %}?filter={{ current_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" style="color: inherit; text-decoration: underline;">Danh sách bài thi</a> / Thẩm định phiên #{{ detail.ma_phien }}</div>
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
-      <h1 class="page-title">Duyệt bài AI – So sánh & Điều chỉnh điểm 🤖</h1>
+      <h1 class="page-title">Thẩm định bài thi #{{ detail.ma_phien }} — {{ detail.hoc_vien_name }} 🤖</h1>
       <p class="page-subtitle">
-        Học viên: <strong style="color: var(--text-primary);">{{ hoc_vien_name|default:"Nguyễn Thị Lan" }}</strong> · 
-        Phiên thi: <strong>#{{ phien.ma_phien|default:"001" }}</strong> · 
-        Thi ngày: {% if phien.hoan_thanh %}{{ phien.hoan_thanh|date:"d/m/Y H:i" }}{% else %}28/10/2026 10:45{% endif %} · 
-        Mục tiêu: <span class="badge badge-coral" style="font-size: 11.5px; font-weight: 700;">{{ ten_bai|default:"IELTS (5.0 - 6.5)" }}</span>
+        Học viên: <strong style="color: var(--text-primary);">{{ detail.hoc_vien_name }}</strong> ({{ detail.email }}) · 
+        SĐT: <strong>{{ detail.so_dien_thoai }}</strong> · 
+        Phiên thi: <strong>#{{ detail.ma_phien }}</strong> · 
+        Thi ngày: {{ detail.ngay_thi|date:"d/m/Y H:i" }} · 
+        Mục tiêu: <span class="badge badge-coral" style="font-size: 11.5px; font-weight: 700;">{{ detail.ten_bai }}</span>
       </p>
     </div>
-    <!-- Badge kỹ năng đang xét -->
-    <span class="badge badge-purple" style="font-size: 13px; padding: 6px 14px;">
-      ✦ Quy trình thẩm định 3 Cột (Side-by-Side)
-    </span>
+    <a href="{% url 'placement_tests:teacher_review' %}?filter={{ current_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-outline btn-sm">
+      <i class="fa-solid fa-arrow-left"></i> Quay lại Danh sách bài thi
+    </a>
   </div>
 </div>
 
-<!-- ─── BỘ LỌC CHỌN KỸ NĂNG & PHIÊN THI ───────────────────── -->
+<!-- ─── BỘ CHỌN KỸ NĂNG THẨM ĐỊNH (SPEAKING / WRITING / TRẮC NGHIỆM) ─── -->
 <div class="card rounded-2xl shadow-sm" style="margin-bottom: 20px;">
   <div class="card-header" style="justify-content: flex-start; gap: 12px; flex-wrap: wrap;">
     <div class="card-title" style="font-size: 13px; color: var(--text-muted);">Chọn Kỹ năng thẩm định:</div>
-    <a href="?session={{ phien.ma_phien|default:1 }}&skill=SPEAKING"
-       class="btn {% if current_skill == 'SPEAKING' or not current_skill %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
+    <a href="?session={{ detail.phien_id }}&skill=SPEAKING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+       class="btn {% if detail.current_skill == 'SPEAKING' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
       🎙️ Speaking (Ghi âm)
-      <span class="badge badge-coral" style="font-size: 9px; margin-left: 4px;">Chờ duyệt</span>
+      <span class="badge {% if detail.speaking_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 9px; margin-left: 4px;">
+        {% if detail.speaking_status == 'GV_DA_DUYET' %}Đã duyệt{% else %}Chờ duyệt{% endif %}
+      </span>
     </a>
-    <a href="?session={{ phien.ma_phien|default:1 }}&skill=WRITING"
-       class="btn {% if current_skill == 'WRITING' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
+    <a href="?session={{ detail.phien_id }}&skill=WRITING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+       class="btn {% if detail.current_skill == 'WRITING' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
       ✍️ Writing (Tự luận)
-      <span class="badge badge-purple" style="font-size: 9px; margin-left: 4px;">AI đã chấm</span>
+      <span class="badge {% if detail.writing_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-purple{% endif %}" style="font-size: 9px; margin-left: 4px;">
+        {% if detail.writing_status == 'GV_DA_DUYET' %}Đã duyệt{% else %}AI đã chấm{% endif %}
+      </span>
     </a>
-    <a href="?session={{ phien.ma_phien|default:1 }}&skill=TRAC_NGHIEM"
-       class="btn {% if current_skill == 'TRAC_NGHIEM' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
+    <a href="?session={{ detail.phien_id }}&skill=TRAC_NGHIEM{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+       class="btn {% if detail.current_skill == 'TRAC_NGHIEM' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
       📝 Trắc nghiệm (40đ)
-      <span class="badge badge-emerald" style="font-size: 9px; margin-left: 4px;">Tự động</span>
+      <span class="badge {% if detail.mcq_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-emerald{% endif %}" style="font-size: 9px; margin-left: 4px;">
+        {% if detail.mcq_status == 'GV_DA_DUYET' %}Đã duyệt{% else %}Tự động{% endif %}
+      </span>
     </a>
   </div>
 </div>
 
-<!-- ─── GIAO DIỆN SO SÁNH & ĐIỀU CHỈNH (SIDE-BY-SIDE 3 CỘT) ─ -->
+<!-- ─── GIAO DIỆN SO SÁNH & ĐIỀU CHỈNH 3 CỘT (SIDE-BY-SIDE) ─── -->
 <div class="review-grid" style="margin-bottom: 24px;">
 
   <!-- ═══════════════════════════════════════════════════════
@@ -67,8 +79,8 @@
       <div>
         <div class="card-title">📄 1. Câu trả lời của Học viên</div>
         <div class="card-subtitle">
-          {% if current_skill == 'WRITING' %}Bài viết tự luận (Task 1 & Task 2)
-          {% elif current_skill == 'TRAC_NGHIEM' %}Chi tiết bài làm Trắc nghiệm (40 điểm)
+          {% if detail.current_skill == 'WRITING' %}Bài viết tự luận (Task 1 & Task 2)
+          {% elif detail.current_skill == 'TRAC_NGHIEM' %}Chi tiết bài làm Trắc nghiệm & Nghe (40 điểm)
           {% else %}File ghi âm Speaking thực tế{% endif %}
         </div>
       </div>
@@ -76,37 +88,46 @@
     </div>
     <div class="card-body">
 
-      {% if current_skill == 'WRITING' %}
+      {% if detail.current_skill == 'WRITING' %}
       <!-- NỘI DUNG BÀI WRITING -->
       <div style="margin-bottom: 16px;">
         <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">✍️ Bài viết Writing tự luận:</div>
-        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text-primary); max-height: 440px; overflow-y: auto; white-space: pre-wrap;">{{ cau_tra_loi.writing_text }}</div>
+        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text-primary); max-height: 440px; overflow-y: auto; white-space: pre-wrap;">{{ detail.cau_tra_loi.writing_text }}</div>
       </div>
 
-      {% elif current_skill == 'TRAC_NGHIEM' %}
+      {% elif detail.current_skill == 'TRAC_NGHIEM' %}
       <!-- NỘI DUNG BÀI TRẮC NGHIỆM -->
       <div style="margin-bottom: 16px;">
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">📝 Kết quả bài làm Trắc nghiệm:</div>
-        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text-primary); max-height: 440px; overflow-y: auto; white-space: pre-wrap;">{{ cau_tra_loi.mcq_summary }}</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary);">📝 Chi tiết bài làm &amp; Đối soát 25 câu Trắc nghiệm:</div>
+          <span class="badge badge-emerald" style="font-size: 10px; font-weight: 700;">Tự động đối soát</span>
+        </div>
+        <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 12px; font-size: 12px; color: #065F46; line-height: 1.5;">
+          <i class="fa-solid fa-circle-check"></i> <strong>Quy tắc chấm:</strong> Hệ thống ghi nhận chính xác từng câu học viên chọn. Câu nào học viên không điền được đánh dấu <strong>[BỎ TRỐNG]</strong> và tự động trừ điểm (0 điểm).
+        </div>
+        <div style="background: var(--bg-app); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; font-size: 12.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height: 1.75; color: var(--text-primary); max-height: 520px; overflow-y: auto; white-space: pre-wrap;">{{ detail.cau_tra_loi.mcq_summary }}</div>
       </div>
 
       {% else %}
       <!-- NỘI DUNG BÀI GHI ÂM SPEAKING -->
       <div style="margin-bottom: 18px;">
         <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
-          🎙️ File Audio ghi âm & Bản dịch Speech-to-Text:
+          🎙️ File Audio ghi âm &amp; Bản dịch Speech-to-Text:
         </div>
         <audio controls style="width: 100%; border-radius: 8px; margin-bottom: 10px;">
-          <source src="https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg" type="audio/ogg">
-          Trình duyệt không hỗ trợ audio player.
+          <source src="{{ detail.cau_tra_loi.audio_url|default:'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg' }}" type="audio/ogg">
+          Trình duyệt không hỗ trợ audio.
         </audio>
-
-        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; max-height: 360px; overflow-y: auto;">
-          <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">
-            BẢN GHI NHẬN DIỆN GIỌNG NÓI (SPEECH-TO-TEXT AI)
-          </div>
-          <div style="font-size: 13px; color: var(--text-primary); line-height: 1.7; font-style: italic; white-space: pre-wrap;">"{{ cau_tra_loi.transcript }}"</div>
+        <div style="font-size: 11px; color: var(--text-muted); font-style: italic;">
+          Bấm play để nghe toàn bộ phần ghi âm câu trả lời Speaking của thí sinh.
         </div>
+      </div>
+
+      <div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+          📝 Transcript lời nói ghi âm:
+        </div>
+        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text-primary); max-height: 300px; overflow-y: auto; white-space: pre-wrap;">{{ detail.cau_tra_loi.transcript }}</div>
       </div>
       {% endif %}
 
@@ -114,56 +135,59 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════
-       CỘT 2: GỢI Ý ĐIỂM CHI TIẾT & NHẬN XÉT TỪ AI
+       CỘT 2: PHÂN TÍCH & GỢI Ý TỪ AI AGENT (GEMINI FLASH)
+       (GIỮ NGUYÊN ĐIỂM AI GỢI Ý GỐC, KHÔNG BỊ TĂNG THEO GV SỬA)
        ═══════════════════════════════════════════════════════ -->
   <div class="card rounded-2xl shadow-sm">
     <div class="card-header">
       <div>
-        <div class="card-title">✦ 2. Phân tích & Gợi ý từ AI</div>
+        <div class="card-title">✦ 2. Phân tích &amp; Gợi ý từ AI</div>
         <div class="card-subtitle">
-          Mô hình: {{ cham_diem_ai.mo_hinh_ai|default:"Gemini 3.5 Flash" }} · Phiên bản: {{ cham_diem_ai.phien_ban_prompt|default:"v2.5" }}
+          Mô hình: {{ detail.cham_diem_ai.mo_hinh_ai }} · Phiên bản: {{ detail.cham_diem_ai.phien_ban_prompt }}
         </div>
       </div>
-      <span class="badge badge-ai">Độ tin cậy {{ cham_diem_ai.do_tin_cay|default:"92" }}%</span>
+      <span class="badge badge-purple">✦ Độ tin cậy {{ detail.cham_diem_ai.do_tin_cay }}%</span>
     </div>
     <div class="card-body">
 
-      <!-- Điểm số AI đề xuất to rõ -->
-      <div style="text-align: center; margin-bottom: 16px; background: var(--purple-light); border-radius: var(--radius-md); padding: 14px;">
-        <div style="font-size: 11px; font-weight: 700; color: var(--accent-purple); text-transform: uppercase;">
-          ĐIỂM AI ĐỀ XUẤT
+      <!-- Hộp điểm AI đề xuất (Gốc) -->
+      <div style="background: linear-gradient(135deg, var(--purple-light), #EDE9FE); border-radius: var(--radius-lg); padding: 16px; text-align: center; margin-bottom: 18px;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-purple); margin-bottom: 4px;">
+          Điểm AI đề xuất (Gốc)
         </div>
-        <div style="font-size: 32px; font-weight: 800; color: var(--accent-purple); line-height: 1.1; margin: 4px 0;">
-          {{ cham_diem_ai.diem_tong|default:"0" }}<span style="font-size: 15px; color: var(--text-secondary);">/{% if current_skill == 'TRAC_NGHIEM' %}40{% else %}30{% endif %}</span>
+        <div style="font-size: 38px; font-weight: 800; color: var(--accent-purple); line-height: 1;">
+          {{ detail.current_ai_score }}<span style="font-size: 20px; font-weight: 500; color: var(--text-muted);">/{{ detail.max_skill_score }}</span>
         </div>
-        <div style="font-size: 12px; color: var(--text-secondary);">
-          Kỹ năng: <strong>{{ current_skill_label }}</strong>
+        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">
+          Kỹ năng: <strong>{{ detail.current_skill_label }}</strong>
         </div>
       </div>
 
-      <!-- Rubric chi tiết 4 tiêu chí -->
-      <div class="ai-feedback-card" style="margin-bottom: 16px;">
-        <div class="ai-feedback-header">
-          <span>✦ Chi tiết Rubric Phân tích</span>
+      <!-- Chi tiết từng tiêu chí Rubric từ AI -->
+      <div style="margin-bottom: 18px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px;">
+          ✦ Chi tiết Rubric Phân tích
         </div>
-        <div class="ai-criteria">
-          {% for criterion in ai_criteria %}
-          <div class="criterion">
-            <span class="criterion-name">{{ criterion.name }}</span>
-            <div class="criterion-bar"><div class="criterion-fill" data-width="{{ criterion.pct }}%" style="width:{{ criterion.pct }}%;"></div></div>
-            <span class="criterion-score">{{ criterion.score }}</span>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          {% for crit in detail.ai_criteria %}
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px;">
+            <span style="color: var(--text-secondary); flex: 1;">{{ crit.name }}</span>
+            <div style="width: 100px; height: 6px; background: #E2E8F0; border-radius: 999px; margin: 0 10px; overflow: hidden;">
+              <div style="width: {{ crit.pct }}%; height: 100%; background: var(--accent-purple); border-radius: 999px;"></div>
+            </div>
+            <strong style="color: var(--text-primary); min-width: 28px; text-align: right;">{{ crit.score }}</strong>
           </div>
           {% endfor %}
         </div>
       </div>
 
       <!-- Nhận xét chi tiết từ AI -->
-      <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
-        <div style="font-size: 11px; font-weight: 700; color: var(--accent-purple); text-transform: uppercase; margin-bottom: 6px;">
-          ✦ NHẬN XÉT PHÂN TÍCH CHI TIẾT TỪ AI
+      <div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+          ✦ Nhận xét phân tích chi tiết từ AI
         </div>
-        <div style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.7; white-space: pre-wrap;">
-          {{ cham_diem_ai.nhan_xet }}
+        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; font-size: 12.5px; line-height: 1.65; color: var(--text-secondary);">
+          {{ detail.cham_diem_ai.nhan_xet }}
         </div>
       </div>
 
@@ -171,41 +195,44 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════
-       CỘT 3: FORM GIÁO VIÊN CHỈNH SỬA & PHÊ DUYỆT (MODELFORM)
+       CỘT 3: GIÁO VIÊN ĐIỀU CHỈNH & PHÊ DUYỆT CHÍNH THỨC
        ═══════════════════════════════════════════════════════ -->
   <div class="card rounded-2xl shadow-sm">
     <div class="card-header">
       <div>
-        <div class="card-title">✏️ 3. Giáo viên Điều chỉnh & Duyệt</div>
+        <div class="card-title">✏️ 3. Giáo viên Điều chỉnh &amp; Duyệt</div>
         <div class="card-subtitle">Chốt điểm chính thức cho thí sinh</div>
       </div>
-      <span class="badge badge-emerald">Chốt kết quả</span>
+      <span class="badge {% if detail.bai_lam.trang_thai_cham == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}">
+        {% if detail.bai_lam.trang_thai_cham == 'GV_DA_DUYET' %}Đã chốt{% else %}Chờ thẩm định{% endif %}
+      </span>
     </div>
     <div class="card-body">
-      <form method="post" action="{% url 'placement_tests:approve_skill' %}" class="approve-form" id="teacher-review-form">
+      <form method="POST" action="{% url 'placement_tests:approve_skill' %}">
         {% csrf_token %}
-        <input type="hidden" name="phien_id" value="{{ phien.ma_phien|default:1 }}">
-        <input type="hidden" name="ky_nang" value="{{ current_skill|default:'SPEAKING' }}">
+        <input type="hidden" name="phien_id" value="{{ detail.phien_id }}">
+        <input type="hidden" name="ky_nang" value="{{ detail.current_skill }}">
 
-        <!-- Thông tin Kỹ năng & Điểm AI tham chiếu -->
+        <!-- Readonly kỹ năng đang duyệt -->
         <div class="form-group">
           <label class="form-label">Kỹ năng đang thẩm định</label>
-          <input type="text" class="form-control" value="{{ current_skill_label }}" readonly style="background: var(--bg-app); font-weight: 600;">
+          <input type="text" class="form-control" value="{{ detail.current_skill_label }}" readonly style="background: #F8FAFC; font-weight: 600;">
         </div>
 
+        <!-- Readonly điểm AI tham khảo (Điểm AI gốc giữ nguyên) -->
         <div class="form-group">
           <label class="form-label">Điểm AI đề xuất (Tham khảo)</label>
-          <input type="text" class="form-control" value="{{ cham_diem_ai.diem_tong|default:'0' }} / {% if current_skill == 'TRAC_NGHIEM' %}40{% else %}30{% endif %} điểm" readonly style="background: var(--bg-app); color: var(--accent-purple); font-weight: 700;">
+          <input type="text" class="form-control" value="{{ detail.current_ai_score }} / {{ detail.max_skill_score }} điểm" readonly style="background: #F8FAFC; color: var(--accent-purple); font-weight: 700;">
         </div>
 
         <!-- Input Giáo viên chỉnh sửa điểm -->
         <div class="form-group">
-          <label class="form-label" style="color: var(--accent-orange);">
-            ⭐ Điểm Giáo viên điều chỉnh chính thức (0–{% if current_skill == 'TRAC_NGHIEM' %}40{% else %}30{% endif %})
+          <label class="form-label" style="color: var(--accent-orange); font-weight: 700;">
+            ⭐ Điểm Giáo viên điều chỉnh chính thức (0–{{ detail.max_skill_score }})
           </label>
           <input type="number" name="diem_dieu_chinh" class="form-control" 
-                 min="0" max="{% if current_skill == 'TRAC_NGHIEM' %}40{% else %}30{% endif %}" step="0.5"
-                 value="{{ bai_lam.diem_dieu_chinh|default:cham_diem_ai.diem_tong|default:'0' }}"
+                 min="0" max="{{ detail.max_skill_score }}" step="0.5"
+                 value="{{ detail.current_teacher_score }}"
                  style="font-size: 16px; font-weight: 700; border-color: var(--accent-coral);"
                  required>
           <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
@@ -216,19 +243,17 @@
         <!-- Textarea Giáo viên chỉnh sửa nhận xét -->
         <div class="form-group">
           <label class="form-label">💬 Nhận xét chính thức của Giáo viên</label>
-          <textarea name="nhan_xet_gv" class="form-control" rows="5" 
-                    placeholder="Nhập nhận xét chi tiết gửi cho học viên và tư vấn viên…">{{ bai_lam.nhan_xet_gv|default:"Học viên hoàn thành bài kiểm tra đúng yêu cầu. Đề xuất chuyển sang Tư vấn tuyển sinh để xếp lớp phù hợp." }}</textarea>
+          <textarea name="nhan_xet_gv" class="form-control" rows="4" 
+                    placeholder="Nhập nhận xét chi tiết gửi cho học viên và tư vấn viên…">{{ detail.bai_lam.nhan_xet_gv|default:"Học viên hoàn thành bài kiểm tra theo đúng chuẩn yêu cầu." }}</textarea>
         </div>
 
         <!-- Dropdown Xếp loại Trình độ năng lực -->
         <div class="form-group">
           <label class="form-label">🎯 Khung năng lực CEFR xếp loại</label>
           <select name="trinh_do" class="form-control" style="font-weight: 600;" required>
-            <option value="A1">A1 – Beginner (0 – 39 điểm)</option>
-            <option value="A2">A2 – Elementary (40 – 59 điểm)</option>
-            <option value="B1" selected>B1 – Intermediate (60 – 79 điểm)</option>
-            <option value="B2">B2 – Upper Intermediate (80 – 89 điểm)</option>
-            <option value="C1">C1 – Advanced (90 – 100 điểm)</option>
+            {% for lv in levels %}
+            <option value="{{ lv.value }}" {% if lv.value == detail.trinh_do %}selected{% endif %}>{{ lv.label }}</option>
+            {% endfor %}
           </select>
         </div>
 
@@ -238,71 +263,243 @@
         </div>
 
         <!-- Nút POST Phê duyệt kết quả -->
-        <button type="submit" class="btn btn-emerald btn-block btn-lg" id="btn-approve-submit">
-          ✔ Phê duyệt kết quả & Chuyển tuyển sinh
+        {% if detail.bai_lam.trang_thai_cham == 'GV_DA_DUYET' %}
+        <button type="button" class="btn btn-outline btn-block btn-lg" disabled style="opacity: 0.85; cursor: not-allowed; font-weight: 700; background: #ECFDF5; color: #065F46; border-color: #A7F3D0;">
+          ✔ Đã phê duyệt chính thức (Điểm đã khóa)
         </button>
+        {% else %}
+        <button type="submit" class="btn btn-emerald btn-block btn-lg" id="btn-approve-submit" style="font-weight: 700;">
+          ✔ Phê duyệt kết quả &amp; Chuyển tuyển sinh
+        </button>
+        {% endif %}
 
-        <button type="button" class="btn btn-outline btn-block" style="margin-top: 8px;" onclick="Toast.show('Đã lưu nháp kết quả duyệt!', 'info')">
-          💾 Lưu nháp (chưa chốt)
-        </button>
+        <a href="{% url 'placement_tests:teacher_review' %}?filter={{ current_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-outline btn-block" style="margin-top: 8px;">
+          ← Quay lại Danh sách bài thi
+        </a>
       </form>
     </div>
   </div>
 
 </div><!-- .review-grid -->
 
-<!-- ─── BẢNG DANH SÁCH BÀI THI AI ĐÃ CHẤM SƠ BỘ ───────────── -->
-<div class="card rounded-2xl shadow-sm">
-  <div class="card-header">
+{% endif %}
+
+{# ══════════════════════════════════════════════════════════════ #}
+{# PHẦN 2: BẢNG DANH SÁCH BÀI THI HỌC VIÊN ĐÃ LÀM TEST           #}
+{# (MẶC ĐỊNH HIỂN THỊ DANH SÁCH - 20 BÀI/TRANG - TÌM KIẾM - LỌC)  #}
+{# ══════════════════════════════════════════════════════════════ #}
+{% if not is_detail_view %}
+<div class="page-header">
+  <div class="page-breadcrumb">🤖 <span>Giáo viên</span> / Duyệt bài AI</div>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
-      <div class="card-title">📋 Danh sách bài thi đã được AI chấm sơ bộ (AI Pre-graded)</div>
-      <div class="card-subtitle">Nhấn "Duyệt" để tải dữ liệu thí sinh lên giao diện so sánh 3 cột ở trên</div>
+      <h1 class="page-title">Duyệt bài AI – So sánh &amp; Điều chỉnh điểm 🤖</h1>
+      <p class="page-subtitle">Danh sách các bài kiểm tra đầu vào học viên đã làm test — Thẩm định &amp; Phê duyệt điểm số</p>
     </div>
-    <span class="badge badge-coral">{{ pending_list|length|default:3 }} bài chờ</span>
   </div>
+</div>
+{% endif %}
+
+<div class="card rounded-2xl shadow-sm">
+  <div class="card-header" style="flex-wrap: wrap; gap: 14px; justify-content: space-between; align-items: center;">
+    <div>
+      <div class="card-title">📋 Danh sách bài thi học viên đã nộp</div>
+      <div class="card-subtitle">Bấm vào <strong>"Duyệt ✏️"</strong> ở mỗi dòng để xem chi tiết bài làm, gợi ý AI và tiến hành chấm chữa</div>
+    </div>
+
+    <!-- ─── CỤM TÌM KIẾM & BỘ LỌC ĐỒNG BỘ ────────────────────── -->
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <!-- THANH TÌM KIẾM HỌC VIÊN (SĐT, TÊN, GMAIL, MÃ PHIÊN) -->
+      <form method="GET" action="" style="display: flex; gap: 6px; align-items: center;" id="test-search-form">
+        {% if current_filter and current_filter != 'all' %}<input type="hidden" name="filter" value="{{ current_filter }}">{% endif %}
+        <div style="position: relative; width: 280px;">
+          <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px;"></i>
+          <input type="text" name="q" id="local-test-search" class="form-control form-control-sm"
+                 value="{{ search_query }}"
+                 placeholder="Tìm theo Tên, SĐT, Email, Mã phiên..."
+                 style="padding-left: 34px; padding-right: 28px; border-radius: 999px;">
+          {% if search_query %}
+          <a href="?{% if current_filter and current_filter != 'all' %}filter={{ current_filter }}{% endif %}" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); text-decoration: none;" title="Xóa tìm kiếm">✕</a>
+          {% endif %}
+        </div>
+        <button type="submit" class="btn btn-outline btn-sm" style="border-radius: 999px;">
+          Tìm
+        </button>
+      </form>
+
+      <!-- 2 BỘ LỌC BÀI THI: CHỜ ĐIỀU CHỈNH & ĐÃ DUYỆT -->
+      <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+        <a href="?filter=all{% if search_query %}&q={{ search_query }}{% endif %}" class="btn {% if current_filter == 'all' or not current_filter %}btn-primary{% else %}btn-outline{% endif %} btn-sm">
+          <i class="fa-solid fa-list"></i> Tất cả ({{ total_tests_count }})
+        </a>
+        <a href="?filter=pending{% if search_query %}&q={{ search_query }}{% endif %}" class="btn {% if current_filter == 'pending' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
+          <i class="fa-regular fa-clock"></i> Bài AI đã chấm chờ điều chỉnh ({{ pending_tests_count }})
+        </a>
+        <a href="?filter=approved{% if search_query %}&q={{ search_query }}{% endif %}" class="btn {% if current_filter == 'approved' %}btn-emerald{% else %}btn-outline{% endif %} btn-sm">
+          <i class="fa-solid fa-circle-check"></i> Bài đã duyệt ({{ approved_tests_count }})
+        </a>
+      </div>
+    </div>
+  </div>
+
   <div class="table-wrapper">
     <table id="students-table">
       <thead>
         <tr>
           <th>Mã phiên</th>
           <th>Học viên</th>
-          <th>Kỹ năng</th>
-          <th>Điểm AI</th>
-          <th>Độ tin cậy</th>
+          <th>Đề thi / Mục tiêu</th>
+          <th>Thời gian nộp</th>
+          <th>Điểm Speaking</th>
+          <th>Điểm Writing</th>
+          <th>Điểm Trắc nghiệm</th>
+          <th>Tổng điểm</th>
           <th>Trạng thái</th>
-          <th>Thao tác</th>
+          <th style="text-align: center;">Thao tác</th>
         </tr>
       </thead>
       <tbody>
-        {% for item in pending_list %}
-        <tr>
+        {% for item in page_obj %}
+        <tr style="{% if item.is_selected %}background: #FAF5FF; border-left: 3px solid var(--accent-purple);{% endif %}">
           <td style="font-weight: 700; color: var(--text-muted);">#{{ item.ma_phien }}</td>
           <td>
-            <div style="font-weight: 600;">{{ item.ten_hoc_vien }}</div>
+            <div style="font-weight: 700; font-size: 13.5px; color: var(--text-primary);">{{ item.ten_hoc_vien }}</div>
+            <div style="font-size: 11.5px; color: var(--text-muted);">{{ item.email }}</div>
+            {% if item.so_dien_thoai %}<div style="font-size: 11px; color: var(--text-muted);"><i class="fa-solid fa-phone" style="font-size: 10px;"></i> {{ item.so_dien_thoai }}</div>{% endif %}
           </td>
           <td>
-            <span class="badge badge-purple">{{ item.ky_nang }}</span>
+            <span class="badge badge-purple" style="font-size: 11.5px; font-weight: 700;">{{ item.ten_bai }}</span>
           </td>
-          <td><strong style="color: var(--accent-purple);">{{ item.diem_ai }}/30</strong></td>
-          <td>88%</td>
           <td>
-            {% if item.trang_thai == 'AI_DA_CHAM' %}
-              <span class="badge badge-coral">Chờ GV duyệt</span>
-            {% elif item.trang_thai == 'GV_DA_DUYET' %}
-              <span class="badge badge-emerald">GV đã duyệt</span>
+            <div style="font-size: 12.5px; color: var(--text-primary);">{{ item.thoi_gian|date:"d/m/Y H:i" }}</div>
+          </td>
+          <td>
+            {% if item.speaking_score is not None %}
+              <span class="badge badge-purple">{{ item.speaking_score }}/30</span>
             {% else %}
-              <span class="badge badge-gray">{{ item.trang_thai }}</span>
+              <span class="text-muted" style="font-size: 12px;">—</span>
             {% endif %}
           </td>
           <td>
-            <a href="?session={{ item.ma_phien }}&skill={{ item.ky_nang }}" class="btn btn-primary btn-sm">
-              Duyệt ✏️
-            </a>
+            {% if item.writing_score is not None %}
+              <span class="badge badge-purple">{{ item.writing_score }}/30</span>
+            {% else %}
+              <span class="text-muted" style="font-size: 12px;">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.mcq_score is not None %}
+              <span class="badge badge-emerald">{{ item.mcq_score }}/40</span>
+            {% else %}
+              <span class="text-muted" style="font-size: 12px;">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <strong style="font-size: 14.5px; color: var(--accent-purple);">{{ item.tong_diem }}đ</strong>
+          </td>
+          <td>
+            {% if item.trang_thai == 'approved' %}
+              <span class="badge badge-emerald"><i class="fa-solid fa-circle-check"></i> {{ item.trang_thai_label }}</span>
+            {% else %}
+              <span class="badge badge-coral"><i class="fa-regular fa-clock"></i> {{ item.trang_thai_label }}</span>
+            {% endif %}
+          </td>
+          <td style="text-align: center;">
+            {% if item.is_approved or item.trang_thai == 'approved' %}
+              <button type="button" class="btn btn-outline btn-sm" disabled style="opacity: 0.7; cursor: not-allowed; background: #F8FAFC; color: #10B981; border-color: #A7F3D0; font-weight: 700; padding: 6px 14px;" title="Bài thi đã được phê duyệt điểm hoàn tất và chuyển sang Tuyển sinh">
+                <i class="fa-solid fa-circle-check"></i> Đã duyệt
+              </button>
+            {% else %}
+              <a href="?session={{ item.id }}&skill=SPEAKING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-primary btn-sm" style="font-weight: 700; padding: 6px 14px;">
+                Duyệt ✏️
+              </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <div style="font-size: 32px; margin-bottom: 8px;">📋</div>
+            <div style="font-weight: 700; font-size: 14.5px;">Không tìm thấy bài thi nào phù hợp với từ khóa hoặc bộ lọc hiện tại.</div>
+            <div style="font-size: 12.5px; margin-top: 4px;">Hãy thử tìm kiếm với tên, số điện thoại, email hoặc mã phiên khác.</div>
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  <!-- ─── PHÂN TRANG (20 BÀI TRÊN MỖI TRANG) ────────────────── -->
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 12px;">
+    <div style="font-size: 13px; color: var(--text-muted);">
+      Hiển thị trang <strong>{{ page_obj.number }}</strong> / <strong>{{ page_obj.paginator.num_pages }}</strong> (Tổng cộng <strong>{{ page_obj.paginator.count }}</strong> bài thi)
+    </div>
+    <div style="display: flex; gap: 6px;">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-outline btn-sm">
+        « Trang trước
+      </a>
+      {% endif %}
+
+      {% for p_num in page_obj.paginator.page_range %}
+        {% if p_num == page_obj.number %}
+        <span class="btn btn-primary btn-sm" style="font-weight: 700;">{{ p_num }}</span>
+        {% else %}
+        <a href="?page={{ p_num }}{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-outline btn-sm">
+          {{ p_num }}
+        </a>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-outline btn-sm">
+        Trang sau »
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
 </div>
+
+<!-- ─── JAVASCRIPT ĐỒNG BỘ TÌM KIẾM GIỮA HEADER GLOBAL VÀ LOCAL ─── -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const globalSearch = document.getElementById('global-search');
+  const localSearch = document.getElementById('local-test-search');
+  const searchForm = document.getElementById('test-search-form');
+
+  // 1. Đồng bộ giá trị tìm kiếm ban đầu lên header #global-search
+  const currentQuery = "{{ search_query|escapejs }}";
+  if (currentQuery && globalSearch) {
+    globalSearch.value = currentQuery;
+  }
+
+  // 2. Đồng bộ 2 chiều giữa #global-search và #local-test-search
+  if (globalSearch && localSearch) {
+    globalSearch.addEventListener('input', function() {
+      localSearch.value = this.value;
+    });
+
+    localSearch.addEventListener('input', function() {
+      globalSearch.value = this.value;
+    });
+
+    // Khi nhấn Enter ở global-search -> submit form tìm kiếm
+    globalSearch.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        localSearch.value = this.value;
+        if (searchForm) {
+          searchForm.submit();
+        } else {
+          window.location.href = '?q=' + encodeURIComponent(this.value) + '{% if current_filter and current_filter != "all" %}&filter={{ current_filter }}{% endif %}';
+        }
+      }
+    });
+  }
+});
+</script>
+
 {% endblock %}

@@ -101,11 +101,46 @@ img { max-width: 100%; }
   position: fixed;
   top: 0; left: 0; bottom: 0;
   z-index: 100;
-  transition: transform var(--transition);
+  transition: width var(--transition), transform var(--transition);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #EDF2F7 transparent;
   box-shadow: 2px 0 16px rgba(0,0,0,0.015);
+}
+
+
+/* ─── SIDEBAR COLLAPSED (DESKTOP MINI SIDEBAR) ────────────── */
+body.sidebar-collapsed {
+  --sidebar-w: 72px;
+}
+body.sidebar-collapsed .sidebar-logo {
+  justify-content: center;
+  padding: 18px 8px;
+}
+body.sidebar-collapsed .sidebar-logo .logo-text,
+body.sidebar-collapsed .sidebar-section-label,
+body.sidebar-collapsed .nav-item span:not(.nav-icon),
+body.sidebar-collapsed .nav-arrow,
+body.sidebar-collapsed .sidebar-feature-card,
+body.sidebar-collapsed .sidebar-profile .profile-info,
+body.sidebar-collapsed .sidebar-footer-item span:not(.footer-icon) {
+  display: none !important;
+}
+body.sidebar-collapsed .nav-item {
+  justify-content: center;
+  padding: 12px 0;
+  margin: 4px 8px;
+}
+body.sidebar-collapsed .nav-icon {
+  margin: 0 !important;
+  font-size: 18px;
+}
+body.sidebar-collapsed .sidebar-profile {
+  justify-content: center;
+  padding: 8px 0;
+}
+body.sidebar-collapsed .sidebar-footer {
+  padding: 12px 6px;
 }
 
 .sidebar::-webkit-scrollbar { width: 4px; }

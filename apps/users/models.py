@@ -95,8 +95,10 @@ class ThongBaoNoiBo(models.Model):
 
     class NguoiNhan(models.TextChoices):
         STUDENT = 'STUDENT', 'Học viên'
+        TEACHER = 'TEACHER', 'Giảng viên'
         STAFF = 'STAFF', 'Tư vấn tuyển sinh'
         ACCOUNTANT = 'ACCOUNTANT', 'Kế toán'
+        ALL = 'ALL', 'Tất cả'
 
     khach_hang = models.ForeignKey(
         KhachHang,

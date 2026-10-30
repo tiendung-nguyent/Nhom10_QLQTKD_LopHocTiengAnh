@@ -4,10 +4,11 @@ from django.utils import timezone
 from datetime import timedelta
 
 from apps.users.models import KhachHang, ThongBaoEmail, ThongBaoNoiBo
-from apps.placement_tests.models import HoSoTuVan, PhienLamBai
-from apps.classes.models import GhiDanh, LopHoc
+from apps.placement_tests.models import PhienLamBai, LanLienHe
+from apps.classes.models import GhiDanh, LopHoc, HoSoTuVan
 from apps.billing.models import PhieuHocPhi, GiaoDichThanhToan
-from apps.users.helpers import get_account_email, check_student_tuition_paid
+from apps.users.helpers import get_account_email, check_student_tuition_paid, create_system_notification
+from apps.billing.vietqr_helpers import generate_vietcombank_qr, send_payment_success_email
 
 
 def payment_detail(request):
@@ -52,7 +53,7 @@ def payment_detail(request):
         # Kiểm tra ghi danh lớp học do tư vấn tuyển sinh xếp
         ghi_danh = GhiDanh.objects.filter(
             ho_so_tu_van__khach_hang=student
-        ).select_related(
+        ).exclude(trang_thai=GhiDanh.TrangThai.HUY).select_related(
             'lop_hoc',
             'lop_hoc__khoa_hoc'
         ).first()
@@ -68,13 +69,21 @@ def payment_detail(request):
             if not phieu_hp:
                 # Tự động tạo phiếu học phí theo học phí khóa học nếu chưa có
                 hoc_phi_val = assigned_khoa_hoc.hoc_phi if (assigned_khoa_hoc and assigned_khoa_hoc.hoc_phi) else 4500000
+                ref_code = f"HP{assigned_lop_hoc.id:02d}{student.id:04d}"
+                qr_url = generate_vietcombank_qr(hoc_phi_val, f"ACADEMIX HP {ref_code}")
                 phieu_hp = PhieuHocPhi.objects.create(
                     ghi_danh=ghi_danh,
-                    ma_tham_chieu=f"HP{assigned_lop_hoc.id:02d}{student.id:04d}",
+                    ma_tham_chieu=ref_code,
+                    hoc_phi_goc=hoc_phi_val,
                     so_tien=hoc_phi_val,
+                    qr_image_url=qr_url,
                     han_thanh_toan=(assigned_lop_hoc.ngay_khai_giang or (now.date() + timedelta(days=7))),
                     trang_thai=PhieuHocPhi.TrangThai.CHUA_TT
                 )
+            elif not phieu_hp.qr_image_url:
+                qr_url = generate_vietcombank_qr(phieu_hp.so_tien, f"ACADEMIX HP {phieu_hp.ma_tham_chieu}")
+                phieu_hp.qr_image_url = qr_url
+                phieu_hp.save(update_fields=['qr_image_url'])
 
             giao_dich_list = list(GiaoDichThanhToan.objects.filter(phieu_hoc_phi=phieu_hp).order_by('-thoi_gian'))
 
@@ -92,33 +101,45 @@ def payment_detail(request):
         'si_so_hien_tai': si_so_hien_tai,
         'tong_diem': tong_diem_test,
         'trinh_do': trinh_do_test,
-        'ngan_hang': 'VietcomBank – CN Hồ Chí Minh',
-        'so_tai_khoan': '1017 689 456',
-        'chu_tai_khoan': 'TRUNG TAM ANH NGU ACADEMIX',
+        'ngan_hang': 'Vietcombank (VCB)',
+        'so_tai_khoan': '1023262284',
+        'chu_tai_khoan': 'ACADEMIX CENTER',
         'giao_dich_list': giao_dich_list,
     }
     return render(request, 'billing/payment_detail.html', context)
 
 
-from apps.users.models import KhachHang, ThongBaoEmail, ThongBaoNoiBo
-
-
 def confirm_payment(request):
     """Học viên xác nhận đã chuyển khoản qua VietQR."""
     if request.method == 'POST':
-        # Thông báo cho Kế toán đối soát
-        try:
-            student_email = request.session.get('student_email', '')
-            kh = KhachHang.objects.filter(email=student_email).first() if student_email else None
-            student_name = request.session.get('student_name', 'Học viên')
-            ThongBaoNoiBo.objects.create(
-                khach_hang=kh,
-                vai_tro_nhan='ACCOUNTANT',
-                tieu_de=f'Học viên {student_name} vừa báo chuyển khoản VietQR',
-                noi_dung=f'Học viên {student_name} ({student_email}) vừa xác nhận chuyển khoản học phí. Kế toán vui lòng kiểm tra đối soát ngân hàng.',
-            )
-        except Exception:
-            pass
+        student_email = get_account_email(request)
+        kh = None
+        if student_email:
+            kh = KhachHang.objects.filter(email=student_email).first()
+        if not kh and request.session.get('student_id'):
+            kh = KhachHang.objects.filter(id=request.session.get('student_id')).first()
+
+        ma_phieu = request.POST.get('ma_phieu')
+        phieu_hp = None
+        if ma_phieu:
+            phieu_hp = PhieuHocPhi.objects.filter(id=ma_phieu).first()
+        if not phieu_hp and kh:
+            phieu_hp = PhieuHocPhi.objects.filter(ghi_danh__ho_so_tu_van__khach_hang=kh).order_by('-id').first()
+
+        if phieu_hp:
+            phieu_hp.hoc_vien_da_xac_nhan = True
+            phieu_hp.thoi_gian_hv_xac_nhan = timezone.now()
+            if phieu_hp.trang_thai == PhieuHocPhi.TrangThai.CHUA_TT:
+                phieu_hp.trang_thai = PhieuHocPhi.TrangThai.CHO_XAC_NHAN
+            phieu_hp.save(update_fields=['hoc_vien_da_xac_nhan', 'thoi_gian_hv_xac_nhan', 'trang_thai'])
+
+        student_name = (kh.ho_ten or kh.email) if kh else request.session.get('student_name', 'Học viên')
+        create_system_notification(
+            vai_tro_nhan='ACCOUNTANT',
+            tieu_de=f'Học viên {student_name} vừa báo chuyển khoản VietQR',
+            noi_dung=f'Học viên {student_name} ({student_email or ""}) vừa xác nhận chuyển khoản học phí cho phiếu {phieu_hp.ma_tham_chieu if phieu_hp else ""}. Kế toán vui lòng kiểm tra đối soát ngân hàng.',
+            khach_hang=kh,
+        )
 
         return JsonResponse({
             'status': 'success',
@@ -130,88 +151,61 @@ def confirm_payment(request):
 def invoice_list(request):
     """Danh sách phiếu học phí & giao dịch chuyển khoản – Dành riêng cho Kế toán."""
     now = timezone.now()
+    phieu_qs = PhieuHocPhi.objects.select_related(
+        'ghi_danh__ho_so_tu_van__khach_hang',
+        'ghi_danh__lop_hoc__khoa_hoc',
+        'ghi_danh__ho_so_tu_van__nhan_vien_tu_van',
+    ).order_by('-id')
+
+    total_invoices = phieu_qs.count()
+    pending_payments = phieu_qs.filter(
+        trang_thai__in=[PhieuHocPhi.TrangThai.CHO_XAC_NHAN, PhieuHocPhi.TrangThai.CHUA_TT],
+        hoc_vien_da_xac_nhan=True
+    ).count()
+    confirmed_payments = phieu_qs.filter(trang_thai=PhieuHocPhi.TrangThai.DA_TT).count()
+
+    total_rev_val = sum(float(p.so_tien) for p in phieu_qs if p.trang_thai == PhieuHocPhi.TrangThai.DA_TT)
+    total_revenue_str = f"{total_rev_val / 1_000_000:.1f}"
+    tyle_thu = round((confirmed_payments / total_invoices * 100), 1) if total_invoices > 0 else 0
+    so_chua_thu = total_invoices - confirmed_payments
+
+    items = []
+    for p in phieu_qs:
+        kh = p.ghi_danh.ho_so_tu_van.khach_hang if (p.ghi_danh and p.ghi_danh.ho_so_tu_van) else None
+        lop = p.ghi_danh.lop_hoc if p.ghi_danh else None
+
+        is_paid = (p.trang_thai == PhieuHocPhi.TrangThai.DA_TT)
+        so_tien_phai_thu = float(p.so_tien)
+        so_tien_da_chuyen = so_tien_phai_thu if (is_paid or p.hoc_vien_da_xac_nhan) else 0.0
+
+        items.append({
+            'ma_phieu': p.ma_tham_chieu,
+            'ma_phieu_id': p.id,
+            'ho_ten': kh.ho_ten if (kh and kh.ho_ten) else (kh.email if kh else 'Học viên'),
+            'email': kh.email if kh else '',
+            'so_dien_thoai': kh.so_dien_thoai if kh else '',
+            'ten_lop': lop.ten_lop if lop else 'Chưa gán lớp',
+            'so_tien_phai_thu': so_tien_phai_thu,
+            'so_tien_da_chuyen': so_tien_da_chuyen,
+            'ma_gd_ngan_hang': f"VCB{p.id:06d}" if (is_paid or p.hoc_vien_da_xac_nhan) else '',
+            'thoi_gian': p.thoi_gian_hv_xac_nhan or p.han_thanh_toan,
+            'trang_thai': p.trang_thai,
+            'hoc_vien_da_xac_nhan': p.hoc_vien_da_xac_nhan,
+            'thoi_gian_hv_xac_nhan': p.thoi_gian_hv_xac_nhan,
+            'hoc_phi_goc': float(p.hoc_phi_goc or p.so_tien),
+            'ma_giam_gia': p.ma_giam_gia or '',
+            'so_tien_giam': float(p.so_tien_giam or 0),
+        })
+
     context = {
         'today': now,
-        'total_invoices': 10,
-        'pending_payments': 3,
-        'confirmed_payments': 7,
-        'total_revenue': '38.5',
-        'tyle_thu': '77.8',
-        'so_chua_thu': 3,
-        'invoice_list': [
-            {
-                'ma_phieu': 'HP-1128-001',
-                'ma_phieu_id': 1,
-                'ho_ten': 'Nguyễn Thị Lan',
-                'email': 'lan.nguyen@gmail.com',
-                'ten_lop': 'B1-01 Sáng T2/T4/T6',
-                'so_tien_phai_thu': 4500000,
-                'so_tien_da_chuyen': 4500000,
-                'ma_gd_ngan_hang': 'FT26301045123',
-                'thoi_gian': now - timedelta(hours=2),
-                'trang_thai': 'CHO_DUYET',
-            },
-            {
-                'ma_phieu': 'HP-1128-002',
-                'ma_phieu_id': 2,
-                'ho_ten': 'Trần Văn Bình',
-                'email': 'binh.tran@gmail.com',
-                'ten_lop': 'A2-01 Sáng T3/T5/T7',
-                'so_tien_phai_thu': 3800000,
-                'so_tien_da_chuyen': 3800000,
-                'ma_gd_ngan_hang': 'FT26301052789',
-                'thoi_gian': now - timedelta(hours=5),
-                'trang_thai': 'CHO_DUYET',
-            },
-            {
-                'ma_phieu': 'HP-1127-003',
-                'ma_phieu_id': 3,
-                'ho_ten': 'Phạm Quốc Tuấn',
-                'email': 'tuan.pham@gmail.com',
-                'ten_lop': 'B1-01 Sáng T2/T4/T6',
-                'so_tien_phai_thu': 4500000,
-                'so_tien_da_chuyen': 4500000,
-                'ma_gd_ngan_hang': 'FT26300098456',
-                'thoi_gian': now - timedelta(days=1, hours=12),
-                'trang_thai': 'DU',
-            },
-            {
-                'ma_phieu': 'HP-1127-004',
-                'ma_phieu_id': 4,
-                'ho_ten': 'Lê Minh Châu',
-                'email': 'chau.le@gmail.com',
-                'ten_lop': 'B2-01 Chiều T7/CN',
-                'so_tien_phai_thu': 5200000,
-                'so_tien_da_chuyen': 5200000,
-                'ma_gd_ngan_hang': 'FT26300112340',
-                'thoi_gian': now - timedelta(days=1, hours=10),
-                'trang_thai': 'DU',
-            },
-            {
-                'ma_phieu': 'HP-1125-005',
-                'ma_phieu_id': 5,
-                'ho_ten': 'Hồ Bích Ngọc',
-                'email': 'ngoc.ho@gmail.com',
-                'ten_lop': 'C1-01 Tối T2/T4',
-                'so_tien_phai_thu': 6800000,
-                'so_tien_da_chuyen': 0,
-                'ma_gd_ngan_hang': '',
-                'thoi_gian': None,
-                'trang_thai': 'CHUA_TT',
-            },
-            {
-                'ma_phieu': 'HP-1125-006',
-                'ma_phieu_id': 6,
-                'ho_ten': 'Lê Công Danh',
-                'email': 'danh.le@gmail.com',
-                'ten_lop': 'B2-01 Tối T3/T5',
-                'so_tien_phai_thu': 5200000,
-                'so_tien_da_chuyen': 5200000,
-                'ma_gd_ngan_hang': 'FT26301099881',
-                'thoi_gian': now - timedelta(hours=7),
-                'trang_thai': 'CHO_DUYET',
-            },
-        ],
+        'total_invoices': total_invoices,
+        'pending_payments': pending_payments,
+        'confirmed_payments': confirmed_payments,
+        'total_revenue': total_revenue_str,
+        'tyle_thu': tyle_thu,
+        'so_chua_thu': so_chua_thu,
+        'invoice_list': items,
     }
     return render(request, 'billing/invoice_list.html', context)
 
@@ -219,86 +213,119 @@ def invoice_list(request):
 def confirm_invoice(request):
     """
     Kế toán kiểm tra và xác nhận học viên đã thanh toán đủ:
-    1. Cập nhật trạng thái phiếu học phí thành 'Đã thanh toán đủ' (không có thanh toán thiếu).
-    2. Tự động gửi Gmail biên nhận học phí tới hòm thư của học viên.
+    1. Cập nhật trạng thái phiếu học phí thành 'Đã thanh toán đủ' (DA_TT).
+    2. Tự động gửi Gmail biên nhận học phí tới hòm thư của học viên bằng template tuition_paid_receipt.html.
     3. Gửi thông báo qua tài khoản của học viên trên hệ thống.
-    4. Gửi thông báo cho Tư vấn Tuyển sinh để tiến hành xếp lớp học viên.
+    4. Gửi thông báo cho Tư vấn Tuyển sinh phụ trách hồ sơ để hoàn tất nhập học.
+    5. Cập nhật GhiDanh sang DANG_HOC, HoSoTuVan sang HOAN_THANH, KhachHang sang DA_GHI_DANH.
     """
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
-    ma_phieu = request.POST.get('ma_phieu', 'HP-1128')
-    ho_ten = request.POST.get('ho_ten', 'Nguyễn Thị Lan')
-    email = request.POST.get('email', 'lan.nguyen@gmail.com')
-    so_tien = request.POST.get('so_tien', '4.500.000đ')
+    ma_phieu = request.POST.get('ma_phieu', '')
+    ma_phieu_id = request.POST.get('ma_phieu_id')
+    ho_ten = request.POST.get('ho_ten', '')
+    email = request.POST.get('email', '')
+    so_tien_str = request.POST.get('so_tien', '')
 
-    kh = KhachHang.objects.filter(email=email).first()
-    if not kh and ho_ten:
-        kh = KhachHang.objects.filter(ho_ten=ho_ten).first()
+    php = None
+    if ma_phieu_id:
+        php = PhieuHocPhi.objects.filter(id=ma_phieu_id).first()
+    if not php and ma_phieu:
+        php = PhieuHocPhi.objects.filter(ma_tham_chieu=ma_phieu).first()
 
-    # 1. Gửi Gmail biên nhận học phí tới học viên
-    try:
-        from django.core.mail import send_mail
-        from django.conf import settings
-        subject = f"[Academix] Biên nhận thanh toán học phí thành công – Phiếu {ma_phieu}"
-        body = f"""Xin chào {ho_ten},
+    kh = None
+    if php and php.ghi_danh and php.ghi_danh.ho_so_tu_van:
+        kh = php.ghi_danh.ho_so_tu_van.khach_hang
+    if not kh and email:
+        kh = KhachHang.objects.filter(email=email).first()
 
-Kế toán trung tâm Anh ngữ Academix xác nhận đã nhận đủ số tiền học phí ({so_tien}) của bạn qua chuyển khoản ngân hàng.
+    if php:
+        php.trang_thai = PhieuHocPhi.TrangThai.DA_TT
+        php.save(update_fields=['trang_thai'])
 
-Thông tin thanh toán:
-- Mã phiếu: {ma_phieu}
-- Số tiền: {so_tien}
-- Trạng thái: ĐÃ THANH TOÁN ĐỦ (100%)
+        if php.ghi_danh:
+            php.ghi_danh.trang_thai = GhiDanh.TrangThai.DA_XEP_LOP
+            php.ghi_danh.save(update_fields=['trang_thai'])
 
-Hồ sơ của bạn đã được chuyển ngay sang Bộ phận Tư vấn Tuyển sinh để hoàn tất xếp lớp học. Bạn có thể theo dõi lịch học tại Cổng học viên.
+            if php.ghi_danh.ho_so_tu_van:
+                hstv = php.ghi_danh.ho_so_tu_van
+                hstv.trang_thai = HoSoTuVan.TrangThai.HOAN_THANH
+                hstv.save(update_fields=['trang_thai'])
 
-Trân trọng,
-Phòng Kế toán & Tài chính Academix
-"""
-        send_mail(
-            subject=subject,
-            message=body,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'ketoan@academix.edu.vn'),
-            recipient_list=[email] if email else ['hocvien@email.com'],
-            fail_silently=True,
-        )
-    except Exception:
-        pass
+                if hstv.nhan_vien_tu_van:
+                    create_system_notification(
+                        vai_tro_nhan='STAFF',
+                        tieu_de=f'Học viên {kh.ho_ten if kh else ho_ten} đã hoàn tất đóng học phí!',
+                        noi_dung=f'Kế toán đã duyệt xác nhận thu phiếu {php.ma_tham_chieu} ({php.so_tien:,.0f}đ). Học viên đã được kích hoạt trạng thái ĐÃ HOÀN TẤT NHẬP HỌC và vào lớp chính thức.',
+                        khach_hang=kh
+                    )
 
-    # Lưu nhật ký ThongBaoEmail
     if kh:
+        kh.trang_thai = KhachHang.TrangThai.DA_GHI_DANH
+        kh.save(update_fields=['trang_thai'])
+
+        # Cập nhật trực tiếp tất cả hồ sơ tư vấn chưa hoàn thành của học viên này sang HOAN_THANH
+        HoSoTuVan.objects.filter(khach_hang=kh).exclude(trang_thai=HoSoTuVan.TrangThai.TU_CHOI).update(
+            trang_thai=HoSoTuVan.TrangThai.HOAN_THANH
+        )
+
         try:
             ThongBaoEmail.objects.create(
                 khach_hang=kh,
                 loai='XAC_NHAN_THANH_TOAN',
                 doi_tuong_tham_chieu='PHIEU_HOC_PHI',
+                ma_tham_chieu=php.id if php else None,
             )
         except Exception:
             pass
 
-    # 2. Thông báo qua tài khoản của học viên trên hệ thống
-    try:
-        ThongBaoNoiBo.objects.create(
-            khach_hang=kh,
-            vai_tro_nhan='STUDENT',
-            tieu_de='Học phí đã thanh toán thành công!',
-            noi_dung=f'Kế toán trung tâm đã xác nhận bạn đã thanh toán đủ {so_tien} học phí. Hồ sơ của bạn đã được chuyển cho Tư vấn Tuyển sinh xếp lớp.',
-        )
-    except Exception:
-        pass
+    # Gửi email biên nhận HTML
+    student_name = (kh.ho_ten if (kh and kh.ho_ten) else ho_ten) or 'Học viên'
+    student_email = (kh.email if (kh and kh.email) else email) or ''
+    classroom_name = (php.ghi_danh.lop_hoc.ten_lop if (php and php.ghi_danh and php.ghi_danh.lop_hoc) else 'Lớp Tiếng Anh Academix')
+    class_schedule = (php.ghi_danh.lop_hoc.lich_hoc if (php and php.ghi_danh and php.ghi_danh.lop_hoc and php.ghi_danh.lop_hoc.lich_hoc) else 'Theo thông báo từ trung tâm')
 
-    # 3. Thông báo cho Tư vấn Tuyển sinh
-    try:
-        ThongBaoNoiBo.objects.create(
-            khach_hang=kh,
-            vai_tro_nhan='STAFF',
-            tieu_de=f'Học viên {ho_ten} đã đóng đủ học phí',
-            noi_dung=f'Kế toán đã duyệt hoàn tất khoản thu {so_tien} cho học viên {ho_ten}. Chuyên viên Tuyển sinh vui lòng kiểm tra và xếp lớp học.',
-        )
-    except Exception:
-        pass
+    # Tự động ghi nhận vào lịch sử tư vấn ở lane tuyển sinh
+    if php and php.ghi_danh and php.ghi_danh.ho_so_tu_van:
+        try:
+            LanLienHe.objects.create(
+                ho_so_tu_van=php.ghi_danh.ho_so_tu_van,
+                nhan_vien=php.ghi_danh.ho_so_tu_van.nhan_vien_tu_van,
+                thoi_gian=timezone.now(),
+                kenh_lien_he='Kế toán đối soát',
+                ket_qua=f'Kế toán trung tâm đã xác nhận thu đủ {php.so_tien:,.0f}đ học phí qua chuyển khoản (Phiếu {php.ma_tham_chieu}). Học viên chính thức hoàn tất thủ tục nhập học và vào lớp {classroom_name}.'
+            )
+        except Exception:
+            pass
+
+    send_payment_success_email(
+        student_email=student_email,
+        student_name=student_name,
+        invoice_id=php.id if php else 1,
+        amount=php.so_tien if php else 4500000,
+        transaction_code=php.ma_tham_chieu if php else 'HP2026',
+        classroom_name=classroom_name,
+        class_schedule=class_schedule,
+    )
+
+    # Gửi thông báo hệ thống cho Học viên
+    create_system_notification(
+        vai_tro_nhan='STUDENT',
+        tieu_de='Học phí đã thanh toán thành công!',
+        noi_dung=f'Kế toán trung tâm đã xác nhận bạn đã thanh toán đủ học phí cho phiếu {php.ma_tham_chieu if php else ma_phieu}. Tài khoản đã được xếp vào lớp {classroom_name}.',
+        khach_hang=kh
+    )
+
+    # Thông báo cho bộ phận tuyển sinh chung
+    create_system_notification(
+        vai_tro_nhan='STAFF',
+        tieu_de=f'Học viên {student_name} đã hoàn tất đóng học phí ({php.so_tien:,.0f}đ)' if php else f'Học viên {student_name} đã hoàn tất đóng học phí',
+        noi_dung=f'Kế toán đã duyệt xác nhận thu phiếu {php.ma_tham_chieu if php else ma_phieu}. Hồ sơ học viên đã được kích hoạt trạng thái ĐÃ HOÀN TẤT NHẬP HỌC.',
+        khach_hang=kh
+    )
 
     return JsonResponse({
         'status': 'success',
-        'message': f'Kế toán đã duyệt thu đủ {so_tien} cho {ho_ten}! Đã gửi Gmail biên nhận cho học viên, gửi thông báo đến tài khoản học viên và thông báo cho Tư vấn Tuyển sinh xếp lớp.',
+        'message': f'Kế toán đã duyệt thu đủ cho {student_name}! Đã gửi Gmail biên nhận học phí và kích hoạt vào lớp học thành công.',
     })

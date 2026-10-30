@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
+        .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 6px solid #16a34a; }
+        .header { text-align: center; border-bottom: 2px dashed #e2e8f0; padding-bottom: 20px; }
+        .header h2 { color: #16a34a; margin: 0 0 5px 0; font-size: 22px; text-transform: uppercase; }
+        .badge-success { background: #dcfce7; color: #15803d; font-size: 13px; font-weight: bold; padding: 4px 12px; border-radius: 20px; display: inline-block; margin-top: 5px; }
+        .content { margin-top: 25px; color: #334155; line-height: 1.6; }
+        .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #f8fafc; border-radius: 8px; overflow: hidden; }
+        .info-table td { padding: 12px 15px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        .info-table td.label { color: #64748b; width: 40%; }
+        .info-table td.value { font-weight: bold; color: #0f172a; text-align: right; }
+        .total-row { background: #f1f5f9; font-size: 16px !important; }
+        .total-row .value { color: #16a34a !important; font-size: 18px !important; }
+        .class-info { background: #eff6ff; border-left: 4px solid #2563eb; padding: 15px; border-radius: 4px; margin: 20px 0; font-size: 14px; }
+        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <h2>ACADEMIX ENGLISH CENTER</h2>
+            <div class="badge-success">✓ XÁC NHẬN THANH TOÁN THÀNH CÔNG</div>
+        </div>
+        
+        <div class="content">
+            <p>Xin chào <strong>{{ student_name }}</strong>,</p>
+            <p>Academix xin xác nhận đã nhận thành công khoản thanh toán học phí của bạn. Dưới đây là biên nhận điện tử cho giao dịch này:</p>
+            
+            <table class="info-table">
+                <tr>
+                    <td class="label">Mã hóa đơn:</td>
+                    <td class="value">#HD{{ invoice_id }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Thời gian xác nhận:</td>
+                    <td class="value">{{ payment_date }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Phương thức:</td>
+                    <td class="value">Chuyển khoản VietQR (Vietcombank)</td>
+                </tr>
+                <tr>
+                    <td class="label">Nội dung chuyển khoản:</td>
+                    <td class="value"><code>{{ payment_content }}</code></td>
+                </tr>
+                <tr class="total-row">
+                    <td class="label"><strong>Số tiền đã thanh toán:</strong></td>
+                    <td class="value"><strong>{{ amount }} VNĐ</strong></td>
+                </tr>
+            </table>
+
+            <div class="class-info">
+                <strong style="color: #1e40af;">📌 Thông tin khóa học & Xếp lớp:</strong><br>
+                • <strong>Lớp học:</strong> {{ classroom_name }}<br>
+                • <strong>Lịch học dự kiến:</strong> {{ class_schedule }}<br>
+                • <strong>Trạng thái tài khoản:</strong> Đã kích hoạt quyền vào lớp trên Student Portal.
+            </div>
+
+            <p>Bộ phận Giáo vụ sẽ gửi email thông báo chi tiết về phòng học và tài liệu trước ngày khai giảng. Nếu có bất kỳ thắc mắc nào, bạn vui lòng phản hồi lại email này hoặc liên hệ hotline của Trung tâm.</p>
+        </div>
+
+        <div class="footer">
+            <p>Đây là email tự động từ Hệ thống Quản lý Học tập Academix English Center.<br>© 2026 Academix English Center. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+

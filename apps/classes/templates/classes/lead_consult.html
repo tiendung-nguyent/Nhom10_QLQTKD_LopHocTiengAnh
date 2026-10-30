@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Chăm sóc & Tư vấn Lộ trình – {{ student.ho_ten|default:student.email }}{% endblock %}
+{% block page_heading %}Tư vấn Lộ trình & Xếp lớp Học viên{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 24px;">
+  <div class="page-breadcrumb">
+    <a href="{% url 'classes:lead_care' %}" style="color: var(--text-muted); text-decoration: none;">CRM Tuyển sinh</a>
+    / <span>Chăm sóc & Tư vấn Lộ trình</span>
+  </div>
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+    <div>
+      <h1 class="page-title" style="display: flex; align-items: center; gap: 10px;">
+        <span>🎯 Tư vấn & Xếp lớp: <strong>{{ student.ho_ten|default:student.email }}</strong></span>
+      </h1>
+      <p class="page-subtitle">
+        Tư vấn lộ trình học, kiểm tra tình trạng chỗ trống lớp học, áp mã ưu đãi (Discount) và phát hành mã VietQR thanh toán.
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <a href="{% url 'classes:lead_care' %}" class="btn btn-outline">
+        ← Trở lại Danh sách
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ─── THÔNG TIN HỌC VIÊN TỔNG QUAN ───────────────────────── -->
+<div class="card rounded-2xl shadow-sm" style="margin-bottom: 24px; padding: 20px 24px; background: linear-gradient(135deg, #FFFFFF, #FAF5FF); border: 1.5px solid #E9D5FF;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--purple-light); color: var(--accent-purple); font-size: 24px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid #DDD6FE;">
+        {{ student.ho_ten|slice:":1"|default:"HV" }}
+      </div>
+      <div>
+        <div style="font-size: 18px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+          <span>{{ student.ho_ten|default:student.email }}</span>
+          <span class="badge badge-purple" style="font-size: 11px;">Mã HV: #{{ student.id }}</span>
+        </div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; display: flex; gap: 16px; flex-wrap: wrap;">
+          <span><i class="fa-solid fa-envelope" style="color: var(--accent-purple);"></i> {{ student.email }}</span>
+          <span><i class="fa-solid fa-phone" style="color: var(--accent-emerald);"></i> {{ student.so_dien_thoai|default:"Chưa có SĐT" }}</span>
+          <span><i class="fa-solid fa-bullseye" style="color: var(--accent-coral);"></i> Mục tiêu: <strong>{{ hstv.khoa_de_xuat.ten_khoa|default:"Luyện thi IELTS" }}</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kết quả kiểm tra năng lực -->
+    <div style="text-align: right; background: #fff; padding: 10px 18px; border-radius: var(--radius-lg); border: 1px solid #E2E8F0;">
+      <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Kết quả Kiểm tra Năng lực</div>
+      {% if test_score is not None %}
+      <div style="font-size: 20px; font-weight: 800; color: var(--accent-purple); margin-top: 2px;">
+        {{ test_score }}đ <span class="badge badge-purple" style="font-size: 12px; vertical-align: middle;">CEFR: {{ test_level|default:"B1" }}</span>
+      </div>
+      {% else %}
+      <div style="margin-top: 4px;">
+        <span class="badge badge-coral" style="font-size: 12px; font-weight: 700;">
+          📝 Chưa test (105')
+        </span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1.35fr; gap: 24px; align-items: start;">
+
+  <!-- ─── CỘT TRÁI: LỊCH SỬ CHĂM SÓC & FORM THÊM TƯ VẤN ────── -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+
+    <!-- Form ghi nhận chăm sóc -->
+    <div class="card rounded-2xl shadow-sm">
+      <div class="card-header">
+        <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+          <span>📞</span> Ghi nhận Lần tư vấn / Chăm sóc
+        </div>
+      </div>
+      <div class="card-body">
+        <form id="consult-contact-form" method="post" action="{% url 'classes:add_lead_contact' %}">
+          {% csrf_token %}
+          <input type="hidden" name="hstv_id" value="{{ hstv.id }}">
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 12.5px;">Kênh liên hệ *</label>
+              <select name="kenh_lien_he" class="form-control" required style="font-weight: 600;">
+                <option value="Gọi điện thoại">📞 Gọi điện thoại</option>
+                <option value="Nhắn tin Zalo / SMS">💬 Nhắn tin Zalo / SMS</option>
+                <option value="Gửi Email tư vấn">📧 Gửi Email tư vấn</option>
+                <option value="Gặp trực tiếp tại trung tâm">🏫 Gặp trực tiếp</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 12.5px;">Chuyên viên phụ trách *</label>
+              <select name="nhan_vien_id" class="form-control" required style="font-weight: 600;">
+                {% for adv in advisors %}
+                <option value="{{ adv.id }}" {% if current_advisor_id and adv.id == current_advisor_id %}selected{% endif %}>
+                  {{ adv.ho_ten }} ({{ adv.email }})
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" style="font-size: 12.5px; color: var(--accent-orange); font-weight: 700;">
+              🎯 Cập nhật Tiến trình (BPMN Pipeline)
+            </label>
+            <select name="trang_thai_moi" class="form-control" id="status-select" onchange="toggleRefusal()" style="font-weight: 600;">
+              <option value="DANG_XU_LY" {% if hstv.trang_thai == 'DANG_XU_LY' %}selected{% endif %}>⏳ Đang tư vấn lộ trình & mục tiêu học</option>
+              <option value="DA_TEST" {% if hstv.trang_thai == 'DA_TEST' %}selected{% endif %}>✦ Đã có điểm test – Chờ tư vấn lộ trình & xếp lớp</option>
+              <option value="DE_XUAT_LOP" {% if hstv.trang_thai == 'DE_XUAT_LOP' %}selected{% endif %}>🎯 Đã tư vấn & Đề xuất lớp học phù hợp (Chờ học phí)</option>
+              <option value="TU_CHOI" {% if hstv.trang_thai == 'TU_CHOI' %}selected{% endif %}>❌ Học viên từ chối / Bận không theo học (Hủy bỏ)</option>
+            </select>
+          </div>
+
+          <!-- Lịch hẹn test nếu cần -->
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" style="font-size: 12.5px; color: var(--accent-coral); font-weight: 700;">
+              📅 Lịch hẹn làm bài test đầu vào (105 phút)
+            </label>
+            <input type="datetime-local" name="thoi_gian_hen_test" class="form-control" style="font-weight: 600;">
+          </div>
+
+          <!-- Input lý do từ chối -->
+          <div class="form-group" id="refusal-group" style="display: none; margin-bottom: 14px;">
+            <label class="form-label" style="font-size: 12.5px; color: #EF4444; font-weight: 700;">
+              ⚠️ Lý do học viên từ chối / Đổi khung giờ
+            </label>
+            <input type="text" name="ly_do_tu_choi" class="form-control" placeholder="Ví dụ: Bận lịch cá nhân, không xếp được ca tối...">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" style="font-size: 12.5px;">💬 Nội dung tư vấn & Kết quả chăm sóc *</label>
+            <textarea name="ket_qua" class="form-control" rows="3" required placeholder="Ghi nhận chi tiết phản hồi của học viên, mong muốn về ca học, mức học phí..."></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-emerald btn-block" id="btn-save-contact" style="font-weight: 700;">
+            ✔ Lưu nhật ký tư vấn & Cập nhật
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Timeline lịch sử tư vấn -->
+    <div class="card rounded-2xl shadow-sm">
+      <div class="card-header">
+        <div class="card-title">📜 Lịch sử Tiếp nhận & Tương tác</div>
+        <span class="badge badge-purple">{{ contacts|length }} lần</span>
+      </div>
+      <div class="card-body" style="max-height: 380px; overflow-y: auto;">
+        {% if contacts %}
+        <div class="timeline">
+          {% for c in contacts %}
+          <div class="timeline-item">
+            <div class="timeline-dot" {% if forloop.first %}style="background: var(--accent-emerald); box-shadow: 0 0 0 2px var(--accent-emerald);"{% endif %}></div>
+            <div class="timeline-time">{{ c.thoi_gian|date:"d/m/Y H:i" }}</div>
+            <div class="timeline-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+              <span>{{ c.kenh_lien_he }}</span>
+              <span style="font-size: 11px; font-weight: 700; color: var(--accent-purple); background: var(--purple-light); padding: 2px 8px; border-radius: 999px;">
+                👤 {{ c.nhan_vien.ho_ten|default:"Tư vấn viên" }}
+              </span>
+            </div>
+            <div class="timeline-desc" style="margin-top: 4px;">{{ c.ket_qua }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px;">
+          Chưa có lịch sử chăm sóc nào cho học viên này.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── CỘT PHẢI: CHỌN KHÓA HỌC, LỚP HỌC & ÁP MÃ DISCOUNT ───── -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+
+    <!-- Khung chọn khóa học & lớp học -->
+    <div class="card rounded-2xl shadow-sm">
+      <div class="card-header">
+        <div>
+          <div class="card-title">🏫 Chọn Khóa học & Lớp học cho Học viên</div>
+          <div class="card-subtitle">Xem tình trạng sĩ số, chỗ trống còn nhận và học phí của từng lớp</div>
+        </div>
+        {% if current_gd %}
+        <span class="badge badge-emerald">Đã xếp lớp: {{ current_gd.lop_hoc.ten_lop }}</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+
+        <!-- Danh sách Accordion từng Khóa học -->
+        <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
+          {% for kh_item in khoa_hocs %}
+          <div style="border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; background: #FFFFFF;">
+            
+            <!-- Khóa học Header -->
+            <div style="padding: 14px 18px; background: #F8FAFC; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <div style="font-weight: 800; font-size: 15px; color: var(--text-primary);">
+                  {{ kh_item.ten_khoa }}
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                  Trình độ: <strong>{{ kh_item.trinh_do }}</strong> · Thời lượng: <strong>{{ kh_item.so_buoi }} buổi</strong>
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Học phí niêm yết</div>
+                <div style="font-size: 16px; font-weight: 800; color: var(--accent-coral);" data-fee="{{ kh_item.hoc_phi }}">
+                  {{ kh_item.hoc_phi_fmt }} VNĐ
+                </div>
+              </div>
+            </div>
+
+            <!-- Danh sách Lớp học thuộc khóa -->
+            <div style="padding: 12px 16px;">
+              {% if kh_item.classes %}
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                {% for cls in kh_item.classes %}
+                <label style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 1.5px solid {% if cls.is_selected %}var(--accent-purple){% else %}#E2E8F0{% endif %}; border-radius: var(--radius-md); background: {% if cls.is_selected %}#FAF5FF{% else %}#FFFFFF{% endif %}; cursor: {% if cls.is_full %}not-allowed{% else %}pointer{% endif %}; transition: all .2s;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <input type="radio" name="selected_lop_id" value="{{ cls.id }}" 
+                           data-class-name="{{ cls.ten_lop }}"
+                           data-course-name="{{ kh_item.ten_khoa }}"
+                           data-fee="{{ kh_item.hoc_phi }}"
+                           {% if cls.is_selected %}checked{% endif %}
+                           {% if cls.is_full and not cls.is_selected %}disabled{% endif %}
+                           onchange="onSelectClass(this)">
+                    <div>
+                      <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">
+                        {{ cls.ten_lop }}
+                      </div>
+                      <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                        📅 {{ cls.lich_hoc }} · Ca: {{ cls.ca_hoc }} · GV: {{ cls.giao_vien }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="text-align: right; flex-shrink: 0;">
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-primary);">
+                      Sĩ số: {{ cls.si_so }} / {{ cls.si_so_toi_da }} HV
+                    </div>
+                    <div style="margin-top: 3px;">
+                      {% if cls.is_full %}
+                      <span class="badge badge-red" style="font-size: 10.5px;">Đã đầy sĩ số</span>
+                      {% else %}
+                      <span class="badge badge-emerald" style="font-size: 10.5px;">Còn trống {{ cls.con_trong }} chỗ</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </label>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div style="font-size: 12.5px; color: var(--text-muted); font-style: italic; padding: 6px;">
+                Hiện chưa có lớp học nào đang mở cho khóa học này.
+              </div>
+              {% endif %}
+            </div>
+
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- ─── BẢNG TÍNH HỌC PHÍ & ÁP MÃ DISCOUNT ───────────── -->
+        <div style="background: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: var(--radius-xl); padding: 18px 20px; margin-bottom: 20px;">
+          <div style="font-size: 14px; font-weight: 800; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <span>🏷️</span> Áp dụng Mã Ưu đãi (Discount) & Tính Học phí
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+            <input type="text" id="discount-code-input" class="form-control" placeholder="Nhập mã giảm giá (VD: ACADEMIX10, WELCOME20...)" style="font-weight: 700; text-transform: uppercase;">
+            <button type="button" class="btn btn-purple" onclick="applyVoucher()" style="font-weight: 700; white-space: nowrap;">
+              Áp dụng mã
+            </button>
+          </div>
+
+          <div id="voucher-result-msg" style="display: none; font-size: 12.5px; margin-bottom: 14px;"></div>
+
+          <!-- Bảng kê số tiền -->
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; border-top: 1px dashed #CBD5E1; padding-top: 12px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-secondary);">Lớp học đã chọn:</span>
+              <strong id="display-class-name">{{ current_gd.lop_hoc.ten_lop|default:"Chưa chọn lớp" }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-secondary);">Học phí niêm yết:</span>
+              <strong id="display-original-fee">0 VNĐ</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; color: var(--accent-emerald);">
+              <span>Mức giảm trừ (Discount):</span>
+              <strong id="display-discount-fee">- 0 VNĐ</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 16px; border-top: 1px solid #CBD5E1; padding-top: 8px; color: var(--accent-coral);">
+              <strong>TỔNG HỌC PHÍ PHẢI THU:</strong>
+              <strong id="display-final-fee" style="font-size: 19px; font-weight: 900;">0 VNĐ</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nút Chốt lớp & Chuyển sang thanh toán học phí -->
+        <button type="button" class="btn btn-emerald btn-lg btn-block" id="btn-submit-enrollment" onclick="submitApplyClass()" style="font-weight: 800; padding: 14px 20px;">
+          🎯 Chốt Lớp & Chuyển sang Thanh toán học phí (Sinh VietQR) 🚀
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ─── THẺ VIETQR ĐÃ SINH (HIỂN THỊ KHI ĐÃ CÓ PHIẾU HỌC PHÍ) ─── -->
+    <div class="card rounded-2xl shadow-sm" id="qr-preview-card" style="{% if not current_phieu %}display: none;{% endif %} border: 2px solid var(--accent-emerald); background: #FAFDFB;">
+      <div class="card-header" style="background: var(--emerald-light); border-bottom: 1.5px solid #A7F3D0;">
+        <div class="card-title" style="color: #065F46; font-size: 15px; display: flex; align-items: center; gap: 8px;">
+          <span>✅</span> Mã VietQR Thanh toán đã được đồng bộ sang Cổng Học viên
+        </div>
+      </div>
+      <div class="card-body" style="text-align: center; padding: 22px;">
+        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+          Học viên có thể quét mã QR dưới đây trực tiếp từ màn hình hoặc truy cập Cổng học viên:
+        </div>
+
+        <div style="display: inline-block; padding: 12px; background: #fff; border-radius: var(--radius-xl); box-shadow: 0 4px 18px rgba(0,0,0,0.06); border: 1.5px solid #E2E8F0;">
+          <img id="qr-image-display" src="{{ current_phieu.qr_image_url|default:'' }}" alt="VietQR Thanh toán học phí" style="width: 220px; height: 220px; object-fit: contain; border-radius: 8px;">
+        </div>
+
+        <div style="margin-top: 14px; font-size: 13px; color: var(--text-primary);">
+          <div>Nội dung CK: <strong id="qr-ref-display" style="color: var(--accent-coral);">{{ current_phieu.ma_tham_chieu }}</strong></div>
+          <div style="margin-top: 2px;">Số tiền: <strong id="qr-amount-display" style="color: var(--accent-emerald); font-size: 16px;">{{ current_phieu.so_tien|floatformat:0 }} VNĐ</strong></div>
+          <div style="margin-top: 2px; font-size: 12px; color: var(--text-muted);">Tài khoản nhận: <strong>Vietcombank (VCB) · 1023262284 · ACADEMIX CENTER</strong></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let currentSelectedLopId = null;
+  let currentOriginalFee = 0;
+  let currentDiscountFee = 0;
+  let currentFinalFee = 0;
+  let appliedDiscountCode = '';
+
+  function toggleRefusal() {
+    const s = document.getElementById('status-select');
+    const rg = document.getElementById('refusal-group');
+    if (s && rg) {
+      rg.style.display = (s.value === 'TU_CHOI') ? 'block' : 'none';
+    }
+  }
+
+  function onSelectClass(radio) {
+    currentSelectedLopId = radio.value;
+    const className = radio.dataset.className;
+    currentOriginalFee = parseFloat(radio.dataset.fee) || 4500000;
+
+    document.getElementById('display-class-name').textContent = className;
+    document.getElementById('display-original-fee').textContent = currentOriginalFee.toLocaleString('vi-VN') + ' VNĐ';
+
+    // Tính lại giảm giá nếu đã có voucher
+    calculateTotal();
+  }
+
+  function calculateTotal() {
+    currentFinalFee = Math.max(0, currentOriginalFee - currentDiscountFee);
+    document.getElementById('display-discount-fee').textContent = '- ' + currentDiscountFee.toLocaleString('vi-VN') + ' VNĐ';
+    document.getElementById('display-final-fee').textContent = currentFinalFee.toLocaleString('vi-VN') + ' VNĐ';
+  }
+
+  async function applyVoucher() {
+    const code = document.getElementById('discount-code-input').value.trim().toUpperCase();
+    const msgEl = document.getElementById('voucher-result-msg');
+
+    if (!code) {
+      msgEl.style.display = 'block';
+      msgEl.style.color = '#EF4444';
+      msgEl.textContent = 'Vui lòng nhập mã giảm giá!';
+      return;
+    }
+
+    if (!currentSelectedLopId) {
+      msgEl.style.display = 'block';
+      msgEl.style.color = '#EF4444';
+      msgEl.textContent = 'Vui lòng chọn một lớp học trước khi áp dụng mã!';
+      return;
+    }
+
+    try {
+      const res = await fetch(`/classes/api/check-voucher/?code=${encodeURIComponent(code)}&fee=${currentOriginalFee}`);
+      const data = await res.json();
+
+      msgEl.style.display = 'block';
+      if (data.valid) {
+        appliedDiscountCode = data.code;
+        currentDiscountFee = data.discount_amount;
+        calculateTotal();
+
+        msgEl.style.color = '#059669';
+        msgEl.innerHTML = `✔ Áp dụng mã <strong>${data.code}</strong> thành công: ${data.description}! Đã giảm ${data.discount_amount.toLocaleString('vi-VN')} VNĐ.`;
+        Toast.show(`Đã áp dụng mã ưu đãi ${data.code}!`, 'success');
+      } else {
+        appliedDiscountCode = '';
+        currentDiscountFee = 0;
+        calculateTotal();
+
+        msgEl.style.color = '#EF4444';
+        msgEl.textContent = data.message || 'Mã không hợp lệ hoặc đã hết hạn!';
+      }
+    } catch (e) {
+      msgEl.style.display = 'block';
+      msgEl.style.color = '#EF4444';
+      msgEl.textContent = 'Lỗi kiểm tra mã giảm giá.';
+    }
+  }
+
+  async function submitApplyClass() {
+    if (!currentSelectedLopId) {
+      Toast.show('Vui lòng chọn một lớp học cho học viên!', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('btn-submit-enrollment');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang chốt lớp & sinh mã VietQR...';
+
+    const fd = new FormData();
+    fd.append('lop_id', currentSelectedLopId);
+    fd.append('ma_discount', appliedDiscountCode);
+
+    try {
+      const res = await fetch("{% url 'classes:lead_apply_class_tuition' hstv.id %}", {
+        method: 'POST',
+        body: fd,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': '{{ csrf_token }}'
+        }
+      });
+      const data = await res.json();
+      btn.disabled = false;
+      btn.innerHTML = '🎯 Chốt Lớp & Chuyển sang Thanh toán học phí (Sinh VietQR) 🚀';
+
+      if (data.status === 'success') {
+        Toast.show(data.message, 'success', 5000);
+
+        // Hiển thị khung QR code xem trước
+        const card = document.getElementById('qr-preview-card');
+        if (card) {
+          card.style.display = 'block';
+          document.getElementById('qr-image-display').src = data.qr_url;
+          document.getElementById('qr-ref-display').textContent = data.ref_code;
+          document.getElementById('qr-amount-display').textContent = data.final_amount.toLocaleString('vi-VN') + ' VNĐ';
+          card.scrollIntoView({ behavior: 'smooth' });
+        }
+      } else {
+        Toast.show(data.message || 'Lỗi khi xếp lớp.', 'error');
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '🎯 Chốt Lớp & Chuyển sang Thanh toán học phí (Sinh VietQR) 🚀';
+      Toast.show('Lỗi kết nối máy chủ.', 'error');
+    }
+  }
+
+  // Khởi tạo trạng thái lớp ban đầu nếu đã có
+  document.addEventListener('DOMContentLoaded', () => {
+    const checkedRadio = document.querySelector('input[name="selected_lop_id"]:checked');
+    if (checkedRadio) {
+      onSelectClass(checkedRadio);
+    }
+  });
+</script>
+{% endblock %}
+

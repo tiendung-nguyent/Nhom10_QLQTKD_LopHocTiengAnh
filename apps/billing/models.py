@@ -25,7 +25,45 @@ class PhieuHocPhi(models.Model):
         verbose_name='Mã tham chiếu',
         help_text='Nội dung chuyển khoản dùng để đối soát',
     )
-    so_tien = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Số tiền')
+    hoc_phi_goc = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name='Học phí gốc',
+        help_text='Học phí niêm yết ban đầu của khóa học'
+    )
+    ma_giam_gia = models.CharField(
+        max_length=50,
+        blank=True,
+        default='',
+        verbose_name='Mã giảm giá',
+        help_text='Mã discount áp dụng (nếu có)'
+    )
+    so_tien_giam = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        verbose_name='Số tiền giảm'
+    )
+    so_tien = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        verbose_name='Số tiền phải thanh toán'
+    )
+    qr_image_url = models.TextField(
+        blank=True,
+        default='',
+        verbose_name='URL ảnh VietQR'
+    )
+    hoc_vien_da_xac_nhan = models.BooleanField(
+        default=False,
+        verbose_name='Học viên xác nhận đã thanh toán'
+    )
+    thoi_gian_hv_xac_nhan = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Thời gian học viên bấm chuyển khoản'
+    )
     han_thanh_toan = models.DateField(verbose_name='Hạn thanh toán')
     trang_thai = models.CharField(
         max_length=20,
@@ -42,6 +80,34 @@ class PhieuHocPhi(models.Model):
 
     def __str__(self):
         return f'PHP #{self.pk} – {self.ma_tham_chieu} ({self.trang_thai})'
+
+
+class MaGiamGia(models.Model):
+    """Mã ưu đãi / giảm giá (Discount voucher) cho học viên khi đăng ký lớp học."""
+
+    class LoaiGiam(models.TextChoices):
+        PHAN_TRAM = 'PHAN_TRAM', 'Phần trăm (%)'
+        SO_TIEN = 'SO_TIEN', 'Số tiền cố định (VNĐ)'
+
+    ma = models.CharField(max_length=50, unique=True, verbose_name='Mã giảm giá')
+    mo_ta = models.CharField(max_length=255, blank=True, verbose_name='Mô tả chương trình ưu đãi')
+    loai_giam = models.CharField(
+        max_length=20,
+        choices=LoaiGiam.choices,
+        default=LoaiGiam.PHAN_TRAM,
+        verbose_name='Loại giảm giá'
+    )
+    gia_tri = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Giá trị giảm')
+    ngay_het_han = models.DateField(null=True, blank=True, verbose_name='Ngày hết hạn')
+    kich_hoat = models.BooleanField(default=True, verbose_name='Đang kích hoạt')
+
+    class Meta:
+        db_table = 'ma_giam_gia'
+        verbose_name = 'Mã giảm giá'
+        verbose_name_plural = 'Danh sách mã giảm giá'
+
+    def __str__(self):
+        return f"{self.ma} – Giảm {self.gia_tri}{'%' if self.loai_giam == 'PHAN_TRAM' else 'đ'}"
 
 
 class GiaoDichThanhToan(models.Model):

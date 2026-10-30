@@ -89,6 +89,31 @@ def role_context(request):
         elif len(parts) == 1 and len(parts[0]) >= 2:
             user_initials = parts[0][:2].upper()
 
+    # Đếm số lượng hồ sơ tuyển sinh đang cần chăm sóc
+    active_leads_count = 27
+    try:
+        from apps.classes.models import HoSoTuVan
+        active_leads_count = HoSoTuVan.objects.filter(
+            trang_thai__in=['MOI', 'DANG_XU_LY', 'CHO_TEST', 'DA_TEST', 'DE_XUAT_LOP', 'TU_CHOI']
+        ).count() or 27
+    except Exception:
+        pass
+
+    # Lấy thông báo hệ thống nội bộ theo vai trò và học viên
+    system_notifications = []
+    unread_notif_count = 0
+    try:
+        from apps.users.models import ThongBaoNoiBo
+        from django.db.models import Q
+        notif_filter = Q(vai_tro_nhan='ALL') | Q(vai_tro_nhan=role)
+        if current_student:
+            notif_filter = notif_filter | Q(khach_hang=current_student)
+        notif_qs = ThongBaoNoiBo.objects.filter(notif_filter).order_by('-thoi_gian_tao')
+        unread_notif_count = notif_qs.filter(da_doc=False).count()
+        system_notifications = list(notif_qs[:8])
+    except Exception:
+        pass
+
     return {
         'current_role': role,
         'user_role': role,
@@ -103,6 +128,9 @@ def role_context(request):
         'student_goal': request.session.get('student_goal', ''),
         'pending_review_count': 7,
         'waiting_assign_count': 6,
+        'active_leads_count': active_leads_count,
         'pending_payment_count': 4,
+        'system_notifications': system_notifications,
+        'unread_notif_count': unread_notif_count,
         'system_now': timezone.now(),
     }

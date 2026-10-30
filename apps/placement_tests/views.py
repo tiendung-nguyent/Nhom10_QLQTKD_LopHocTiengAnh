@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.db import models
 from django.db.models import Q
@@ -321,6 +322,12 @@ def test_room(request):
         'completed_summary': completed_summary,
         'mcq_submitted': mcq_submitted,
         'mcq_score': mcq_score,
+        'mcq_details': request.session.get('placement_mcq_details', []),
+        'mcq_correct': request.session.get('placement_mcq_correct', 0),
+        'mcq_wrong': request.session.get('placement_mcq_wrong', 0),
+        'mcq_blank': request.session.get('placement_mcq_blank', 0),
+        'mcq_total': request.session.get('placement_mcq_total', 25),
+        'mcq_percentage': request.session.get('placement_mcq_percentage', 0),
         'cau_hoi_mcq': cau_hoi_mcq,
         'goal_type': goal_type,
         'target_detail': target_detail,
@@ -331,8 +338,9 @@ def test_room(request):
     return render(request, 'placement_tests/test_room.html', context)
 
 
+@csrf_exempt
 def submit_mcq(request):
-    """Nộp bài trắc nghiệm (45 phút) – Tự động chấm điểm đối soát đáp án."""
+    """Nộp bài trắc nghiệm (45 phút) – Tự động chấm điểm đối soát đáp án toàn bộ 25 câu."""
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
@@ -352,37 +360,131 @@ def submit_mcq(request):
         except Exception:
             answers = {}
 
+    goal_type = request.session.get('student_goal_type', 'IELTS')
+    target_detail = request.session.get('student_target_detail', '5.0 đến 6.5')
+
     session_mcq = request.session.get('placement_mcq_cache')
+    if not (session_mcq and 'questions' in session_mcq and len(session_mcq.get('questions', [])) >= 20):
+        session_mcq = get_fallback_mcq_test(goal_type, target_detail, 25)
+        request.session['placement_mcq_cache'] = session_mcq
+
+    questions_list = session_mcq.get('questions', [])
+    total_questions = len(questions_list) if questions_list else 25
+
+    category_labels = {
+        'LISTENING': 'Nghe hiểu (Listening)',
+        'GRAMMAR': 'Ngữ pháp (Grammar)',
+        'VOCAB': 'Từ vựng (Vocabulary)',
+        'VOCABULARY': 'Từ vựng (Vocabulary)',
+        'READING': 'Đọc hiểu (Reading)'
+    }
+
+    point_per_q = round(40.0 / max(total_questions, 1), 2)  # ~1.6 điểm mỗi câu
+
     correct_count = 0
-    total_questions = 25
+    wrong_count = 0
+    blank_count = 0
+    detailed_results = []
+    text_log_items = []
 
-    if session_mcq and 'questions' in session_mcq:
-        total_questions = len(session_mcq['questions'])
-        for q in session_mcq['questions']:
-            q_id = str(q.get('id'))
-            correct_ans = str(q.get('correct_option', '')).strip().upper()
-            user_ans = str(answers.get(q_id, '')).strip().upper()
-            if user_ans and user_ans == correct_ans:
+    for idx, q in enumerate(questions_list, start=1):
+        q_id = str(q.get('id', idx))
+        cat_key = str(q.get('category', 'GRAMMAR')).upper()
+        cat_label = category_labels.get(cat_key, cat_key)
+        q_text = q.get('question_text', '')
+        options_dict = q.get('options', {})
+        correct_ans = str(q.get('correct_option', 'A')).strip().upper()
+        explanation = q.get('explanation', '')
+        correct_opt_text = options_dict.get(correct_ans, '')
+
+        # Kiểm tra đáp án học viên đã nộp
+        raw_ans = answers.get(q_id)
+        if raw_ans is None:
+            raw_ans = answers.get(str(idx))
+        if raw_ans is None and f"q_{q_id}" in answers:
+            raw_ans = answers.get(f"q_{q_id}")
+
+        user_ans = str(raw_ans or '').strip().upper()
+
+        if user_ans in ['A', 'B', 'C', 'D']:
+            user_opt_text = options_dict.get(user_ans, '')
+            if user_ans == correct_ans:
+                is_correct = True
+                is_blank = False
                 correct_count += 1
-    else:
-        total_questions = max(len(answers), 25)
-        correct_count = min(len(answers), 18)
+                status = 'CORRECT'
+                status_label = 'ĐÚNG'
+                pts = point_per_q
+            else:
+                is_correct = False
+                is_blank = False
+                wrong_count += 1
+                status = 'WRONG'
+                status_label = 'SAI'
+                pts = 0.0
+        else:
+            # Học viên KHÔNG ĐIỀN -> ĐỂ TRỐNG VÀ TRỪ ĐIỂM (0 điểm)
+            user_ans = ''
+            user_opt_text = 'Để trống (Chưa chọn đáp án)'
+            is_correct = False
+            is_blank = True
+            blank_count += 1
+            status = 'BLANK'
+            status_label = 'BỎ TRỐNG'
+            pts = 0.0
 
-    score = round((correct_count / max(total_questions, 1)) * 40, 1)
+        item = {
+            'index': idx,
+            'q_id': q_id,
+            'category': cat_label,
+            'question_text': q_text,
+            'options': [{'key': k, 'text': f"{k}. {v}"} for k, v in options_dict.items()],
+            'user_ans': user_ans,
+            'user_opt_text': user_opt_text,
+            'correct_ans': correct_ans,
+            'correct_opt_text': correct_opt_text,
+            'explanation': explanation,
+            'is_correct': is_correct,
+            'is_blank': is_blank,
+            'status': status,
+            'status_label': status_label,
+            'points': pts,
+        }
+        detailed_results.append(item)
+
+        # Định dạng văn bản đối soát chi tiết
+        if is_correct:
+            ans_str = f"Lựa chọn của học viên: {user_ans}. {user_opt_text}  -->  ✔ [ĐÚNG] (+{point_per_q}đ)"
+        elif is_blank:
+            ans_str = f"Lựa chọn của học viên: [BỎ TRỐNG - CHƯA LÀM]  -->  ⚠️ [TRỪ ĐIỂM - 0đ]"
+        else:
+            ans_str = f"Lựa chọn của học viên: {user_ans}. {user_opt_text}  -->  ❌ [SAI] (0đ)"
+
+        text_log_items.append(
+            f"Câu {idx} [{cat_label}]:\n"
+            f"  - Đề bài: {q_text}\n"
+            f"  - {ans_str}\n"
+            f"  - Đáp án đúng: {correct_ans}. {correct_opt_text}\n"
+            f"  - Giải thích: {explanation}"
+        )
+
+    score = round((correct_count / max(total_questions, 1)) * 40.0, 1)
     percentage = round((correct_count / max(total_questions, 1)) * 100)
 
     # Lưu tiến độ vào session
     request.session['placement_mcq_submitted'] = True
     request.session['placement_mcq_score'] = score
     request.session['placement_mcq_correct'] = correct_count
+    request.session['placement_mcq_wrong'] = wrong_count
+    request.session['placement_mcq_blank'] = blank_count
     request.session['placement_mcq_total'] = total_questions
+    request.session['placement_mcq_percentage'] = percentage
     request.session['placement_mcq_answers'] = answers
+    request.session['placement_mcq_details'] = detailed_results
 
     # ══════════════════════════════════════════════════════════════════
-    # LƯU VÀO CSDL ĐỂ CHUYỂN NGAY DỮ LIỆU SANG LANE GIẢNG VIÊN (teacher_review)
+    # LƯU VÀO CSDL ĐỂ CHUYỂN TOÀN BỘ DỮ LIỆU SANG LANE GIẢNG VIÊN (teacher_review)
     # ══════════════════════════════════════════════════════════════════
-    goal_type = request.session.get('student_goal_type', 'IELTS')
-    target_detail = request.session.get('student_target_detail', '5.0 đến 6.5')
     student_email = get_account_email(request)
 
     phien_obj = None
@@ -418,17 +520,18 @@ def submit_mcq(request):
 
             request.session['current_phien_id'] = phien_obj.id
 
-            # Lưu / Cập nhật BaiLamKyNang cho Trắc nghiệm
+            # Lưu / Cập nhật BaiLamKyNang cho Trắc nghiệm (giữ nguyên điểm AI gốc score)
             BaiLamKyNang.objects.update_or_create(
                 phien_lam_bai=phien_obj,
                 ky_nang='TRAC_NGHIEM',
                 defaults={
                     'diem_tu_dong': score,
+                    'diem_dieu_chinh': None,
                     'trang_thai_cham': BaiLamKyNang.TrangThaiCham.AI_DA_CHAM
                 }
             )
 
-            # Lưu câu trả lời trắc nghiệm
+            # Lưu câu trả lời trắc nghiệm với đầy đủ 25 câu và thống kê BỎ TRỐNG
             cau_mcq, _ = CauHoi.objects.get_or_create(
                 bai_kiem_tra=bai_test,
                 ky_nang=CauHoi.KyNang.READING,
@@ -440,12 +543,18 @@ def submit_mcq(request):
                 }
             )
             summary_mcq_text = (
-                f"Đúng {correct_count}/{total_questions} câu ({percentage}%).\n"
-                f"Điểm số đạt được: {score} / 40 điểm.\n"
-                f"Chi tiết đáp án lựa chọn:\n" +
-                "\n".join([f"Câu {k}: {v}" for k, v in list(answers.items())[:25]])
+                f"KẾT QUẢ BÀI LÀM TRẮC NGHIỆM (40 ĐIỂM)\n"
+                f"==================================================\n"
+                f"Tổng điểm đạt được: {score} / 40 điểm ({percentage}%)\n"
+                f"✔ Số câu đúng: {correct_count}/{total_questions} câu (+{score}đ)\n"
+                f"❌ Số câu sai: {wrong_count}/{total_questions} câu (0đ)\n"
+                f"⚠️ Số câu bỏ trống: {blank_count}/{total_questions} câu (0đ - trừ điểm)\n"
+                f"==================================================\n\n"
+                f"CHI TIẾT 25 CÂU HỎI & ĐỐI SOÁT ĐÁP ÁN:\n"
+                f"--------------------------------------------------\n" +
+                "\n\n".join(text_log_items)
             )
-            CauTraLoi.objects.update_or_create(
+            tl_mcq, _ = CauTraLoi.objects.update_or_create(
                 phien_lam_bai=phien_obj,
                 cau_hoi=cau_mcq,
                 defaults={
@@ -454,14 +563,38 @@ def submit_mcq(request):
                 }
             )
 
+            # Lưu / Cập nhật ChamDiemAI cho trắc nghiệm
+            ChamDiemAI.objects.update_or_create(
+                cau_tra_loi=tl_mcq,
+                defaults={
+                    'mo_hinh_ai': 'Hệ thống Đối soát Tự động CEFR',
+                    'phien_ban_prompt': 'v2.5',
+                    'diem_tong': score,
+                    'do_tin_cay': 100.0,
+                    'nhan_xet': (
+                        f"Hệ thống đã tự động đối soát đáp án trắc nghiệm: Đạt {score}/40 điểm ({percentage}%). "
+                        f"Đúng {correct_count}/{total_questions} câu, Sai {wrong_count} câu, Bỏ trống {blank_count} câu (trừ điểm)."
+                    ),
+                    'diem_theo_tieu_chi': {
+                        'grammar': {'criterion_name': 'Ngữ pháp (Grammar - 40%)', 'score': round(score * 0.4, 1)},
+                        'vocab': {'criterion_name': 'Từ vựng (Vocabulary - 40%)', 'score': round(score * 0.4, 1)},
+                        'reading': {'criterion_name': 'Đọc hiểu (Reading - 10%)', 'score': round(score * 0.1, 1)},
+                        'listening': {'criterion_name': 'Nghe hiểu (Listening - 10%)', 'score': round(score * 0.1, 1)},
+                    }
+                }
+            )
+
     return JsonResponse({
         'status': 'success',
-        'message': f'Hoàn thành Trắc nghiệm! Đúng {correct_count}/{total_questions} câu ({score}/40 điểm). Phần thi Writing & Speaking đã mở khóa.',
+        'message': f'Hoàn thành Trắc nghiệm! Đạt {score}/40 điểm (Đúng {correct_count}/{total_questions} câu, Bỏ trống {blank_count} câu). Phần thi Writing & Speaking đã mở khóa.',
         'score': score,
         'total': 40,
         'correct_count': correct_count,
+        'wrong_count': wrong_count,
+        'blank_count': blank_count,
         'total_questions': total_questions,
         'percentage': percentage,
+        'details': detailed_results
     })
 
 
@@ -470,7 +603,10 @@ def reset_mcq(request):
     request.session['placement_mcq_submitted'] = False
     request.session['placement_mcq_score'] = 0
     request.session['placement_mcq_correct'] = 0
+    request.session['placement_mcq_wrong'] = 0
+    request.session['placement_mcq_blank'] = 0
     request.session['placement_mcq_answers'] = {}
+    request.session['placement_mcq_details'] = []
     request.session['placement_mcq_cache'] = None
     request.session['placement_test_result'] = None
     request.session['placement_retake_in_progress'] = True
@@ -484,7 +620,10 @@ def reset_full_test(request):
     request.session['placement_mcq_submitted'] = False
     request.session['placement_mcq_score'] = 0
     request.session['placement_mcq_correct'] = 0
+    request.session['placement_mcq_wrong'] = 0
+    request.session['placement_mcq_blank'] = 0
     request.session['placement_mcq_answers'] = {}
+    request.session['placement_mcq_details'] = []
     request.session['placement_mcq_cache'] = None
     request.session['placement_test_result'] = None
     request.session['placement_retake_in_progress'] = True
@@ -678,7 +817,24 @@ def submit_writing_speaking(request):
                 do_tin_cay=90.0
             )
 
-            # Khởi tạo bản ghi Kết quả kiểm tra chờ GV phê duyệt
+            # Chuyển tất cả các bài test cũ hơn chưa duyệt chính thức sang trạng thái LƯU TRỮ (LUU_TRU)
+            old_phiens = PhienLamBai.objects.filter(
+                ho_so_tu_van=hstv
+            ).exclude(id=phien_obj.id)
+            for op in old_phiens:
+                kq_old = getattr(op, 'ket_qua_kiem_tra', None)
+                if kq_old and kq_old.trang_thai != KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
+                    kq_old.trang_thai = KetQuaKiemTra.TrangThai.LUU_TRU
+                    kq_old.save(update_fields=['trang_thai'])
+                elif not kq_old:
+                    KetQuaKiemTra.objects.create(
+                        phien_lam_bai=op,
+                        tong_diem=0.0,
+                        trinh_do='A1',
+                        trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
+                    )
+
+            # Khởi tạo bản ghi Kết quả kiểm tra phiên mới nhất chờ GV phê duyệt
             KetQuaKiemTra.objects.update_or_create(
                 phien_lam_bai=phien_obj,
                 defaults={
@@ -768,6 +924,49 @@ def submit_speaking(request):
     return submit_writing_speaking(request)
 
 
+def request_test_review(request, phien_id):
+    """
+    Học viên gửi yêu cầu thẩm định lại phiên làm bài đang ở trạng thái Lưu trữ (LUU_TRU) cho Giảng viên.
+    Chuyển trạng thái sang CHO_DUYET và thông báo tới GV.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    phien = PhienLamBai.objects.filter(pk=phien_id).first()
+    if not phien:
+        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy phiên làm bài!'}, status=404)
+
+    # Cập nhật kết quả kiểm tra sang CHO_DUYET
+    kq, _ = KetQuaKiemTra.objects.get_or_create(
+        phien_lam_bai=phien,
+        defaults={'tong_diem': 0.0, 'trinh_do': 'B1'}
+    )
+    kq.trang_thai = KetQuaKiemTra.TrangThai.CHO_DUYET
+    kq.save(update_fields=['trang_thai'])
+
+    # Cập nhật các bài làm kỹ năng sang AI_DA_CHAM để GV duyệt
+    for bl in phien.bai_lam_ky_nangs.all():
+        if bl.trang_thai_cham != BaiLamKyNang.TrangThaiCham.GV_DA_DUYET:
+            bl.trang_thai_cham = BaiLamKyNang.TrangThaiCham.AI_DA_CHAM
+            bl.save(update_fields=['trang_thai_cham'])
+
+    # Bắn notification cho TEACHER và STAFF
+    kh = phien.ho_so_tu_van.khach_hang if phien.ho_so_tu_van else None
+    student_name = kh.ho_ten or kh.email if kh else 'Học viên'
+    from apps.users.helpers import create_system_notification
+    create_system_notification(
+        vai_tro_nhan='TEACHER',
+        tieu_de='📤 Yêu cầu thẩm định bài thi mới',
+        noi_dung=f'Học viên {student_name} vừa gửi yêu cầu Giáo viên thẩm định lại phiên làm bài #{phien.id:03d}.',
+        khach_hang=kh
+    )
+
+    return JsonResponse({
+        'status': 'success',
+        'message': f'Đã gửi yêu cầu thẩm định bài thi #{phien.id:03d} tới Giảng viên thành công! Bài thi đã chuyển sang danh sách "Chờ GV duyệt".'
+    })
+
+
 def test_result(request):
     """
     Kết quả kiểm tra – Đầy đủ điểm 4 kỹ năng và đề xuất lộ trình.
@@ -803,26 +1002,44 @@ def test_result(request):
             'cau_tra_lois__cau_hoi'
         ).order_by('-hoan_thanh', '-id')
 
-        for p in db_phiens:
+        for idx, p in enumerate(db_phiens):
             tot_sc = 0.0
             is_approved = False
+            is_archived = False
+
+            kq = getattr(p, 'ket_qua_kiem_tra', None)
+            if kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
+                is_approved = True
+            elif kq and kq.trang_thai == KetQuaKiemTra.TrangThai.LUU_TRU:
+                is_archived = True
+            elif idx > 0 and not is_approved:
+                is_archived = True
+
             for bl in p.bai_lam_ky_nangs.all():
                 bl_score = float(bl.diem_dieu_chinh if bl.diem_dieu_chinh is not None else (bl.diem_tu_dong or 0.0))
                 tot_sc += bl_score
                 if bl.trang_thai_cham == BaiLamKyNang.TrangThaiCham.GV_DA_DUYET:
                     is_approved = True
 
-            kq = getattr(p, 'ket_qua_kiem_tra', None)
-            if kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
-                is_approved = True
+            if is_approved:
+                st_key = 'GV_DA_DUYET'
+                st_label = 'GV đã duyệt'
+            elif is_archived:
+                st_key = 'LUU_TRU'
+                st_label = 'Lưu trữ'
+            else:
+                st_key = 'AI_DA_CHAM'
+                st_label = 'Chờ GV duyệt'
 
             danh_sach_phien.append({
                 'id': p.id,
                 'ma_phien': f"{p.id:03d}",
                 'ngay_hoan_thanh': p.hoan_thanh or p.bat_dau or now,
                 'tong_diem': round(tot_sc, 1),
-                'trang_thai_duyet': 'GV_DA_DUYET' if is_approved else 'AI_DA_CHAM',
-                'status_label': 'GV đã duyệt' if is_approved else 'Chờ GV duyệt',
+                'trang_thai_duyet': st_key,
+                'status_label': st_label,
+                'is_archived': is_archived,
+                'can_request_review': (is_archived and not is_approved),
                 'ten_bai': p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else 'Placement Test',
             })
 
@@ -1061,200 +1278,339 @@ def test_result(request):
 
 
 def teacher_review(request):
-    """Duyệt bài AI – Hiển thị bài làm và đánh giá của AI từ CSDL."""
+    """
+    Duyệt bài AI – So sánh & Điều chỉnh điểm 🤖
+    - Mặc định: Hiển thị danh sách các bài thi học viên đã làm test, sắp xếp giảm dần theo thời gian.
+    - 2 bộ lọc: Bài AI đã chấm chờ điều chỉnh (filter=pending) và Bài đã duyệt (filter=approved), cùng tab Tất cả (filter=all).
+    - Phân trang: 20 bài / trang bằng Paginator.
+    - Khi bấm "Duyệt" ở mỗi dòng (?session=<id>): Mở giao diện chi tiết thẩm định gồm thanh chọn Kỹ năng (Speaking, Writing, Trắc nghiệm) và 3 cột (Bài học viên - Gợi ý AI - Giáo viên điều chỉnh & chốt kết quả).
+    """
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
     now = timezone.now()
+    session_param = request.GET.get('session', '').strip()
     skill_param = request.GET.get('skill', 'SPEAKING').upper()
-    session_param = request.GET.get('session', '')
-    is_writing = (skill_param == 'WRITING')
-    is_mcq = (skill_param == 'TRAC_NGHIEM')
-    ai_criteria = []
+    filter_type = request.GET.get('filter', 'all').lower()
+    search_query = request.GET.get('q', '').strip()
+    page_num = request.GET.get('page', 1)
+    is_approved_now = (request.GET.get('approved') == '1')
 
+    # 1. TRUY VẤN TẤT CẢ CÁC BÀI THI HỌC VIÊN ĐÃ LÀM TỪ CSDL (Loại bỏ các bài ở trạng thái Lưu trữ)
+    all_phiens = PhienLamBai.objects.exclude(
+        ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
+    ).select_related(
+        'ho_so_tu_van__khach_hang', 'bai_kiem_tra', 'ket_qua_kiem_tra'
+    ).prefetch_related(
+        'bai_lam_ky_nangs',
+        'cau_tra_lois__cham_diem_ais',
+        'cau_tra_lois__cau_hoi'
+    ).order_by('-hoan_thanh', '-bat_dau', '-id')
+
+    formatted_tests = []
+    for p in all_phiens:
+        kh = p.ho_so_tu_van.khach_hang if p.ho_so_tu_van else None
+        kq = getattr(p, 'ket_qua_kiem_tra', None)
+
+        spk_ai_score = None
+        wri_ai_score = None
+        mcq_ai_score = None
+        spk_adj_score = None
+        wri_adj_score = None
+        mcq_adj_score = None
+        spk_status = 'CHO_CHAM'
+        wri_status = 'CHO_CHAM'
+        mcq_status = 'CHO_CHAM'
+        has_any_pending = False
+        has_any_skill = False
+
+        for bl in p.bai_lam_ky_nangs.all():
+            has_any_skill = True
+            auto_sc = float(bl.diem_tu_dong) if bl.diem_tu_dong is not None else 0.0
+            adj_sc = float(bl.diem_dieu_chinh) if bl.diem_dieu_chinh is not None else None
+
+            if bl.ky_nang == 'SPEAKING':
+                spk_ai_score = auto_sc
+                spk_adj_score = adj_sc
+                spk_status = bl.trang_thai_cham
+            elif bl.ky_nang == 'WRITING':
+                wri_ai_score = auto_sc
+                wri_adj_score = adj_sc
+                wri_status = bl.trang_thai_cham
+            elif bl.ky_nang == 'TRAC_NGHIEM':
+                mcq_ai_score = auto_sc
+                mcq_adj_score = adj_sc
+                mcq_status = bl.trang_thai_cham
+
+            if bl.trang_thai_cham != BaiLamKyNang.TrangThaiCham.GV_DA_DUYET:
+                has_any_pending = True
+
+        # Trạng thái duyệt tổng quát của bài thi
+        is_approved = False
+        if kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
+            is_approved = True
+        elif has_any_skill and not has_any_pending:
+            is_approved = True
+
+        status_key = 'approved' if is_approved else 'pending'
+        status_label = 'GV đã duyệt' if is_approved else 'Chờ GV duyệt'
+
+        eff_spk = spk_adj_score if spk_adj_score is not None else (spk_ai_score or 0.0)
+        eff_wri = wri_adj_score if wri_adj_score is not None else (wri_ai_score or 0.0)
+        eff_mcq = mcq_adj_score if mcq_adj_score is not None else (mcq_ai_score or 0.0)
+        total_sc = round(eff_spk + eff_wri + eff_mcq, 1)
+
+        formatted_tests.append({
+            'id': p.id,
+            'ma_phien': f"{p.id:03d}",
+            'ten_hoc_vien': kh.ho_ten if (kh and kh.ho_ten) else (kh.email if kh else 'Học viên'),
+            'email': kh.email if kh else '',
+            'so_dien_thoai': kh.so_dien_thoai if kh else 'Chưa có SĐT',
+            'ten_bai': p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else 'Placement Test',
+            'thoi_gian': p.hoan_thanh or p.bat_dau or now,
+            'speaking_score': spk_ai_score,
+            'writing_score': wri_ai_score,
+            'mcq_score': mcq_ai_score,
+            'speaking_adj': spk_adj_score,
+            'writing_adj': wri_adj_score,
+            'mcq_adj': mcq_adj_score,
+            'speaking_status': spk_status,
+            'writing_status': wri_status,
+            'mcq_status': mcq_status,
+            'tong_diem': total_sc,
+            'trang_thai': status_key,
+            'trang_thai_label': status_label,
+            'is_approved': is_approved,
+            'is_selected': (session_param and str(p.id) == str(session_param)),
+        })
+
+    # Tìm kiếm theo thông tin học viên (Tên, SĐT, Email, Mã phiên / ID, Đề thi)
+    if search_query:
+        q_clean = search_query.lower()
+        formatted_tests = [
+            x for x in formatted_tests
+            if q_clean in x['ten_hoc_vien'].lower()
+            or q_clean in x['email'].lower()
+            or q_clean in x['so_dien_thoai'].lower()
+            or q_clean in str(x['id']).lower()
+            or q_clean in x['ma_phien'].lower()
+            or q_clean in x['ten_bai'].lower()
+        ]
+
+    # Đếm số lượng cho các bộ lọc
+    total_tests_count = len(formatted_tests)
+    pending_tests_count = len([x for x in formatted_tests if x['trang_thai'] == 'pending'])
+    approved_tests_count = len([x for x in formatted_tests if x['trang_thai'] == 'approved'])
+
+    # Áp dụng bộ lọc
+    if filter_type == 'pending':
+        filtered_tests = [x for x in formatted_tests if x['trang_thai'] == 'pending']
+    elif filter_type == 'approved':
+        filtered_tests = [x for x in formatted_tests if x['trang_thai'] == 'approved']
+    else:
+        filtered_tests = formatted_tests
+
+    # Phân trang: 20 bài / trang
+    paginator = Paginator(filtered_tests, 20)
+    try:
+        page_obj = paginator.page(page_num)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    # 2. XỬ LÝ CHI TIẾT CHẤM CHỮA (CHỈ KÍCH HOẠT KHI CÓ session ĐƯỢC CHỌN)
+    is_detail_view = False
     phien_db = None
+    detail_data = {}
+
     if session_param:
-        phien_db = PhienLamBai.objects.filter(pk=session_param).select_related('ho_so_tu_van__khach_hang', 'bai_kiem_tra').first()
+        phien_db = PhienLamBai.objects.filter(pk=session_param).select_related(
+            'ho_so_tu_van__khach_hang', 'bai_kiem_tra', 'ket_qua_kiem_tra'
+        ).prefetch_related(
+            'bai_lam_ky_nangs',
+            'cau_tra_lois__cham_diem_ais',
+            'cau_tra_lois__cau_hoi'
+        ).first()
 
-    if not phien_db:
-        # Lấy phiên làm bài mới nhất trong CSDL
-        phien_db = PhienLamBai.objects.select_related('ho_so_tu_van__khach_hang', 'bai_kiem_tra').order_by('-bat_dau').first()
+    if phien_db:
+        is_detail_view = True
+        kh_obj = phien_db.ho_so_tu_van.khach_hang if phien_db.ho_so_tu_van else None
 
-    if phien_db and phien_db.ho_so_tu_van:
-        hoc_vien_name = phien_db.ho_so_tu_van.khach_hang.ho_ten or 'Học viên'
-        ma_phien = str(phien_db.id)
-        ngay_thi = phien_db.hoan_thanh or phien_db.bat_dau or now
-
-        # Lấy điểm các kỹ năng
-        writing_score = 21.0
-        speaking_score = 20.0
-        mcq_score = 30.0
+        # Trích xuất điểm AI GỢI Ý GỐC & Điểm Giáo viên điều chỉnh cho cả 3 kỹ năng
+        spk_status = 'CHO_CHAM'
+        wri_status = 'CHO_CHAM'
+        mcq_status = 'CHO_CHAM'
+        ai_spk_score = 0.0
+        ai_wri_score = 0.0
+        ai_mcq_score = 0.0
+        teacher_spk_score = None
+        teacher_wri_score = None
+        teacher_mcq_score = None
         bl_cur = None
-        for b in phien_db.bai_lam_ky_nangs.all():
-            val = float(b.diem_dieu_chinh if b.diem_dieu_chinh is not None else (b.diem_tu_dong or 0.0))
-            if b.ky_nang == 'WRITING':
-                writing_score = val
-                if is_writing: bl_cur = b
-            elif b.ky_nang == 'SPEAKING':
-                speaking_score = val
-                if not is_writing and not is_mcq: bl_cur = b
-            elif b.ky_nang == 'TRAC_NGHIEM':
-                mcq_score = val
-                if is_mcq: bl_cur = b
 
-        # Lấy nội dung câu trả lời
+        for b in phien_db.bai_lam_ky_nangs.all():
+            auto_val = float(b.diem_tu_dong or 0.0)
+            adj_val = float(b.diem_dieu_chinh) if b.diem_dieu_chinh is not None else None
+
+            if b.ky_nang == 'SPEAKING':
+                ai_spk_score = auto_val
+                teacher_spk_score = adj_val
+                spk_status = b.trang_thai_cham
+                if skill_param == 'SPEAKING': bl_cur = b
+            elif b.ky_nang == 'WRITING':
+                ai_wri_score = auto_val
+                teacher_wri_score = adj_val
+                wri_status = b.trang_thai_cham
+                if skill_param == 'WRITING': bl_cur = b
+            elif b.ky_nang == 'TRAC_NGHIEM':
+                ai_mcq_score = auto_val
+                teacher_mcq_score = adj_val
+                mcq_status = b.trang_thai_cham
+                if skill_param == 'TRAC_NGHIEM': bl_cur = b
+
+        is_writing = (skill_param == 'WRITING')
+        is_mcq = (skill_param == 'TRAC_NGHIEM')
+
+        if is_writing:
+            current_ai_score = ai_wri_score
+            current_teacher_score = teacher_wri_score if teacher_wri_score is not None else ai_wri_score
+            current_skill = 'WRITING'
+            current_skill_label = 'Writing (Tự luận)'
+            max_skill_score = 30
+        elif is_mcq:
+            current_ai_score = ai_mcq_score
+            current_teacher_score = teacher_mcq_score if teacher_mcq_score is not None else ai_mcq_score
+            current_skill = 'TRAC_NGHIEM'
+            current_skill_label = 'Trắc nghiệm (40đ)'
+            max_skill_score = 40
+        else:
+            current_ai_score = ai_spk_score
+            current_teacher_score = teacher_spk_score if teacher_spk_score is not None else ai_spk_score
+            current_skill = 'SPEAKING'
+            current_skill_label = 'Speaking (Ghi âm)'
+            max_skill_score = 30
+
+        # Lấy bài làm học viên từ CSDL
         w_answer = "Chưa có bài nộp Writing của học viên."
         s_transcript = "Chưa có bản thu âm Speaking của học viên."
         mcq_summary = "Chưa có kết quả Trắc nghiệm."
+        audio_url = ""
 
         for tl in phien_db.cau_tra_lois.all():
             if tl.cau_hoi and tl.cau_hoi.ky_nang == CauHoi.KyNang.WRITING:
                 w_answer = tl.noi_dung_tra_loi or w_answer
             elif tl.cau_hoi and tl.cau_hoi.ky_nang == CauHoi.KyNang.SPEAKING:
                 s_transcript = tl.noi_dung_tra_loi or s_transcript
+                if tl.audio_url: audio_url = tl.audio_url
             elif tl.cau_hoi and (tl.cau_hoi.ky_nang == CauHoi.KyNang.READING or tl.cau_hoi.loai == CauHoi.Loai.TRAC_NGHIEM):
                 mcq_summary = tl.noi_dung_tra_loi or mcq_summary
 
-        # Lấy nhận xét & tiêu chí AI từ bản ghi tương ứng kỹ năng đang chọn
+        # Lấy nhận xét & rubric AI từ CSDL
         ai_comment = "AI đã hoàn tất đánh giá sơ bộ theo chuẩn CEFR."
-        target_ky_nang = 'WRITING' if is_writing else ('TRAC_NGHIEM' if is_mcq else 'SPEAKING')
-        ai_crit_obj = ChamDiemAI.objects.filter(
-            cau_tra_loi__phien_lam_bai=phien_db,
-            cau_tra_loi__cau_hoi__ky_nang=target_ky_nang
-        ).first()
-
-        if not ai_crit_obj and not is_mcq:
-            ai_crit_obj = ChamDiemAI.objects.filter(cau_tra_loi__phien_lam_bai=phien_db).first()
+        ai_criteria = []
+        if is_mcq:
+            ai_crit_obj = ChamDiemAI.objects.filter(
+                cau_tra_loi__phien_lam_bai=phien_db,
+                cau_tra_loi__cau_hoi__loai=CauHoi.Loai.TRAC_NGHIEM
+            ).first()
+        else:
+            target_ky_nang = 'WRITING' if is_writing else 'SPEAKING'
+            ai_crit_obj = ChamDiemAI.objects.filter(
+                cau_tra_loi__phien_lam_bai=phien_db,
+                cau_tra_loi__cau_hoi__ky_nang=target_ky_nang
+            ).first()
 
         if ai_crit_obj:
             if ai_crit_obj.nhan_xet:
                 ai_comment = ai_crit_obj.nhan_xet
             if ai_crit_obj.diem_theo_tieu_chi and isinstance(ai_crit_obj.diem_theo_tieu_chi, dict):
                 dt = ai_crit_obj.diem_theo_tieu_chi
-                custom_c_list = []
                 for k, v in dt.items():
                     if isinstance(v, dict) and 'score' in v:
                         c_title = v.get('criterion_name') or k.replace('_', ' ').title()
                         c_score = v.get('score', 7.0)
-                        custom_c_list.append({
+                        ai_criteria.append({
                             'name': c_title,
                             'score': str(c_score),
                             'pct': int(float(c_score) * 10) if float(c_score) <= 10 else int(float(c_score))
                         })
-                if custom_c_list:
-                    ai_criteria = custom_c_list
         elif is_mcq:
-            ai_comment = f"Hệ thống đã tự động đối soát đáp án trắc nghiệm: Đạt {mcq_score}/40 điểm. Tỷ lệ chính xác tương đương {int((mcq_score/40)*100)}%."
-    else:
-        hoc_vien_name = 'Nguyễn Thị Lan'
-        ma_phien = '001'
-        ngay_thi = now - timedelta(hours=2)
-        writing_score = 21.0
-        speaking_score = 19.0
-        mcq_score = 32.0
-        w_answer = "Dear Admissions Team, I would like to inquire about the course..."
-        s_transcript = "Hello, my name is Lan. I am learning English for my career..."
-        mcq_summary = "Đúng 20/25 câu (80%). Điểm số: 32/40 điểm."
-        ai_comment = "AI đã hoàn tất đánh giá sơ bộ các tiêu chí."
-        bl_cur = None
-
-    if is_writing:
-        current_score = writing_score
-        current_skill = 'WRITING'
-        current_skill_label = 'Writing (Tự luận)'
-    elif is_mcq:
-        current_score = mcq_score
-        current_skill = 'TRAC_NGHIEM'
-        current_skill_label = 'Trắc nghiệm (40đ)'
-    else:
-        current_score = speaking_score
-        current_skill = 'SPEAKING'
-        current_skill_label = 'Speaking (Ghi âm)'
-
-    ten_bai = phien_db.bai_kiem_tra.ten_bai if (phien_db and phien_db.bai_kiem_tra) else "Placement Test (IELTS - 5.0 đến 6.5)"
-
-    if not ai_criteria:
-        if is_writing:
+            pct_m = int((current_ai_score / 40) * 100) if current_ai_score else 0
+            ai_comment = f"Hệ thống tự động đối soát đáp án trắc nghiệm: Đạt {current_ai_score}/40 điểm ({pct_m}%)."
             ai_criteria = [
-                {'name': 'Task Achievement / Response', 'score': '7.0', 'pct': 70},
-                {'name': 'Coherence & Cohesion', 'score': '6.8', 'pct': 68},
-                {'name': 'Lexical Resource', 'score': '7.2', 'pct': 72},
-                {'name': 'Grammatical Range & Accuracy', 'score': '7.0', 'pct': 70},
-            ]
-        elif is_mcq:
-            pct_mcq = int((mcq_score / 40) * 100) if mcq_score else 75
-            ai_criteria = [
-                {'name': 'Ngữ pháp (Grammar - 40%)', 'score': f'{round(mcq_score*0.4, 1)}', 'pct': pct_mcq},
-                {'name': 'Từ vựng (Vocabulary - 40%)', 'score': f'{round(mcq_score*0.4, 1)}', 'pct': pct_mcq},
-                {'name': 'Đọc hiểu (Reading - 10%)', 'score': f'{round(mcq_score*0.1, 1)}', 'pct': pct_mcq},
-                {'name': 'Nghe hiểu (Listening - 10%)', 'score': f'{round(mcq_score*0.1, 1)}', 'pct': pct_mcq},
-            ]
-        else:
-            ai_criteria = [
-                {'name': 'Fluency & Coherence', 'score': '7.0', 'pct': 70},
-                {'name': 'Lexical Resource', 'score': '6.8', 'pct': 68},
-                {'name': 'Grammatical Range & Accuracy', 'score': '7.0', 'pct': 70},
-                {'name': 'Pronunciation & Intonation', 'score': '7.2', 'pct': 72},
+                {'name': 'Ngữ pháp (Grammar - 40%)', 'score': f'{round(current_ai_score*0.4, 1)}', 'pct': pct_m},
+                {'name': 'Từ vựng (Vocabulary - 40%)', 'score': f'{round(current_ai_score*0.4, 1)}', 'pct': pct_m},
+                {'name': 'Đọc hiểu (Reading - 10%)', 'score': f'{round(current_ai_score*0.1, 1)}', 'pct': pct_m},
+                {'name': 'Nghe hiểu (Listening - 10%)', 'score': f'{round(current_ai_score*0.1, 1)}', 'pct': pct_m},
             ]
 
-    # Danh sách bài thi đã được AI chấm sơ bộ từ CSDL thực tế
-    pending_list = []
-    try:
-        recent_phiens = PhienLamBai.objects.select_related(
-            'ho_so_tu_van__khach_hang', 'bai_kiem_tra'
-        ).prefetch_related('bai_lam_ky_nangs').order_by('-bat_dau')[:20]
+        if not ai_criteria:
+            if is_writing:
+                ai_criteria = [
+                    {'name': 'Task Achievement / Response', 'score': '7.0', 'pct': 70},
+                    {'name': 'Coherence & Cohesion', 'score': '6.8', 'pct': 68},
+                    {'name': 'Lexical Resource', 'score': '7.2', 'pct': 72},
+                    {'name': 'Grammatical Range & Accuracy', 'score': '7.0', 'pct': 70},
+                ]
+            else:
+                ai_criteria = [
+                    {'name': 'Fluency & Coherence', 'score': '7.0', 'pct': 70},
+                    {'name': 'Lexical Resource', 'score': '6.8', 'pct': 68},
+                    {'name': 'Grammatical Range & Accuracy', 'score': '7.0', 'pct': 70},
+                    {'name': 'Pronunciation & Intonation', 'score': '7.2', 'pct': 72},
+                ]
 
-        for p in recent_phiens:
-            kh_p = p.ho_so_tu_van.khach_hang if p.ho_so_tu_van else None
-            ten_hv = kh_p.ho_ten if (kh_p and kh_p.ho_ten) else (kh_p.email if kh_p else f'Thí sinh #{p.id}')
-            for bl in p.bai_lam_ky_nangs.all():
-                pending_list.append({
-                    'ma_phien': str(p.id),
-                    'ten_hoc_vien': ten_hv,
-                    'email': kh_p.email if kh_p else '',
-                    'ky_nang': bl.ky_nang,
-                    'diem_ai': round(float(bl.diem_tu_dong or 0.0), 1),
-                    'diem_dieu_chinh': bl.diem_dieu_chinh,
-                    'trang_thai': bl.trang_thai_cham,
-                    'thoi_gian': p.hoan_thanh or p.bat_dau,
-                })
-    except Exception:
-        pass
+        total_3_skills = (teacher_wri_score or ai_wri_score) + (teacher_spk_score or ai_spk_score) + (teacher_mcq_score or ai_mcq_score)
+        suggested_cefr = 'B2' if total_3_skills >= 75 else ('B1' if total_3_skills >= 55 else 'A2')
 
-    if not pending_list:
-        pending_list = [
-            {'ma_phien': '001', 'ten_hoc_vien': 'Nguyễn Thị Lan', 'ky_nang': 'SPEAKING', 'diem_ai': 19.0, 'trang_thai': 'AI_DA_CHAM'},
-            {'ma_phien': '001', 'ten_hoc_vien': 'Nguyễn Thị Lan', 'ky_nang': 'WRITING', 'diem_ai': 21.0, 'trang_thai': 'GV_DA_DUYET'},
-            {'ma_phien': '002', 'ten_hoc_vien': 'Trần Văn Bình', 'ky_nang': 'SPEAKING', 'diem_ai': 18.0, 'trang_thai': 'AI_DA_CHAM'},
-        ]
+        detail_data = {
+            'hoc_vien_name': kh_obj.ho_ten if (kh_obj and kh_obj.ho_ten) else 'Học viên',
+            'email': kh_obj.email if kh_obj else '',
+            'so_dien_thoai': kh_obj.so_dien_thoai if kh_obj else '',
+            'phien_id': phien_db.id,
+            'ma_phien': f"{phien_db.id:03d}",
+            'ngay_thi': phien_db.hoan_thanh or phien_db.bat_dau or now,
+            'ten_bai': phien_db.bai_kiem_tra.ten_bai if phien_db.bai_kiem_tra else 'Placement Test',
+            'current_skill': current_skill,
+            'current_skill_label': current_skill_label,
+            'max_skill_score': max_skill_score,
+            'current_ai_score': round(current_ai_score, 1),
+            'current_teacher_score': round(current_teacher_score, 1),
+            'speaking_status': spk_status,
+            'writing_status': wri_status,
+            'mcq_status': mcq_status,
+            'cau_tra_loi': {
+                'transcript': s_transcript,
+                'writing_text': w_answer,
+                'mcq_summary': mcq_summary,
+                'audio_url': audio_url,
+            },
+            'cham_diem_ai': {
+                'mo_hinh_ai': 'Gemini 3.5 Flash (Rubric CEFR)',
+                'phien_ban_prompt': 'v2.5',
+                'do_tin_cay': 92,
+                'diem_tong': round(current_ai_score, 1),  # Luôn giữ nguyên điểm AI gợi ý lúc đầu
+                'nhan_xet': ai_comment,
+            },
+            'ai_criteria': ai_criteria,
+            'bai_lam': {
+                'diem_dieu_chinh': round(current_teacher_score, 1),
+                'nhan_xet_gv': 'Học viên hoàn thành bài kiểm tra theo đúng chuẩn yêu cầu.',
+                'trang_thai_cham': bl_cur.trang_thai_cham if bl_cur else 'CHO_CHAM',
+            },
+            'trinh_do': suggested_cefr,
+        }
 
     context = {
-        'hoc_vien_name': hoc_vien_name,
-        'phien': {'ma_phien': ma_phien, 'hoan_thanh': ngay_thi},
-        'ten_bai': ten_bai,
-        'current_skill': current_skill,
-        'current_skill_label': current_skill_label,
-        'is_approved_now': (request.GET.get('approved') == '1'),
-        'skills_to_review': [
-            {'key': 'SPEAKING', 'icon': '🎙️', 'label': 'Speaking (30đ)', 'status': 'pending'},
-            {'key': 'WRITING', 'icon': '✍️', 'label': 'Writing (30đ)', 'status': 'pending'},
-            {'key': 'TRAC_NGHIEM', 'icon': '📝', 'label': 'Trắc nghiệm (40đ)', 'status': 'done'},
-        ],
-        'cau_tra_loi': {
-            'transcript': s_transcript,
-            'writing_text': w_answer,
-            'mcq_summary': mcq_summary,
-        },
-        'cham_diem_ai': {
-            'mo_hinh_ai': 'Gemini 3.5 Flash (Rubric CEFR)',
-            'phien_ban_prompt': 'v2.5',
-            'do_tin_cay': 92,
-            'diem_tong': current_score,
-            'nhan_xet': ai_comment,
-        },
-        'ai_criteria': ai_criteria,
-        'bai_lam': {
-            'diem_dieu_chinh': bl_cur.diem_dieu_chinh if (bl_cur and bl_cur.diem_dieu_chinh is not None) else current_score,
-            'nhan_xet_gv': 'Học viên hoàn thành bài kiểm tra theo đúng chuẩn yêu cầu.',
-        },
-        'ket_qua': {'trinh_do': 'B1'},
+        'is_detail_view': is_detail_view,
+        'detail': detail_data,
+        'page_obj': page_obj,
+        'current_filter': filter_type,
+        'search_query': search_query,
+        'total_tests_count': total_tests_count,
+        'pending_tests_count': pending_tests_count,
+        'approved_tests_count': approved_tests_count,
+        'is_approved_now': is_approved_now,
         'levels': [
             {'value': 'A1', 'label': 'A1 – Beginner (0–39đ)'},
             {'value': 'A2', 'label': 'A2 – Elementary (40–59đ)'},
@@ -1262,7 +1618,6 @@ def teacher_review(request):
             {'value': 'B2', 'label': 'B2 – Upper Intermediate (80–89đ)'},
             {'value': 'C1', 'label': 'C1 – Advanced (90–100đ)'},
         ],
-        'pending_list': pending_list,
     }
     return render(request, 'placement_tests/teacher_review.html', context)
 

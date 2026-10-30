@@ -44,6 +44,9 @@ class LopHoc(models.Model):
         default=TrangThai.MO,
         verbose_name='Trạng thái',
     )
+    giao_vien = models.CharField(max_length=150, null=True, blank=True, default='Giảng viên trung tâm', verbose_name='Giáo viên')
+    phong_hoc = models.CharField(max_length=100, null=True, blank=True, default='P.302 – Cơ sở chính', verbose_name='Phòng học')
+    ca_hoc = models.CharField(max_length=20, default='sang', verbose_name='Ca học (sang/chieu/toi)')
 
     class Meta:
         db_table = 'lop_hoc'

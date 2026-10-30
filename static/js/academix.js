@@ -81,9 +81,26 @@ const Toast = (() => {
 
 // ─── 3. SIDEBAR DI ĐỘNG TOGGLE ───────────────────────────────
 function toggleSidebar() {
-  const sb = document.getElementById('sidebar');
-  if (sb) sb.classList.toggle('open');
+  if (window.innerWidth <= 768) {
+    const sb = document.getElementById('sidebar');
+    if (sb) sb.classList.toggle('open');
+  } else {
+    document.body.classList.toggle('sidebar-collapsed');
+    const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+    try {
+      localStorage.setItem('sidebar_collapsed', isCollapsed ? '1' : '0');
+    } catch(e) {}
+  }
 }
+
+// Khởi tạo trạng thái sidebar thu gọn trên desktop nếu đã lưu trước đó
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    if (window.innerWidth > 768 && localStorage.getItem('sidebar_collapsed') === '1') {
+      document.body.classList.add('sidebar-collapsed');
+    }
+  } catch(e) {}
+});
 
 // ─── 4. ĐÁNH DẤU MENU ACTIVE ─────────────────────────────────
 function setActiveNav() {

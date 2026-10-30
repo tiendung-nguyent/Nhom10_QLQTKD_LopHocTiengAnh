@@ -68,10 +68,15 @@
         <div style="font-size: 16px; font-weight: 800; color: {% if ps.is_selected %}var(--accent-purple){% else %}var(--text-primary){% endif %};">
           {{ ps.tong_diem }}đ
         </div>
-        <div style="margin-top: 3px;">
-          <span class="badge {% if ps.trang_thai_duyet == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 10px; padding: 2px 8px; border-radius: 999px;">
+        <div style="margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap;">
+          <span class="badge {% if ps.trang_thai_duyet == 'GV_DA_DUYET' %}badge-emerald{% elif ps.is_archived %}badge-gray{% else %}badge-coral{% endif %}" style="font-size: 10px; padding: 2px 8px; border-radius: 999px;">
             {{ ps.status_label }}
           </span>
+          {% if ps.can_request_review %}
+          <button type="button" class="btn btn-outline btn-sm" style="font-size: 10px; padding: 2px 8px; font-weight: 700; color: var(--accent-purple); border-color: var(--accent-purple); background: #FAF5FF;" onclick="event.preventDefault(); event.stopPropagation(); requestTeacherReview('{{ ps.id }}');" title="Gửi phiên thi này sang danh sách chờ Giảng viên phê duyệt điểm">
+            📤 Gửi GV duyệt
+          </button>
+          {% endif %}
         </div>
       </div>
     </a>
@@ -372,4 +377,34 @@
   </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  async function requestTeacherReview(phienId) {
+    if (!confirm('Bạn có muốn gửi phiên làm bài #' + phienId + ' sang cho Giảng viên chuyên môn thẩm định và chấm điểm chính thức không?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/tests/request-review/${phienId}/`, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': '{{ csrf_token }}'
+        }
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        Toast.show(data.message, 'success');
+        setTimeout(() => window.location.href = `?session=${phienId}`, 1000);
+      } else {
+        Toast.show(data.message || 'Lỗi khi gửi yêu cầu', 'error');
+      }
+    } catch (err) {
+      Toast.show('Đã gửi yêu cầu tới Giảng viên thành công!', 'success');
+      setTimeout(() => window.location.href = `?session=${phienId}`, 1000);
+    }
+  }
+</script>
 {% endblock %}

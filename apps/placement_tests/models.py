@@ -13,6 +13,14 @@ class LanLienHe(models.Model):
         related_name='lan_lien_hes',
         verbose_name='Hồ sơ tư vấn',
     )
+    nhan_vien = models.ForeignKey(
+        NhanVien,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lan_lien_hes',
+        verbose_name='Chuyên viên tư vấn',
+    )
     thoi_gian = models.DateTimeField(verbose_name='Thời gian')
     kenh_lien_he = models.CharField(max_length=100, verbose_name='Kênh liên hệ')
     ket_qua = models.TextField(verbose_name='Kết quả')
@@ -303,6 +311,7 @@ class KetQuaKiemTra(models.Model):
     class TrangThai(models.TextChoices):
         CHO_DUYET = 'CHO_DUYET', 'Chờ duyệt'
         DA_XAC_NHAN = 'DA_XAC_NHAN', 'Đã xác nhận'
+        LUU_TRU = 'LUU_TRU', 'Lưu trữ'
         HUY = 'HUY', 'Hủy'
 
     phien_lam_bai = models.OneToOneField(

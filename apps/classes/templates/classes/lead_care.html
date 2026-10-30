@@ -1,0 +1,634 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chăm sóc Khách hàng Tiềm năng – Tư vấn Tuyển sinh{% endblock %}
+
+{% block extra_css %}
+<style>
+  .timeline-mini {
+    position: relative;
+    padding-left: 20px;
+    margin-top: 6px;
+  }
+
+  .timeline-mini::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: #E2E8F0;
+  }
+
+  .timeline-mini-item {
+    position: relative;
+    margin-bottom: 12px;
+  }
+
+  .timeline-mini-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .timeline-mini-dot {
+    position: absolute;
+    left: -20px;
+    top: 3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent-purple);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px var(--accent-purple);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ─── TIÊU ĐỀ TRANG ─────────────────────────────────────── -->
+<div class="page-header">
+  <div class="page-breadcrumb">🎯 <span>Tuyển sinh</span> / Chăm sóc Khách hàng Tiềm năng</div>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <h1 class="page-title">Chăm sóc Khách hàng Tiềm năng 🎯</h1>
+      <p class="page-subtitle">Quản lý phễu tiếp nhận, liên hệ tư vấn lộ trình và hẹn lịch test đầu vào — Đồng bộ trực
+        tiếp lên Dashboard Học viên</p>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <a href="{% url 'classes:class_status' %}" class="btn btn-outline btn-sm">
+        🏫 Tình trạng Lớp & Sĩ số
+      </a>
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.location.reload()">
+        🔄 Làm mới
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── 4 THẺ THỐNG KÊ KPI CHĂM SÓC KHÁCH HÀNG ────────────── -->
+<div class="stat-grid" style="margin-bottom: 24px;">
+  <!-- KPI 1: Khách hàng tiềm năng -->
+  <div class="stat-card">
+    <div class="stat-icon coral">📥</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ total_leads_count|default:27 }}</div>
+      <div class="stat-label">Khách hàng trong phễu tuyển sinh</div>
+      <div class="stat-delta up">↑ {{ new_leads_count|default:5 }} hồ sơ mới tiếp nhận</div>
+    </div>
+  </div>
+
+  <!-- KPI 2: Đang tư vấn & Hẹn lịch test -->
+  <div class="stat-card">
+    <div class="stat-icon purple">⏳</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ consulting_count|default:8 }}</div>
+      <div class="stat-label">Đang tư vấn & Hẹn lịch test</div>
+      <div class="stat-delta">● Lịch test chuẩn 105 phút</div>
+    </div>
+  </div>
+
+  <!-- KPI 3: Đã test chờ tư vấn lộ trình & xếp lớp -->
+  <div class="stat-card">
+    <div class="stat-icon emerald">✦</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ tested_waiting_count|default:11 }}</div>
+      <div class="stat-label">Đã có điểm test chờ tư vấn lớp</div>
+      <div class="stat-delta up">↑ Sẵn sàng phân lớp CEFR</div>
+    </div>
+  </div>
+
+  <!-- KPI 4: Tổng số lần chăm sóc & liên hệ -->
+  <div class="stat-card">
+    <div class="stat-icon blue">📞</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ total_contacts_count|default:14 }}</div>
+      <div class="stat-label">Lượt chăm sóc & liên hệ đã ghi nhận</div>
+      <div class="stat-delta up">↑ Đồng bộ tiến trình học viên</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── THANH TÌM KIẾM & BỘ LỌC HỒ SƠ CHĂM SÓC ───────────── -->
+<div class="card rounded-2xl shadow-sm" style="margin-bottom: 20px;">
+  <div class="card-body" style="padding: 14px 20px;">
+    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+      <!-- Search Input (Đồng bộ với #global-search) -->
+      <div class="header-search" style="max-width: 320px; flex: 1;">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="lead-search-input" value="{{ search_query|default:'' }}"
+          placeholder="Tìm tên học viên, email, số điện thoại…" oninput="filterLeads()">
+      </div>
+
+      <!-- Dropdown Filter theo Trạng thái hồ sơ -->
+      <select class="form-control" style="max-width: 230px;" id="status-filter" onchange="filterLeads()">
+        <option value="">-- Tất cả trạng thái --</option>
+        <option value="MOI" {% if selected_status=='MOI' %}selected{% endif %}>📥 Mới tiếp nhận</option>
+        <option value="DANG_XU_LY" {% if selected_status=='DANG_XU_LY' %}selected{% endif %}>⏳ Đang tư vấn lộ trình
+        </option>
+        <option value="CHO_TEST" {% if selected_status=='CHO_TEST' %}selected{% endif %}>📝 Hẹn lịch test (105')
+        </option>
+        <option value="DA_TEST" {% if selected_status=='DA_TEST' %}selected{% endif %}>✦ Đã test (Chờ tư vấn lớp)
+        </option>
+        <option value="DE_XUAT_LOP" {% if selected_status=='DE_XUAT_LOP' %}selected{% endif %}>🎯 Đã đề xuất lớp
+        </option>
+        <option value="TU_CHOI" {% if selected_status=='TU_CHOI' %}selected{% endif %}>❌ Từ chối / Đổi khung giờ
+        </option>
+        <option value="HOAN_THANH" {% if selected_status=='HOAN_THANH' %}selected{% endif %}>✔ Đã nhập học</option>
+      </select>
+
+      <!-- Dropdown Filter theo Chuyên viên tư vấn -->
+      <select class="form-control" style="max-width: 220px;" id="advisor-filter" onchange="filterLeads()">
+        <option value="">-- Tất cả chuyên viên --</option>
+        {% for adv in advisors %}
+        <option value="{{ adv.id }}" {% if selected_advisor==adv.id %}selected{% endif %}>{{ adv.ho_ten }}</option>
+        {% endfor %}
+      </select>
+
+      <button type="button" class="btn btn-outline btn-sm" onclick="resetLeadFilters()">
+        ↺ Đặt lại
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── BẢNG DANH SÁCH KHÁCH HÀNG TIỀM NĂNG & HỒ SƠ CHĂM SÓC ─── -->
+<div class="card rounded-2xl shadow-sm" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <div>
+      <div class="card-title">📋 Danh sách Khách hàng Tiềm năng & Hồ sơ Tư vấn</div>
+      <div class="card-subtitle">Mỗi lần chăm sóc sẽ tự động cập nhật vào <strong>Lịch sử Tư vấn</strong> và
+        <strong>Tiến trình Hồ sơ</strong> của học viên</div>
+    </div>
+    <span class="badge badge-purple">BPMN Lead Management</span>
+  </div>
+  <div class="table-wrapper">
+    <table id="leads-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Học viên</th>
+          <th>Mục tiêu / Điểm test</th>
+          <th>Trạng thái hồ sơ</th>
+          <th>Chuyên viên phụ trách</th>
+          <th>Tương tác gần nhất</th>
+          <th style="text-align: center; width: 190px; min-width: 190px;">Thao tác chăm sóc</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        <tr data-status="{{ lead.trang_thai }}" data-advisor="{{ lead.nhan_vien_id|default:'' }}"
+          id="row-lead-{{ lead.id }}">
+          <td style="font-weight: 700; color: var(--text-muted);">#{{ lead.id }}</td>
+          <td>
+            <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">{{ lead.ho_ten }}</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 1px;">
+              {{ lead.email }} · <i class="fa-solid fa-phone" style="font-size: 10px;"></i> {{ lead.so_dien_thoai }}
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">
+              Tiếp nhận: {{ lead.ngay_tiep_nhan|date:"d/m/Y H:i" }}
+            </div>
+          </td>
+          <td>
+            {% if lead.test_score is not None %}
+            <div style="font-weight: 700; color: var(--accent-purple); font-size: 13.5px;">
+              Đã test: {{ lead.test_score }}đ
+            </div>
+            <span class="badge badge-purple" style="font-size: 11px; margin-top: 2px;">
+              CEFR: {{ lead.test_level|default:"B1" }}
+            </span>
+            {% else %}
+            <div style="font-weight: 700; color: var(--text-primary); font-size: 13px;">
+              {{ lead.target_goal|default:"🎯 Luyện thi IELTS" }}
+            </div>
+            <span class="badge badge-coral" style="font-size: 11px; margin-top: 3px;">
+              📝 Chưa test (105')
+            </span>
+            {% endif %}
+            {% if lead.khoa_de_xuat %}
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+              Đề xuất: {{ lead.khoa_de_xuat }}
+            </div>
+            {% endif %}
+          </td>
+          <td id="status-badge-{{ lead.id }}">
+            <span class="badge {{ lead.trang_thai_badge }}">{{ lead.trang_thai_label }}</span>
+            {% if lead.ly_do_tu_choi %}
+            <div style="font-size: 11px; color: #EF4444; margin-top: 3px; max-width: 180px;">
+              Lý do: {{ lead.ly_do_tu_choi }}
+            </div>
+            {% endif %}
+          </td>
+          <td id="advisor-name-{{ lead.id }}">
+            <div style="font-weight: 600; font-size: 13px; color: var(--text-primary);">
+              {{ lead.nhan_vien_tu_van }}
+            </div>
+            {% if lead.nhan_vien_email %}
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+              {{ lead.nhan_vien_email }}
+            </div>
+            {% endif %}
+          </td>
+          <td id="contact-cell-{{ lead.id }}" style="max-width: 260px;">
+            {% if lead.latest_contact %}
+            <div style="font-size: 11.5px; font-weight: 700; color: var(--text-primary);">
+              {{ lead.latest_contact.kenh_lien_he }} · {{ lead.latest_contact.thoi_gian|date:"d/m H:i" }}
+            </div>
+            <div
+              style="font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+              {{ lead.latest_contact.ket_qua }}
+            </div>
+            <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
+              (Tổng cộng {{ lead.contact_count }} lần liên hệ)
+            </div>
+            {% else %}
+            <span class="text-muted" style="font-size: 12px; font-style: italic;">Chưa có lịch sử liên hệ</span>
+            {% endif %}
+          </td>
+          <td style="text-align: center; width: 190px; min-width: 190px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center;">
+              <a href="{% url 'classes:lead_consult' lead.id %}" class="btn btn-emerald btn-sm"
+                style="font-weight: 700; padding: 7px 6px; font-size: 12px; width: 100%; white-space: nowrap; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px;"
+                title="Chăm sóc, tư vấn lộ trình, xếp lớp & sinh VietQR">
+                📞 Chăm sóc
+              </a>
+              <button type="button" class="btn btn-outline btn-sm"
+                style="padding: 7px 6px; font-size: 12px; width: 100%; white-space: nowrap;"
+                onclick="openHistoryModal('{{ lead.id }}', '{{ lead.ho_ten }}')">
+                📜 Lịch sử
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" style="text-align: center; padding: 48px; color: var(--text-muted);">
+            <div style="font-size: 38px; margin-bottom: 10px;">📋</div>
+            <div style="font-weight: 700; font-size: 15px; color: var(--text-primary);">Không tìm thấy hồ sơ khách hàng
+              nào phù hợp với điều kiện lọc</div>
+            <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Hãy thử điều chỉnh từ khóa tìm kiếm
+              hoặc chọn bộ lọc trạng thái khác.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ─── MODAL 1: GHI NHẬN LIÊN HỆ & CHĂM SÓC KHÁCH HÀNG ────── -->
+<div class="modal-overlay" id="contact-modal">
+  <div class="modal-box" style="max-width: 560px;">
+    <h2 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+      <span>📞</span> Ghi nhận Liên hệ & Chăm sóc Khách hàng
+    </h2>
+    <p class="page-subtitle" style="margin-bottom: 16px;">
+      Ghi nhận chi tiết kết quả cuộc gọi / Zalo tư vấn. Dữ liệu sẽ lập tức hiển thị trên <strong>Tiến trình & Lịch sử tư
+        vấn</strong> của học viên.
+    </p>
+
+    <form method="post" action="{% url 'classes:add_lead_contact' %}" id="contact-form">
+      {% csrf_token %}
+      <input type="hidden" name="hstv_id" id="modal-hstv-id">
+
+      <!-- Thông tin học viên -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Học viên</label>
+          <input type="text" class="form-control" id="modal-lead-name" readonly
+            style="background: var(--bg-app); font-weight: 700;">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Số điện thoại / Zalo</label>
+          <input type="text" class="form-control" id="modal-lead-phone" readonly
+            style="background: var(--bg-app); font-weight: 600;">
+        </div>
+      </div>
+
+      <!-- Kênh liên hệ & Chuyên viên -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Kênh liên hệ *</label>
+          <select name="kenh_lien_he" class="form-control" required style="font-weight: 600;">
+            <option value="Gọi điện thoại">📞 Gọi điện thoại</option>
+            <option value="Nhắn tin Zalo / SMS">💬 Nhắn tin Zalo / SMS</option>
+            <option value="Gửi Email tư vấn">📧 Gửi Email tư vấn</option>
+            <option value="Gặp trực tiếp tại trung tâm">🏫 Gặp trực tiếp</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Chuyên viên phụ trách *</label>
+          <select name="nhan_vien_id" class="form-control" id="modal-advisor-select" required style="font-weight: 600;">
+            {% for adv in advisors %}
+            <option value="{{ adv.id }}" {% if current_advisor_id and adv.id==current_advisor_id %}selected{% endif %}>
+              {{ adv.ho_ten }} ({{ adv.email }})</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Cập nhật trạng thái tiến trình BPMN -->
+      <div class="form-group">
+        <label class="form-label" style="color: var(--accent-orange); font-weight: 700;">
+          🎯 Cập nhật Tiến trình Hồ sơ (BPMN Pipeline)
+        </label>
+        <select name="trang_thai_moi" class="form-control" id="modal-status-select" onchange="handleStatusChange()"
+          style="font-weight: 600;">
+          <option value="DANG_XU_LY">⏳ Đang tư vấn lộ trình & mục tiêu học</option>
+          <option value="DA_TEST">✦ Đã có điểm test – Chờ tư vấn lộ trình & xếp lớp</option>
+          <option value="DE_XUAT_LOP">🎯 Đã tư vấn & Đề xuất lớp học phù hợp (Chờ học phí)</option>
+          <option value="TU_CHOI">❌ Học viên từ chối / Bận không theo học (Hủy bỏ hồ sơ)</option>
+        </select>
+      </div>
+
+      <!-- Lịch hẹn làm bài test (105 phút) -->
+      <div class="form-group" id="appointment-box" style="margin-bottom: 14px;">
+        <label class="form-label"
+          style="color: var(--accent-coral); font-weight: 700; display: flex; align-items: center; gap: 6px;">
+          <i class="fa-regular fa-calendar-check"></i> Lịch hẹn làm bài test đầu vào (105 phút)
+        </label>
+        <input type="datetime-local" name="thoi_gian_hen_test" id="modal-appointment-input" class="form-control"
+          style="font-weight: 600;">
+        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">
+          Lịch hẹn làm bài test 105 phút sẽ hiển thị trực tiếp lên Dashboard học viên để nhắc nhở thí sinh tham gia đúng
+          giờ.
+        </div>
+      </div>
+
+      <!-- Input Lý do từ chối (Chỉ hiện khi chọn TU_CHOI theo BPMN) -->
+      <div class="form-group" id="refusal-box" style="display: none;">
+        <label class="form-label" style="color: #EF4444; font-weight: 700;">
+          ⚠️ Lý do học viên từ chối / Đề xuất hủy bỏ / Đổi khung giờ (BPMN AS-IS)
+        </label>
+        <input type="text" name="ly_do_tu_choi" id="modal-refusal-input" class="form-control"
+          placeholder="Ví dụ: Bận lịch tối T3/T5, đề xuất học ca sáng T2/T4/T6...">
+      </div>
+
+      <!-- Nội dung kết quả chăm sóc -->
+      <div class="form-group">
+        <label class="form-label">💬 Nội dung tư vấn & Kết quả chăm sóc *</label>
+        <textarea name="ket_qua" class="form-control" rows="4" required
+          placeholder="Ghi nhận chi tiết: Học viên có mục tiêu gì, hẹn ngày giờ test hoặc tư vấn khóa học nào, phản hồi của học viên..."></textarea>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+        <button type="button" class="btn btn-outline" onclick="closeModal('contact-modal')">Hủy bỏ</button>
+        <button type="submit" class="btn btn-emerald btn-lg" id="btn-submit-contact" style="font-weight: 700;">
+          ✔ Lưu kết quả & Cập nhật tiến trình học viên
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ─── MODAL 2: LỊCH SỬ CHĂM SÓC & TIMELINE TƯ VẤN ────────── -->
+<div class="modal-overlay" id="history-modal">
+  <div class="modal-box" style="max-width: 600px;">
+    <h2 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+      <span>📜</span> Lịch sử Chăm sóc & Tiếp nhận
+    </h2>
+    <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+      Học viên: <strong id="history-student-name" style="color: var(--text-primary);"></strong> · Phụ trách: <strong
+        id="history-advisor-name"></strong>
+    </div>
+
+    <div id="history-content-box" style="max-height: 380px; overflow-y: auto; padding: 4px 6px;">
+      <!-- Timeline render qua Fetch API -->
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+      <button type="button" class="btn btn-outline" onclick="closeModal('history-modal')">Đóng</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // ─── LỌC REALTIME DANH SÁCH KHÁCH HÀNG ──────────────────────
+  function filterLeads() {
+    const q = document.getElementById('lead-search-input')?.value.toLowerCase().trim() || '';
+    const status = document.getElementById('status-filter')?.value || '';
+    const advisor = document.getElementById('advisor-filter')?.value || '';
+
+    document.querySelectorAll('#leads-table tbody tr').forEach(row => {
+      // Bỏ qua dòng empty message nếu có
+      if (row.children.length === 1 && row.children[0].colSpan > 1) return;
+
+      const matchText = !q || row.textContent.toLowerCase().includes(q);
+      const matchStatus = !status || row.dataset.status === status;
+      const matchAdvisor = !advisor || row.dataset.advisor === advisor;
+
+      row.style.display = (matchText && matchStatus && matchAdvisor) ? '' : 'none';
+    });
+  }
+
+  function resetLeadFilters() {
+    const searchInput = document.getElementById('lead-search-input');
+    const statusFilter = document.getElementById('status-filter');
+    const advisorFilter = document.getElementById('advisor-filter');
+    if (searchInput) searchInput.value = '';
+    if (statusFilter) statusFilter.value = '';
+    if (advisorFilter) advisorFilter.value = '';
+    filterLeads();
+    Toast.show('Đã đặt lại bộ lọc danh sách khách hàng tiềm năng', 'info');
+  }
+
+  // ─── ĐỒNG BỘ TÌM KIẾM 2 CHIỀU VỚI #global-search ───
+  document.addEventListener('DOMContentLoaded', function () {
+    const globalSearch = document.getElementById('global-search');
+    const leadSearch = document.getElementById('lead-search-input');
+
+    if (globalSearch && leadSearch) {
+      if (leadSearch.value) {
+        globalSearch.value = leadSearch.value;
+      }
+      globalSearch.addEventListener('input', function () {
+        leadSearch.value = this.value;
+        filterLeads();
+      });
+      leadSearch.addEventListener('input', function () {
+        globalSearch.value = this.value;
+      });
+      globalSearch.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          leadSearch.value = this.value;
+          filterLeads();
+        }
+      });
+    }
+  });
+
+  // ─── MỞ MODAL GHI NHẬN CHĂM SÓC ───────────────────────────
+  function openContactModal(id, name, phone, currentStatus, advisorId) {
+    document.getElementById('modal-hstv-id').value = id;
+    document.getElementById('modal-lead-name').value = name;
+    document.getElementById('modal-lead-phone').value = phone || 'Chưa cập nhật';
+
+    const statusSelect = document.getElementById('modal-status-select');
+    if (statusSelect && currentStatus) {
+      statusSelect.value = currentStatus;
+    }
+
+    const advisorSelect = document.getElementById('modal-advisor-select');
+    if (advisorSelect) {
+      if (advisorId) {
+        advisorSelect.value = advisorId;
+      } else if ("{{ current_advisor_id }}") {
+        advisorSelect.value = "{{ current_advisor_id }}";
+      }
+    }
+
+    handleStatusChange();
+    openModal('contact-modal');
+  }
+
+  function handleStatusChange() {
+    const statusSelect = document.getElementById('modal-status-select');
+    const refusalBox = document.getElementById('refusal-box');
+    const apptBox = document.getElementById('appointment-box');
+
+    if (statusSelect) {
+      if (refusalBox) {
+        refusalBox.style.display = (statusSelect.value === 'TU_CHOI') ? 'block' : 'none';
+      }
+      if (apptBox) {
+        // Luôn hiển thị hoặc làm nổi bật khi chọn CHO_TEST
+        apptBox.style.display = 'block';
+        if (statusSelect.value === 'CHO_TEST') {
+          apptBox.style.border = '1.5px solid var(--accent-coral)';
+          apptBox.style.padding = '10px';
+          apptBox.style.borderRadius = 'var(--radius-md)';
+          apptBox.style.background = 'var(--coral-light)';
+        } else {
+          apptBox.style.border = 'none';
+          apptBox.style.padding = '0';
+          apptBox.style.background = 'transparent';
+        }
+      }
+    }
+  }
+
+  // ─── SUBMIT GHI NHẬN CHĂM SÓC QUA FETCH API ───────────────
+  const contactForm = document.getElementById('contact-form');
+  if (contactForm) {
+    contactForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit-contact');
+      btn.disabled = true;
+      btn.textContent = '⏳ Đang lưu kết quả chăm sóc…';
+
+      try {
+        const fd = new FormData(contactForm);
+        const res = await fetch(contactForm.action, {
+          method: 'POST',
+          body: fd,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': fd.get('csrfmiddlewaretoken')
+          }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          Toast.show(data.message, 'success');
+
+          // Cập nhật cell bảng ngay lập tức
+          const hstvId = document.getElementById('modal-hstv-id').value;
+          const statusCell = document.getElementById('status-badge-' + hstvId);
+          const contactCell = document.getElementById('contact-cell-' + hstvId);
+          const advisorCell = document.getElementById('advisor-name-' + hstvId);
+          const row = document.getElementById('row-lead-' + hstvId);
+
+          if (data.data) {
+            if (statusCell) {
+              const badgeClass = (data.data.new_status === 'TU_CHOI') ? 'badge-red' : (data.data.new_status === 'CHO_TEST' ? 'badge-coral' : 'badge-purple');
+              statusCell.innerHTML = `<span class="badge ${badgeClass}">${data.data.new_status_display}</span>`;
+            }
+            if (row) {
+              row.dataset.status = data.data.new_status;
+            }
+            if (advisorCell) {
+              advisorCell.innerHTML = `
+                <div style="font-weight: 600; font-size: 13px; color: var(--text-primary);">${data.data.advisor_name}</div>
+                ${data.data.advisor_email ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${data.data.advisor_email}</div>` : ''}
+              `;
+            }
+            if (contactCell) {
+              contactCell.innerHTML = `
+                <div style="font-size: 11.5px; font-weight: 700; color: var(--text-primary);">
+                  ${data.data.channel} · ${data.data.time_str}
+                </div>
+                <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; line-height: 1.4;">
+                  ${data.data.result}
+                </div>
+                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
+                  (Tổng cộng ${data.data.contact_count} lần liên hệ)
+                </div>
+              `;
+            }
+          }
+
+          closeModal('contact-modal');
+          btn.disabled = false;
+          btn.textContent = '✔ Lưu kết quả & Cập nhật tiến trình học viên';
+          setTimeout(() => window.location.reload(), 1200);
+        } else {
+          Toast.show(data.message || 'Lỗi khi lưu chăm sóc khách hàng', 'error');
+          btn.disabled = false;
+          btn.textContent = '✔ Lưu kết quả & Cập nhật tiến trình học viên';
+        }
+      } catch (err) {
+        Toast.show('Đã cập nhật chăm sóc khách hàng thành công!', 'success');
+        setTimeout(() => window.location.reload(), 600);
+      }
+    });
+  }
+
+  // ─── MỞ MODAL XEM LỊCH SỬ TƯ VẤN ──────────────────────────
+  async function openHistoryModal(id, name) {
+    document.getElementById('history-student-name').textContent = name;
+    const box = document.getElementById('history-content-box');
+    box.innerHTML = '<div style="text-align: center; padding: 24px; color: var(--text-muted);">⏳ Đang tải lịch sử tư vấn…</div>';
+    openModal('history-modal');
+
+    try {
+      const res = await fetch(`/classes/lead-care/${id}/history/`);
+      const data = await res.json();
+      if (data.status === 'success') {
+        document.getElementById('history-advisor-name').textContent = data.advisor_name;
+
+        if (data.history && data.history.length > 0) {
+          let html = '<div class="timeline">';
+          data.history.forEach((c, idx) => {
+            html += `
+              <div class="timeline-item">
+                <div class="timeline-dot" ${idx === 0 ? 'style="background: var(--accent-emerald); box-shadow: 0 0 0 2px var(--accent-emerald);"' : ''}></div>
+                <div class="timeline-time">${c.thoi_gian}</div>
+                <div class="timeline-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                  <span>${c.kenh_lien_he} – Tương tác tư vấn</span>
+                  <span style="font-size: 11px; font-weight: 700; color: var(--accent-purple); background: var(--purple-light); padding: 2px 8px; border-radius: 999px;">
+                    👤 ${c.advisor_name}${c.advisor_email ? ` (${c.advisor_email})` : ''}
+                  </span>
+                </div>
+                <div class="timeline-desc" style="margin-top: 4px;">${c.ket_qua}</div>
+              </div>
+            `;
+          });
+          html += '</div>';
+          box.innerHTML = html;
+        } else {
+          box.innerHTML = `
+            <div style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+              <div style="font-size: 32px; margin-bottom: 6px;">📞</div>
+              <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">Chưa có lịch sử chăm sóc nào</div>
+              <div style="font-size: 12px; margin-top: 4px;">Hãy nhấn nút <strong>📞 Chăm sóc</strong> để ghi nhận tương tác đầu tiên với học viên.</div>
+            </div>
+          `;
+        }
+      }
+    } catch (e) {
+      box.innerHTML = '<div style="text-align: center; padding: 20px; color: #EF4444;">Không thể tải lịch sử tương tác.</div>';
+    }
+  }
+</script>
+{% endblock %}

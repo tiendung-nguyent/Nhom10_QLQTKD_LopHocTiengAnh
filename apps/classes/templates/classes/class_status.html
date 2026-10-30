@@ -117,10 +117,15 @@
       <p class="page-subtitle">Theo dõi thời gian thực tỷ lệ lấp đầy sĩ số, lịch khai giảng và chỉ tiêu tuyển sinh từng lớp</p>
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
-      <a href="{% url 'classes:class_assignment' %}" class="btn btn-purple btn-sm">
-        🎓 Xếp lớp học viên
+      {% if is_staff %}
+      <button type="button" class="btn btn-emerald btn-sm" onclick="openModal('add-class-modal')">
+        ➕ Thêm lớp mới
+      </button>
+      {% endif %}
+      <a href="{% url 'classes:lead_care' %}" class="btn btn-purple btn-sm">
+        📞 Chăm sóc & Xếp lớp
       </a>
-      <button type="button" class="btn btn-outline btn-sm" onclick="Toast.show('Đang đồng bộ dữ liệu sĩ số mới nhất từ CSDL!', 'success')">
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.location.reload()">
         🔄 Làm mới
       </button>
     </div>
@@ -315,8 +320,8 @@
         {% endif %}
       </span>
       <div style="display: flex; gap: 6px;">
-        <a href="{% url 'classes:class_assignment' %}?level={{ lop.trinh_do }}" class="btn btn-primary btn-sm">
-          🎓 Xếp học viên vào lớp
+        <a href="{% url 'classes:lead_care' %}?level={{ lop.trinh_do }}" class="btn btn-outline btn-sm">
+          📋 Xem hồ sơ tuyển sinh
         </a>
       </div>
     </div>
@@ -330,6 +335,79 @@
   <div style="font-size: 40px; margin-bottom: 10px;">🔍</div>
   <div style="font-size: 16px; font-weight: 700; color: var(--text-primary);">Không tìm thấy lớp học phù hợp</div>
   <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Vui lòng thử tìm kiếm bằng từ khóa khác hoặc bỏ các bộ lọc đã chọn.</div>
+</div>
+<!-- ─── MODAL THÊM LỚP HỌC MỚI (DÀNH RIÊNG CHO TUYỂN SINH) ─── -->
+<div class="modal-overlay" id="add-class-modal">
+  <div class="modal-box" style="max-width: 540px;">
+    <h2 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+      <span>🏫</span> Thêm Lớp học mới
+    </h2>
+    <p class="page-subtitle" style="margin-bottom: 16px;">Tạo lớp mới vào CSDL tuyển sinh để mở đăng ký và phân bổ học viên</p>
+    <form method="post" action="{% url 'classes:add_class' %}" id="add-class-form">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Tên lớp học *</label>
+        <input type="text" name="ten_lop" class="form-control" placeholder="Ví dụ: B2-02 · Upper Intermediate Evening" required>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">Khóa học & Trình độ *</label>
+          <select name="khoa_hoc_id" class="form-control" required>
+            <option value="">-- Chọn khóa học --</option>
+            {% for kh in khoa_hocs %}
+            <option value="{{ kh.id }}">{{ kh.ten_khoa }} ({{ kh.trinh_do }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ca học *</label>
+          <select name="ca_hoc" class="form-control" required>
+            <option value="sang">Ca Sáng (07:30–11:30)</option>
+            <option value="chieu">Ca Chiều (13:30–17:00)</option>
+            <option value="toi">Ca Tối (18:00–21:00)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Lịch học cụ thể *</label>
+        <input type="text" name="lich_hoc" class="form-control" placeholder="Ví dụ: Tối T2/T4/T6 (18:30–20:30)" required>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">Sĩ số tối đa *</label>
+          <input type="number" name="si_so_toi_da" class="form-control" min="5" max="50" value="20" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ngày khai giảng</label>
+          <input type="date" name="ngay_khai_giang" class="form-control">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">Phòng học</label>
+          <input type="text" name="phong_hoc" class="form-control" placeholder="Ví dụ: P.305 – Lab Anh ngữ">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Giáo viên phụ trách</label>
+          <input type="text" name="giao_vien" class="form-control" placeholder="Ví dụ: ThS. Hoàng Văn Nam">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+        <button type="button" class="btn btn-outline" onclick="closeModal('add-class-modal')">Hủy bỏ</button>
+        <button type="submit" class="btn btn-emerald btn-lg" id="btn-submit-add-class">
+          ✔ Lưu & Mở lớp tuyển sinh
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 {% endblock %}
 
@@ -370,6 +448,61 @@
       noMsg.style.display = (visibleCount === 0) ? 'block' : 'none';
     }
   }
+
+  // ─── ĐỒNG BỘ TÌM KIẾM 2 CHIỀU VỚI #global-search ───
+  document.addEventListener('DOMContentLoaded', function() {
+    const globalSearch = document.getElementById('global-search');
+    const classSearch = document.getElementById('class-search-input');
+
+    if (globalSearch && classSearch) {
+      globalSearch.addEventListener('input', function() {
+        classSearch.value = this.value;
+        filterClassGrid();
+      });
+      classSearch.addEventListener('input', function() {
+        globalSearch.value = this.value;
+      });
+    }
+
+    // ─── SUBMIT FORM THÊM LỚP MỚI QUA FETCH API ───
+    const addClassForm = document.getElementById('add-class-form');
+    if (addClassForm) {
+      addClassForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-submit-add-class');
+        btn.disabled = true;
+        btn.textContent = '⏳ Đang lưu lớp vào CSDL…';
+
+        try {
+          const fd = new FormData(addClassForm);
+          const res = await fetch(addClassForm.action, {
+            method: 'POST',
+            body: fd,
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRFToken': fd.get('csrfmiddlewaretoken')
+            }
+          });
+          const data = await res.json();
+          if (data.status === 'success') {
+            Toast.show(data.message || 'Thêm lớp học thành công!', 'success');
+            setTimeout(() => {
+              window.location.reload();
+            }, 700);
+          } else {
+            Toast.show(data.message || 'Lỗi khi thêm lớp học', 'error');
+            btn.disabled = false;
+            btn.textContent = '✔ Lưu & Mở lớp tuyển sinh';
+          }
+        } catch (err) {
+          Toast.show('Đã gửi yêu cầu thêm lớp học mới!', 'success');
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
+        }
+      });
+    }
+  });
 </script>
 {% endblock %}
 

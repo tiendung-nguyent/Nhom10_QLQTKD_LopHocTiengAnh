@@ -32,3 +32,4 @@ class ThongBaoNoiBoAdmin(admin.ModelAdmin):
     list_filter = ('vai_tro_nhan', 'da_doc', 'thoi_gian_tao')
     search_fields = ('tieu_de', 'noi_dung', 'khach_hang__ho_ten')
     ordering = ('-thoi_gian_tao',)
+

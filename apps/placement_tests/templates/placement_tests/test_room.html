@@ -471,9 +471,103 @@
         <button type="button" class="btn btn-purple" onclick="unlockAndSwitchToWS()">
           Tiếp tục làm Writing & Speaking (60') →
         </button>
+        <button type="button" class="btn btn-outline" onclick="toggleMCQReviewDetails()" id="btn-toggle-mcq-review" style="background:#fff; border-color:#059669; color:#059669; font-weight:700;">
+          <i class="fa-solid fa-list-check"></i> Xem kết quả &amp; đáp án chi tiết (25 câu)
+        </button>
         <a href="{% url 'placement_tests:reset_mcq' %}" class="btn btn-outline" onclick="return handleResetMCQClick(event);" title="Làm lại bài trắc nghiệm">
           <i class="fa-solid fa-rotate-left"></i> Làm lại bài Trắc nghiệm
         </a>
+      </div>
+    </div>
+
+    <!-- KHUNG XEM KẾT QUẢ VÀ ĐÁP ÁN BÀI THI TRẮC NGHIỆM CHI TIẾT (25 CÂU) -->
+    <div id="mcq-review-detail-box" style="display: {% if mcq_submitted and not test_already_completed %}block{% else %}none{% endif %}; margin-bottom: 24px;">
+      <div class="card rounded-2xl shadow-sm" style="border: 1.5px solid #A7F3D0; overflow: hidden;">
+        <div class="card-header" style="background: linear-gradient(135deg, #ECFDF5, #F0FDF4); border-bottom: 1px solid #A7F3D0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <div class="card-title" style="color: #065F46; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-clipboard-check" style="color: var(--accent-emerald);"></i> Kết quả chi tiết &amp; Đối soát đáp án bài làm Trắc nghiệm
+            </div>
+            <div class="card-subtitle" style="color: #047857;">
+              Hệ thống đã tự động chấm điểm. Câu học viên không điền được tính BỎ TRỐNG và trừ điểm (0 điểm).
+            </div>
+          </div>
+          <span class="badge badge-emerald" style="font-size: 12px; padding: 6px 12px;">
+            Đạt <strong id="review-score-badge">{{ mcq_score|default:0 }}</strong> / 40 điểm
+          </span>
+        </div>
+
+        <div class="card-body" style="padding: 20px;">
+          <!-- KPI Stats 4 ô -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px;">
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 12px; padding: 14px; text-align: center;">
+              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #047857; margin-bottom: 4px;">Tổng điểm</div>
+              <div style="font-size: 26px; font-weight: 800; color: #065F46;" id="review-stat-score">{{ mcq_score|default:0 }}<span style="font-size: 14px; font-weight: 500;">/40</span></div>
+            </div>
+            <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 14px; text-align: center;">
+              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #166534; margin-bottom: 4px;">Số câu đúng</div>
+              <div style="font-size: 26px; font-weight: 800; color: #166534;" id="review-stat-correct">{{ mcq_correct|default:0 }}<span style="font-size: 14px; font-weight: 500;">/25</span></div>
+            </div>
+            <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 12px; padding: 14px; text-align: center;">
+              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #991B1B; margin-bottom: 4px;">Số câu sai</div>
+              <div style="font-size: 26px; font-weight: 800; color: #DC2626;" id="review-stat-wrong">{{ mcq_wrong|default:0 }}<span style="font-size: 14px; font-weight: 500;">/25</span></div>
+            </div>
+            <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: 14px; text-align: center;">
+              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #92400E; margin-bottom: 4px;">Bỏ trống (0đ)</div>
+              <div style="font-size: 26px; font-weight: 800; color: #D97706;" id="review-stat-blank">{{ mcq_blank|default:0 }}<span style="font-size: 14px; font-weight: 500;">/25</span></div>
+            </div>
+          </div>
+
+          <!-- Danh sách 25 câu hỏi chi tiết -->
+          <div id="mcq-review-items-container" style="display: flex; flex-direction: column; gap: 14px; max-height: 520px; overflow-y: auto; padding-right: 4px;">
+            {% for item in mcq_details %}
+            <div class="review-item-card" style="background: var(--bg-card); border: 1.5px solid {% if item.is_correct %}#A7F3D0{% elif item.is_blank %}#FDE68A{% else %}#FECACA{% endif %}; border-radius: var(--radius-lg); padding: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">
+                  CÂU {{ item.index }} · {{ item.category }}
+                </span>
+                {% if item.is_correct %}
+                  <span class="badge badge-emerald" style="font-size: 11px; font-weight: 700;">✔ ĐÚNG (+1.6đ)</span>
+                {% elif item.is_blank %}
+                  <span class="badge" style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; font-size: 11px; font-weight: 700;">⚠️ BỎ TRỐNG (0đ)</span>
+                {% else %}
+                  <span class="badge badge-coral" style="font-size: 11px; font-weight: 700;">❌ SAI (0đ)</span>
+                {% endif %}
+              </div>
+
+              <div style="font-size: 13.5px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; line-height: 1.6;">
+                {{ item.question_text }}
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 6px; font-size: 12.5px;">
+                {% if item.is_blank %}
+                  <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 8px 12px; color: #92400E;">
+                    <strong>Đáp án bạn chọn:</strong> <em>[Chưa điền đáp án - Bỏ trống 0 điểm]</em>
+                  </div>
+                {% elif item.is_correct %}
+                  <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; padding: 8px 12px; color: #065F46;">
+                    <strong>Đáp án bạn chọn:</strong> <strong>{{ item.user_ans }}</strong>. {{ item.user_opt_text }} <i class="fa-solid fa-check" style="color: #059669; margin-left: 4px;"></i>
+                  </div>
+                {% else %}
+                  <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 8px 12px; color: #991B1B;">
+                    <strong>Đáp án bạn chọn:</strong> <strong>{{ item.user_ans }}</strong>. {{ item.user_opt_text }} <i class="fa-solid fa-xmark" style="color: #DC2626; margin-left: 4px;"></i>
+                  </div>
+                {% endif %}
+
+                <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 8px 12px; color: #166534;">
+                  <strong>Đáp án chính xác:</strong> <strong>{{ item.correct_ans }}</strong>. {{ item.correct_opt_text }}
+                </div>
+
+                {% if item.explanation %}
+                <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; color: var(--text-secondary); margin-top: 2px;">
+                  💡 <strong>Giải thích:</strong> {{ item.explanation }}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1479,6 +1573,18 @@
     w2Ta.dispatchEvent(new Event('input'));
   }
 
+  // ─── TOGGLE XEM CHI TIẾT BÀI LÀM TRẮC NGHIỆM ─────────────
+  function toggleMCQReviewDetails() {
+    const box = document.getElementById('mcq-review-detail-box');
+    if (!box) return;
+    if (box.style.display === 'none' || !box.style.display) {
+      box.style.display = 'block';
+      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      box.style.display = 'none';
+    }
+  }
+
   // ─── NỘP BÀI TRẮC NGHIỆM QUA FETCH API ─────────────────────
   const mcqForm = document.getElementById('mcq-form');
   if (mcqForm) {
@@ -1517,15 +1623,77 @@
           document.getElementById('mcq-score-display').textContent = data.score;
           document.getElementById('mcq-questions-container').style.display = 'none';
 
+          // Cập nhật và hiển thị khung đối soát kết quả chi tiết
+          const reviewBox = document.getElementById('mcq-review-detail-box');
+          if (reviewBox) {
+            reviewBox.style.display = 'block';
+            const badgeScore = document.getElementById('review-score-badge');
+            if (badgeScore) badgeScore.textContent = data.score;
+            const statScore = document.getElementById('review-stat-score');
+            if (statScore) statScore.innerHTML = `${data.score}<span style="font-size:14px; font-weight:500;">/40</span>`;
+            const statCor = document.getElementById('review-stat-correct');
+            if (statCor) statCor.innerHTML = `${data.correct_count}<span style="font-size:14px; font-weight:500;">/25</span>`;
+            const statWr = document.getElementById('review-stat-wrong');
+            if (statWr) statWr.innerHTML = `${data.wrong_count}<span style="font-size:14px; font-weight:500;">/25</span>`;
+            const statBl = document.getElementById('review-stat-blank');
+            if (statBl) statBl.innerHTML = `${data.blank_count}<span style="font-size:14px; font-weight:500;">/25</span>`;
+
+            if (data.details && data.details.length > 0) {
+              const container = document.getElementById('mcq-review-items-container');
+              if (container) {
+                container.innerHTML = data.details.map(item => {
+                  let badgeHtml = '';
+                  let userAnsHtml = '';
+                  let borderColor = '#FECACA';
+
+                  if (item.is_correct) {
+                    borderColor = '#A7F3D0';
+                    badgeHtml = '<span class="badge badge-emerald" style="font-size:11px; font-weight:700;">✔ ĐÚNG (+1.6đ)</span>';
+                    userAnsHtml = `<div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:8px; padding:8px 12px; color:#065F46;"><strong>Đáp án bạn chọn:</strong> <strong>${item.user_ans}</strong>. ${item.user_opt_text} <i class="fa-solid fa-check" style="color:#059669; margin-left:4px;"></i></div>`;
+                  } else if (item.is_blank) {
+                    borderColor = '#FDE68A';
+                    badgeHtml = '<span class="badge" style="background:#FEF3C7; color:#92400E; border:1px solid #FCD34D; font-size:11px; font-weight:700;">⚠️ BỎ TRỐNG (0đ)</span>';
+                    userAnsHtml = `<div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px; padding:8px 12px; color:#92400E;"><strong>Đáp án bạn chọn:</strong> <em>[Chưa điền đáp án - Bỏ trống 0 điểm]</em></div>`;
+                  } else {
+                    badgeHtml = '<span class="badge badge-coral" style="font-size:11px; font-weight:700;">❌ SAI (0đ)</span>';
+                    userAnsHtml = `<div style="background:#FEF2F2; border:1px solid #FECACA; border-radius:8px; padding:8px 12px; color:#991B1B;"><strong>Đáp án bạn chọn:</strong> <strong>${item.user_ans}</strong>. ${item.user_opt_text} <i class="fa-solid fa-xmark" style="color:#DC2626; margin-left:4px;"></i></div>`;
+                  }
+
+                  const explHtml = item.explanation ? `<div style="background:var(--bg-app); border:1px solid var(--border-color); border-radius:8px; padding:8px 12px; color:var(--text-secondary); margin-top:2px;">💡 <strong>Giải thích:</strong> ${item.explanation}</div>` : '';
+
+                  return `
+                    <div class="review-item-card" style="background:var(--bg-card); border:1.5px solid ${borderColor}; border-radius:var(--radius-lg); padding:16px;">
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:12px; font-weight:700; color:var(--text-secondary);">CÂU ${item.index} · ${item.category}</span>
+                        ${badgeHtml}
+                      </div>
+                      <div style="font-size:13.5px; font-weight:600; color:var(--text-primary); margin-bottom:12px; line-height:1.6;">${item.question_text}</div>
+                      <div style="display:flex; flex-direction:column; gap:6px; font-size:12.5px;">
+                        ${userAnsHtml}
+                        <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; padding:8px 12px; color:#166534;">
+                          <strong>Đáp án chính xác:</strong> <strong>${item.correct_ans}</strong>. ${item.correct_opt_text}
+                        </div>
+                        ${explHtml}
+                      </div>
+                    </div>
+                  `;
+                }).join('');
+              }
+            }
+          }
+
           document.getElementById('modal-feedback-title').textContent = 'Hoàn thành bài Trắc nghiệm!';
           document.getElementById('modal-feedback-desc').textContent = 'Hệ thống đã tự động đối soát đáp án.';
           document.getElementById('modal-feedback-score').textContent = `${data.score} / ${data.total} điểm`;
-          document.getElementById('modal-feedback-note').textContent = `Đúng ${data.correct_count}/${data.total_questions} câu (${data.percentage}%). Phần thi Writing & Speaking đã mở khóa.`;
+          document.getElementById('modal-feedback-note').textContent = `Đúng ${data.correct_count}/${data.total_questions} câu (${data.percentage}%). Bỏ trống ${data.blank_count} câu (0đ).`;
           
           document.getElementById('modal-criteria-breakdown').innerHTML = `
-            <div style="background: var(--bg-card); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <div style="background: var(--bg-card); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 12px;">
               <span style="font-weight:700; color:var(--accent-emerald);">✓ Mở khóa thành công:</span> Bạn có thể chuyển sang làm phần thi Writing & Speaking (60 phút) ngay bây giờ.
             </div>
+            <button type="button" class="btn btn-outline btn-block btn-sm" onclick="closeModal('result-feedback-modal'); toggleMCQReviewDetails();" style="border-color:#059669; color:#059669; font-weight:700;">
+              <i class="fa-solid fa-list-check"></i> Xem lại chi tiết đáp án &amp; giải thích 25 câu
+            </button>
           `;
           openModal('result-feedback-modal');
           Toast.show(data.message, 'success', 5000);

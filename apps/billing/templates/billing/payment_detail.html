@@ -121,6 +121,14 @@
       <div style="text-align: center; margin-bottom: 16px;">
         <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px;">TỔNG HỌC PHÍ PHẢI THANH TOÁN</div>
         <div class="payment-amount">{{ phieu.so_tien|floatformat:0|default:"4,500,000" }} đ</div>
+        {% if phieu.so_tien_giam > 0 %}
+        <div style="font-size: 12.5px; color: var(--accent-coral); font-weight: 700; margin-top: 4px;">
+          🎟️ Đã áp dụng mã: <strong>{{ phieu.ma_giam_gia }}</strong> (-{{ phieu.so_tien_giam|floatformat:0 }} đ)
+        </div>
+        <div style="font-size: 11.5px; color: var(--text-muted); text-decoration: line-through;">
+          Học phí gốc: {{ phieu.hoc_phi_goc|floatformat:0 }} đ
+        </div>
+        {% endif %}
       </div>
 
       <!-- Ảnh Mã VietQR động -->
@@ -129,11 +137,12 @@
           📱 QUÉT MÃ VIETQR BẰNG MỌI APP NGÂN HÀNG
         </div>
         <img class="qr-img" 
-             src="https://img.vietqr.io/image/VCB-1017689456-compact2.png?amount={{ phieu.so_tien|default:4500000 }}&addInfo={{ phieu.ma_tham_chieu|default:'HP20261128001' }}&accountName=TRUNG%20TAM%20ANH%20NGU%20NHOM%2010"
-             alt="VietQR Thanh toán học phí"
-             onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=HP20261128001-4500000';">
+             src="{% if phieu.qr_image_url %}{{ phieu.qr_image_url }}{% else %}https://img.vietqr.io/image/VCB-1023262284-compact.png?amount={{ phieu.so_tien|default:4500000 }}&addInfo=ACADEMIX%20HP%20{{ phieu.ma_tham_chieu|default:'HP20261128001' }}&accountName=ACADEMIX%20CENTER{% endif %}"
+             alt="VietQR Thanh toán học phí Vietcombank"
+             style="max-width: 240px; border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.08);"
+             onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=VCB-1023262284-ACADEMIX-{{ phieu.ma_tham_chieu|default:1 }}';">
         <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
-          Số tiền và nội dung chuyển khoản được nhúng tự động trong mã QR
+          Số tiền và nội dung chuyển khoản được nhúng tự động theo chuẩn VietQR Vietcombank
         </div>
       </div>
 
@@ -142,24 +151,24 @@
         <div class="payment-meta-row">
           <span class="label">Nội dung CK (Mã hóa đơn)</span>
           <span class="value" style="color: var(--accent-coral); font-weight: 800;">
-            <span id="copy-memo">{{ phieu.ma_tham_chieu|default:"HP20261128001" }}</span>
+            <span id="copy-memo">ACADEMIX HP {{ phieu.ma_tham_chieu|default:"HP20261128001" }}</span>
             <button type="button" class="copy-pill-btn" onclick="copyText('copy-memo')">Sao chép</button>
           </span>
         </div>
         <div class="payment-meta-row">
           <span class="label">Ngân hàng nhận</span>
-          <span class="value">{{ ngan_hang|default:"VietcomBank – CN Hồ Chí Minh" }}</span>
+          <span class="value">Vietcombank (VCB)</span>
         </div>
         <div class="payment-meta-row">
           <span class="label">Số tài khoản</span>
           <span class="value">
-            <span id="copy-stk">{{ so_tai_khoan|default:"1017 689 456" }}</span>
+            <span id="copy-stk">1023262284</span>
             <button type="button" class="copy-pill-btn" onclick="copyText('copy-stk')">Sao chép</button>
           </span>
         </div>
         <div class="payment-meta-row">
           <span class="label">Chủ tài khoản</span>
-          <span class="value">{{ chu_tai_khoan|default:"TRUNG TAM ANH NGU NHOM 10" }}</span>
+          <span class="value">ACADEMIX CENTER</span>
         </div>
       </div>
 
