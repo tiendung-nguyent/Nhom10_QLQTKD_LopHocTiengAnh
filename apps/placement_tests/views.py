@@ -28,6 +28,15 @@ from apps.placement_tests.services import (
 logger = logging.getLogger(__name__)
 
 
+def _normalize_goal(bai_ten):
+    b = (bai_ten or '').upper()
+    if 'IELTS' in b: return 'IELTS'
+    if 'DAU_RA' in b or 'DH' in b or 'VSTEP' in b: return 'DAU_RA_DH'
+    if 'GIAO_TIEP' in b or 'COMMUNICATION' in b: return 'GIAO_TIEP'
+    if 'MAT_GOC' in b or 'FOUNDATION' in b: return 'MAT_GOC'
+    return ''
+
+
 def test_room(request):
     """Phòng thi thích ứng linh hoạt theo mục tiêu học tập (IELTS, ĐH, Giao tiếp, Mất gốc)."""
     if request.method == 'POST':
@@ -178,6 +187,25 @@ def test_room(request):
                 'lua_chons': {'all': options_list}
             })
 
+    # Kiểm tra xem học viên đã có phiên thi được Giáo viên duyệt chính thức cho mục tiêu hiện tại chưa
+    is_goal_approved = False
+    approved_phien = None
+    if student:
+        hstv = HoSoTuVan.objects.filter(khach_hang=student).first()
+        if hstv:
+            student_phiens = PhienLamBai.objects.filter(
+                ho_so_tu_van=hstv,
+                trang_thai=PhienLamBai.TrangThai.HOAN_THANH
+            ).select_related('bai_kiem_tra', 'ket_qua_kiem_tra').prefetch_related('bai_lam_ky_nangs')
+            for p in student_phiens:
+                p_goal = _normalize_goal(p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else '')
+                kq = getattr(p, 'ket_qua_kiem_tra', None)
+                has_gv_approved = (kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN) or p.bai_lam_ky_nangs.filter(trang_thai_cham=BaiLamKyNang.TrangThaiCham.GV_DA_DUYET).exists()
+                if p_goal == goal_type and has_gv_approved:
+                    is_goal_approved = True
+                    approved_phien = p
+                    break
+
     # Kiểm tra xem học viên đã hoàn thành toàn bộ bài test chưa (cả 2 phần MCQ + Writing & Speaking)
     test_result = request.session.get('placement_test_result')
     test_already_completed = False
@@ -185,7 +213,30 @@ def test_room(request):
 
     is_retaking = request.session.get('placement_retake_in_progress', False)
 
-    if test_result and not is_retaking:
+    if is_goal_approved and approved_phien:
+        # Mục tiêu này đã được Giảng viên phê duyệt chính thức -> Khóa làm lại
+        test_already_completed = True
+        is_retaking = False
+        request.session['placement_retake_in_progress'] = False
+        p_mcq = 0.0
+        p_w = 0.0
+        p_s = 0.0
+        for bl in approved_phien.bai_lam_ky_nangs.all():
+            val = float(bl.diem_dieu_chinh if bl.diem_dieu_chinh is not None else (bl.diem_tu_dong or 0.0))
+            if bl.ky_nang == 'TRAC_NGHIEM': p_mcq = val
+            elif bl.ky_nang == 'WRITING': p_w = val
+            elif bl.ky_nang == 'SPEAKING': p_s = val
+        p_total = round(p_mcq + p_w + p_s, 1)
+        comp_date = approved_phien.hoan_thanh or approved_phien.bat_dau
+        completed_summary = {
+            'phien_id': approved_phien.id,
+            'mcq_score': p_mcq,
+            'writing_score': p_w,
+            'speaking_score': p_s,
+            'total_score': p_total,
+            'completed_at': comp_date.strftime('%d/%m/%Y %H:%M') if comp_date else '',
+        }
+    elif test_result and not is_retaking:
         test_already_completed = True
         completed_summary = test_result
     elif student and not is_retaking:
@@ -194,26 +245,29 @@ def test_room(request):
             latest_phien = PhienLamBai.objects.filter(
                 ho_so_tu_van=hstv,
                 trang_thai=PhienLamBai.TrangThai.HOAN_THANH
-            ).order_by('-bat_dau').first()
+            ).order_by('-bat_dau', '-id').first()
             if latest_phien:
-                test_already_completed = True
-                p_mcq = 0.0
-                p_w = 0.0
-                p_s = 0.0
-                for bl in latest_phien.bai_lam_ky_nangs.all():
-                    val = float(bl.diem_dieu_chinh if bl.diem_dieu_chinh is not None else (bl.diem_tu_dong or 0.0))
-                    if bl.ky_nang == 'TRAC_NGHIEM': p_mcq = val
-                    elif bl.ky_nang == 'WRITING': p_w = val
-                    elif bl.ky_nang == 'SPEAKING': p_s = val
-                p_total = round(p_mcq + p_w + p_s, 1)
-                completed_summary = {
-                    'phien_id': latest_phien.id,
-                    'mcq_score': p_mcq,
-                    'writing_score': p_w,
-                    'speaking_score': p_s,
-                    'total_score': p_total,
-                    'completed_at': latest_phien.ket_thuc.strftime('%d/%m/%Y %H:%M') if latest_phien.ket_thuc else latest_phien.bat_dau.strftime('%d/%m/%Y %H:%M'),
-                }
+                p_goal = _normalize_goal(latest_phien.bai_kiem_tra.ten_bai if latest_phien.bai_kiem_tra else '')
+                if p_goal == goal_type:
+                    test_already_completed = True
+                    p_mcq = 0.0
+                    p_w = 0.0
+                    p_s = 0.0
+                    for bl in latest_phien.bai_lam_ky_nangs.all():
+                        val = float(bl.diem_dieu_chinh if bl.diem_dieu_chinh is not None else (bl.diem_tu_dong or 0.0))
+                        if bl.ky_nang == 'TRAC_NGHIEM': p_mcq = val
+                        elif bl.ky_nang == 'WRITING': p_w = val
+                        elif bl.ky_nang == 'SPEAKING': p_s = val
+                    p_total = round(p_mcq + p_w + p_s, 1)
+                    comp_date = latest_phien.hoan_thanh or latest_phien.bat_dau
+                    completed_summary = {
+                        'phien_id': latest_phien.id,
+                        'mcq_score': p_mcq,
+                        'writing_score': p_w,
+                        'speaking_score': p_s,
+                        'total_score': p_total,
+                        'completed_at': comp_date.strftime('%d/%m/%Y %H:%M') if comp_date else '',
+                    }
 
     # Tiến độ bài thi: mcq_submitted chỉ True khi đang làm dở dang (đã nộp trắc nghiệm nhưng chưa nộp Writing & Speaking)
     mcq_submitted = False
@@ -321,6 +375,8 @@ def test_room(request):
         'constructed_time_seconds': 60 * 60,
         'test_already_completed': test_already_completed,
         'completed_summary': completed_summary,
+        'is_goal_approved': is_goal_approved,
+        'can_retake': not is_goal_approved,
         'mcq_submitted': mcq_submitted,
         'mcq_score': mcq_score,
         'mcq_details': request.session.get('placement_mcq_details', []),
@@ -600,7 +656,21 @@ def submit_mcq(request):
 
 
 def reset_mcq(request):
-    """Reset trạng thái làm bài Trắc nghiệm để học viên có thể làm lại."""
+    """Reset trạng thái làm bài Trắc nghiệm để học viên có thể làm lại nếu mục tiêu chưa khóa."""
+    student_email = get_account_email(request)
+    goal_type = request.session.get('student_goal_type', 'IELTS')
+    if student_email:
+        kh = KhachHang.objects.filter(email__iexact=student_email).first()
+        if kh:
+            hstv = HoSoTuVan.objects.filter(khach_hang=kh).first()
+            if hstv:
+                for p in PhienLamBai.objects.filter(ho_so_tu_van=hstv, trang_thai=PhienLamBai.TrangThai.HOAN_THANH).select_related('bai_kiem_tra', 'ket_qua_kiem_tra').prefetch_related('bai_lam_ky_nangs'):
+                    p_goal = _normalize_goal(p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else '')
+                    kq = getattr(p, 'ket_qua_kiem_tra', None)
+                    has_gv = (kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN) or p.bai_lam_ky_nangs.filter(trang_thai_cham=BaiLamKyNang.TrangThaiCham.GV_DA_DUYET).exists()
+                    if p_goal == goal_type and has_gv:
+                        return redirect('placement_tests:test_room')
+
     request.session['placement_mcq_submitted'] = False
     request.session['placement_mcq_score'] = 0
     request.session['placement_mcq_correct'] = 0
@@ -617,7 +687,21 @@ def reset_mcq(request):
 
 
 def reset_full_test(request):
-    """Reset toàn bộ bài test (Trắc nghiệm + Writing & Speaking) để làm lại từ đầu."""
+    """Reset toàn bộ bài test (Trắc nghiệm + Writing & Speaking) để làm lại từ đầu nếu mục tiêu chưa khóa."""
+    student_email = get_account_email(request)
+    goal_type = request.session.get('student_goal_type', 'IELTS')
+    if student_email:
+        kh = KhachHang.objects.filter(email__iexact=student_email).first()
+        if kh:
+            hstv = HoSoTuVan.objects.filter(khach_hang=kh).first()
+            if hstv:
+                for p in PhienLamBai.objects.filter(ho_so_tu_van=hstv, trang_thai=PhienLamBai.TrangThai.HOAN_THANH).select_related('bai_kiem_tra', 'ket_qua_kiem_tra').prefetch_related('bai_lam_ky_nangs'):
+                    p_goal = _normalize_goal(p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else '')
+                    kq = getattr(p, 'ket_qua_kiem_tra', None)
+                    has_gv = (kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN) or p.bai_lam_ky_nangs.filter(trang_thai_cham=BaiLamKyNang.TrangThaiCham.GV_DA_DUYET).exists()
+                    if p_goal == goal_type and has_gv:
+                        return redirect('placement_tests:test_room')
+
     request.session['placement_mcq_submitted'] = False
     request.session['placement_mcq_score'] = 0
     request.session['placement_mcq_correct'] = 0
@@ -818,22 +902,24 @@ def submit_writing_speaking(request):
                 do_tin_cay=90.0
             )
 
-            # Chuyển tất cả các bài test cũ hơn chưa duyệt chính thức sang trạng thái LƯU TRỮ (LUU_TRU)
+            # Chuyển tất cả các bài test cũ hơn chưa duyệt chính thức của CÙNG MỤC TIÊU sang trạng thái LƯU TRỮ (LUU_TRU)
             old_phiens = PhienLamBai.objects.filter(
                 ho_so_tu_van=hstv
-            ).exclude(id=phien_obj.id)
+            ).exclude(id=phien_obj.id).select_related('bai_kiem_tra', 'ket_qua_kiem_tra')
             for op in old_phiens:
-                kq_old = getattr(op, 'ket_qua_kiem_tra', None)
-                if kq_old and kq_old.trang_thai != KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
-                    kq_old.trang_thai = KetQuaKiemTra.TrangThai.LUU_TRU
-                    kq_old.save(update_fields=['trang_thai'])
-                elif not kq_old:
-                    KetQuaKiemTra.objects.create(
-                        phien_lam_bai=op,
-                        tong_diem=0.0,
-                        trinh_do='A1',
-                        trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
-                    )
+                op_goal = _normalize_goal(op.bai_kiem_tra.ten_bai if op.bai_kiem_tra else '')
+                if op_goal == goal_type:
+                    kq_old = getattr(op, 'ket_qua_kiem_tra', None)
+                    if kq_old and kq_old.trang_thai != KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
+                        kq_old.trang_thai = KetQuaKiemTra.TrangThai.LUU_TRU
+                        kq_old.save(update_fields=['trang_thai'])
+                    elif not kq_old:
+                        KetQuaKiemTra.objects.create(
+                            phien_lam_bai=op,
+                            tong_diem=0.0,
+                            trinh_do='A1',
+                            trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
+                        )
 
             # Khởi tạo bản ghi Kết quả kiểm tra phiên mới nhất chờ GV phê duyệt
             KetQuaKiemTra.objects.update_or_create(
@@ -1123,18 +1209,10 @@ def test_result(request):
                     if not s_eval.get('detailed_feedback') and ai_cham.nhan_xet:
                         s_eval['detailed_feedback'] = ai_cham.nhan_xet
 
-        # Nhận diện mục tiêu từ tên bài kiểm tra hoặc hồ sơ tư vấn
+        # Nhận diện mục tiêu từ tên bài kiểm tra hoặc session
         bai_ten = selected_phien.bai_kiem_tra.ten_bai if selected_phien.bai_kiem_tra else ''
-        if 'IELTS' in bai_ten:
-            goal_type = 'IELTS'
-        elif 'DAU_RA' in bai_ten or 'DH' in bai_ten:
-            goal_type = 'DAU_RA_DH'
-        elif 'GIAO_TIEP' in bai_ten:
-            goal_type = 'GIAO_TIEP'
-        elif 'MAT_GOC' in bai_ten:
-            goal_type = 'MAT_GOC'
-        elif selected_phien.ho_so_tu_van and selected_phien.ho_so_tu_van.muc_tieu_hoc_tap:
-            goal_type = selected_phien.ho_so_tu_van.muc_tieu_hoc_tap
+        if bai_ten:
+            goal_type = _normalize_goal(bai_ten)
         else:
             goal_type = request.session.get('student_goal_type', 'IELTS')
 
@@ -1248,6 +1326,15 @@ def test_result(request):
 
     goal_placement = get_goal_placement_info(goal_type, total, mcq, writing, speaking)
 
+    scale_type = goal_score.get('scale_type')
+    main_num = float(goal_score.get('main_score_number', 0) or 0)
+    if scale_type == 'IELTS_BAND':
+        ring_pct = round(min(100.0, max(0.0, (main_num / 9.0) * 100)), 1)
+    elif scale_type == 'VSTEP_10':
+        ring_pct = round(min(100.0, max(0.0, (main_num / 10.0) * 100)), 1)
+    else:
+        ring_pct = round(min(100.0, max(0.0, float(total))), 1)
+
     context = {
         'has_test_results': True,
         'phien': {'ma_phien': phien_id, 'hoan_thanh': hoan_thanh_time, 'id': selected_phien.id if selected_phien else '001'},
@@ -1259,6 +1346,7 @@ def test_result(request):
         'is_teacher_approved': is_teacher_approved,
         'teacher_note': teacher_note,
         'goal_score': goal_score,
+        'ring_pct': ring_pct,
         'goal_type': goal_type,
         'target_detail': target_detail,
         'ket_qua': {

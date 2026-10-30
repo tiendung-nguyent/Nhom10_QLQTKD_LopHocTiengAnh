@@ -54,7 +54,11 @@ def get_account_email(request):
 
     # 4. Kiểm tra session nếu chưa lấy được email từ user
     if not email and hasattr(request, 'session'):
-        email = request.session.get('student_email') or request.session.get('user_email') or ''
+        role = request.session.get('role', '')
+        if role in ['TEACHER', 'STAFF', 'ACCOUNTANT']:
+            email = request.session.get('user_email') or request.session.get('student_email') or ''
+        else:
+            email = request.session.get('student_email') or request.session.get('user_email') or ''
         if email:
             email = email.strip().lower()
 

@@ -31,7 +31,8 @@
     .score-ring .score-val {
       font-size: 22px !important;
     }
-    div[style*="display: grid"][style*="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))"] {
+    .history-sessions-grid,
+    div[style*="display: grid"][style*="grid-template-columns: repeat(auto-fill"] {
       grid-template-columns: 1fr !important;
     }
   }
@@ -80,34 +81,34 @@
     </span>
   </div>
 
-  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;">
+  <div class="history-sessions-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px;">
     {% for ps in danh_sach_phien %}
-    <a href="?session={{ ps.id }}" style="text-decoration: none; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 18px; border-radius: 16px; border: 2px solid {% if ps.is_selected %}var(--accent-purple){% else %}#E2E8F0{% endif %}; background: {% if ps.is_selected %}#FAF5FF{% else %}#FFFFFF{% endif %}; color: inherit; transition: all 0.2s ease; box-shadow: {% if ps.is_selected %}0 6px 18px rgba(139, 92, 246, 0.18){% else %}0 2px 6px rgba(0,0,0,0.03){% endif %}; cursor: pointer;" onmouseover="if(!{{ ps.is_selected|yesno:'true,false' }}){this.style.borderColor='var(--accent-purple)'; this.style.transform='translateY(-2px)';}" onmouseout="if(!{{ ps.is_selected|yesno:'true,false' }}){this.style.borderColor='#E2E8F0'; this.style.transform='none';}">
-      <div style="display: flex; align-items: center; gap: 12px;">
+    <a href="?session={{ ps.id }}" style="text-decoration: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: 16px; border: 2px solid {% if ps.is_selected %}var(--accent-purple){% else %}#E2E8F0{% endif %}; background: {% if ps.is_selected %}#FAF5FF{% else %}#FFFFFF{% endif %}; color: inherit; transition: all 0.2s ease; box-shadow: {% if ps.is_selected %}0 6px 18px rgba(139, 92, 246, 0.18){% else %}0 2px 6px rgba(0,0,0,0.03){% endif %}; cursor: pointer; box-sizing: border-box; min-width: 0; overflow: hidden; position: relative;" onmouseover="if(!{{ ps.is_selected|yesno:'true,false' }}){this.style.borderColor='var(--accent-purple)'; this.style.transform='translateY(-2px)';}" onmouseout="if(!{{ ps.is_selected|yesno:'true,false' }}){this.style.borderColor='#E2E8F0'; this.style.transform='none';}">
+      <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; overflow: hidden;">
         <div style="width: 36px; height: 36px; border-radius: 50%; background: {% if ps.is_selected %}var(--accent-purple){% else %}var(--bg-app){% endif %}; color: {% if ps.is_selected %}#fff{% else %}var(--text-secondary){% endif %}; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex-shrink: 0;">
           {% if ps.is_selected %}<i class="fa-solid fa-check"></i>{% else %}#{{ ps.id }}{% endif %}
         </div>
-        <div>
-          <div style="font-size: 13.5px; font-weight: 800; color: {% if ps.is_selected %}var(--accent-purple){% else %}var(--text-primary){% endif %}; display: flex; align-items: center; gap: 6px;">
-            <span>Phiên thi #{{ ps.ma_phien }}</span>
-            {% if ps.is_selected %}<span class="badge badge-purple" style="font-size: 9.5px; padding: 2px 6px;">Đang xem</span>{% endif %}
+        <div style="min-width: 0; overflow: hidden;">
+          <div style="font-size: 13px; font-weight: 800; color: {% if ps.is_selected %}var(--accent-purple){% else %}var(--text-primary){% endif %}; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            <span style="overflow: hidden; text-overflow: ellipsis;">Phiên thi #{{ ps.ma_phien }}</span>
+            {% if ps.is_selected %}<span class="badge badge-purple" style="font-size: 9.5px; padding: 1px 6px; flex-shrink: 0;">Đang xem</span>{% endif %}
           </div>
-          <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 5px;">
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
             <i class="fa-regular fa-calendar"></i> {{ ps.ngay_hoan_thanh|date:"d/m/Y H:i" }}
           </div>
         </div>
       </div>
 
-      <div style="text-align: right; flex-shrink: 0;">
-        <div style="font-size: 16px; font-weight: 800; color: {% if ps.is_selected %}var(--accent-purple){% else %}var(--text-primary){% endif %};">
+      <div style="text-align: right; flex-shrink: 0; min-width: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: center;">
+        <div style="font-size: 15px; font-weight: 800; color: {% if ps.is_selected %}var(--accent-purple){% else %}var(--text-primary){% endif %}; white-space: nowrap;">
           {{ ps.tong_diem }}đ
         </div>
-        <div style="margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap;">
-          <span class="badge {% if ps.trang_thai_duyet == 'GV_DA_DUYET' %}badge-emerald{% elif ps.is_archived %}badge-gray{% else %}badge-coral{% endif %}" style="font-size: 10px; padding: 2px 8px; border-radius: 999px;">
+        <div style="margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 5px; flex-wrap: nowrap;">
+          <span class="badge {% if ps.trang_thai_duyet == 'GV_DA_DUYET' %}badge-emerald{% elif ps.is_archived %}badge-gray{% else %}badge-coral{% endif %}" style="font-size: 10px; padding: 2px 7px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;">
             {{ ps.status_label }}
           </span>
           {% if ps.can_request_review %}
-          <button type="button" class="btn btn-outline btn-sm" style="font-size: 10px; padding: 2px 8px; font-weight: 700; color: var(--accent-purple); border-color: var(--accent-purple); background: #FAF5FF;" onclick="event.preventDefault(); event.stopPropagation(); requestTeacherReview('{{ ps.id }}');" title="Gửi phiên thi này sang danh sách chờ Giảng viên phê duyệt điểm">
+          <button type="button" class="btn btn-outline btn-sm" style="font-size: 10px; padding: 2px 6px; font-weight: 700; color: var(--accent-purple); border-color: var(--accent-purple); background: #FAF5FF; white-space: nowrap; flex-shrink: 0;" onclick="event.preventDefault(); event.stopPropagation(); requestTeacherReview('{{ ps.id }}');" title="Gửi phiên thi này sang danh sách chờ Giảng viên phê duyệt điểm">
             📤 Gửi GV duyệt
           </button>
           {% endif %}
@@ -158,17 +159,17 @@
     <div class="card-body">
       <!-- Vòng tròn hiển thị điểm số (Score Ring đồng bộ theo thang mục tiêu) -->
       {% if goal_score.scale_type == 'IELTS_BAND' %}
-      <div class="score-ring" data-pct="75" style="--pct: 75; margin-bottom: 16px;">
+      <div class="score-ring" data-pct="{{ ring_pct|default:33 }}" style="--pct: {{ ring_pct|default:33 }}; margin-bottom: 16px;">
         <span class="score-val" style="font-size: 26px;">{{ goal_score.main_score_display }}</span>
       </div>
       <div style="font-size: 13px; color: var(--text-muted); font-weight: 500;">trên thang điểm <strong>Band 9.0 IELTS</strong></div>
       {% elif goal_score.scale_type == 'VSTEP_10' %}
-      <div class="score-ring" data-pct="70" style="--pct: 70; margin-bottom: 16px;">
+      <div class="score-ring" data-pct="{{ ring_pct|default:70 }}" style="--pct: {{ ring_pct|default:70 }}; margin-bottom: 16px;">
         <span class="score-val" style="font-size: 24px;">{{ goal_score.main_score_display }}</span>
       </div>
       <div style="font-size: 13px; color: var(--text-muted); font-weight: 500;">trên thang điểm <strong>10.0 VSTEP</strong></div>
       {% else %}
-      <div class="score-ring" data-pct="{{ ket_qua.tong_diem|default:72 }}" style="--pct: {{ ket_qua.tong_diem|default:72 }}; margin-bottom: 16px;">
+      <div class="score-ring" data-pct="{{ ring_pct|default:ket_qua.tong_diem|default:72 }}" style="--pct: {{ ring_pct|default:ket_qua.tong_diem|default:72 }}; margin-bottom: 16px;">
         <span class="score-val">{{ ket_qua.tong_diem|default:72 }}</span>
       </div>
       <div style="font-size: 13px; color: var(--text-muted); font-weight: 500;">trên thang điểm 100 ({{ goal_score.goal_title|default:"Năng lực tiếng Anh" }})</div>

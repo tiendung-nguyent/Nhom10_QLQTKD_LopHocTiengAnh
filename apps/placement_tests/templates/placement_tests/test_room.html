@@ -422,13 +422,41 @@
         </div>
       </div>
     </div>
-    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
       <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary" style="font-weight: 700; padding: 10px 20px;">
         <i class="fa-solid fa-chart-column"></i> Xem chi tiết Bảng điểm & AI chấm 📊
       </a>
+      {% if not is_goal_approved %}
       <a href="{% url 'placement_tests:reset_full_test' %}" class="btn btn-outline" onclick="return handleResetAllClick(event);" title="Làm lại bài kiểm tra từ đầu">
         <i class="fa-solid fa-rotate-left"></i> Làm lại bài kiểm tra từ đầu
       </a>
+      {% else %}
+      <span class="badge badge-emerald" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; font-size: 12.5px; font-weight: 700; border-radius: 10px;">
+        <i class="fa-solid fa-lock"></i> Điểm mục tiêu này đã được GV duyệt chính thức (Đã khóa)
+      </span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if is_goal_approved and not test_already_completed %}
+  <div class="alert alert-warning" style="margin-bottom: 20px; border-radius: 14px; padding: 14px 18px; background: #FFFBEB; border: 1.5px solid #FDE68A; color: #92400E; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <i class="fa-solid fa-circle-check" style="font-size: 24px; color: #10B981;"></i>
+      <div>
+        <div style="font-weight: 800; font-size: 14.5px; color: #065F46;">
+          Điểm bài thi mục tiêu {{ goal_display_text }} đã được Giảng viên phê duyệt chính thức
+        </div>
+        <div style="font-size: 12.5px; color: #047857; margin-top: 2px;">
+          Điểm số của mục tiêu này đã hoàn thành và khóa chính thức. Bạn có thể xem bảng điểm hoặc bấm đổi mục tiêu bên cạnh nếu muốn kiểm tra mục tiêu học tập khác (VSTEP, Giao tiếp,...).
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary btn-sm">Xem bảng điểm 📊</a>
+      <button type="button" class="btn btn-outline btn-sm" onclick="openEditProfileModal(false)" style="font-weight: 700;">
+        <i class="fa-solid fa-arrows-rotate"></i> Kiểm tra mục tiêu khác 🎯
+      </button>
     </div>
   </div>
   {% endif %}
@@ -1185,9 +1213,6 @@
       <button type="button" class="btn btn-outline" onclick="closeModal('result-feedback-modal')">
         Đóng cửa sổ
       </button>
-      <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary">
-        Xem bảng điểm toàn diện →
-      </a>
     </div>
   </div>
 </div>

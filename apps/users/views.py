@@ -26,8 +26,29 @@ def student_auth(request, default_tab='login'):
     prefill_email = request.GET.get('email', '')
     demo = request.GET.get('demo')
 
+    # Nếu người dùng đã đăng nhập (User Django authenticated hoặc có vai trò trong Session) -> Điều hướng thẳng đến Dashboard
+    if request.method == 'GET' and not demo and not request.GET.get('logout') and msg != 'logged_out':
+        user_is_auth = (hasattr(request, 'user') and request.user.is_authenticated) or bool(
+            request.session.get('role') and (request.session.get('user_email') or request.session.get('student_email'))
+        )
+        if user_is_auth:
+            role = request.session.get('role') or get_user_role(request) or 'STUDENT'
+            if role == 'TEACHER':
+                return redirect(next_url or 'users:teacher_dashboard')
+            elif role == 'ACCOUNTANT':
+                return redirect(next_url or 'users:accountant_dashboard')
+            elif role == 'STAFF':
+                return redirect(next_url or 'users:staff_dashboard')
+            elif role == 'STUDENT':
+                cur_email = get_account_email(request)
+                kh = KhachHang.objects.filter(email=cur_email).first() if cur_email else None
+                if kh and (not kh.ho_ten or not kh.so_dien_thoai or not kh.ngay_sinh):
+                    return redirect(next_url or 'placement_tests:test_room')
+                return redirect(next_url or 'users:student_dashboard')
+
     # Quick demo buttons (1 chạm đăng nhập cho từng vai trò)
     if demo == 'student':
+        request.session.flush()
         kh = KhachHang.objects.filter(email='a.nguyen@email.com').first()
         if not kh:
             kh = KhachHang.objects.create(
@@ -48,6 +69,7 @@ def student_auth(request, default_tab='login'):
         return redirect(next_url or 'users:student_dashboard')
 
     elif demo == 'teacher':
+        request.session.flush()
         nv = NhanVien.objects.filter(email='thao.tran@academix.edu.vn').first()
         request.session['role'] = 'TEACHER'
         request.session['user_email'] = nv.email if nv else 'thao.tran@academix.edu.vn'
@@ -55,13 +77,23 @@ def student_auth(request, default_tab='login'):
         return redirect(next_url or 'users:teacher_dashboard')
 
     elif demo == 'staff':
+        request.session.flush()
         nv = NhanVien.objects.filter(email='tuvan@academix.edu.vn').first()
         request.session['role'] = 'STAFF'
         request.session['user_email'] = nv.email if nv else 'tuvan@academix.edu.vn'
         request.session['user_name'] = nv.ho_ten if nv else 'Lê Văn Tư Vấn'
         return redirect(next_url or 'users:staff_dashboard')
 
+    elif demo == 'accountant':
+        request.session.flush()
+        nv = NhanVien.objects.filter(email='ketoan@academix.edu.vn').first()
+        request.session['role'] = 'ACCOUNTANT'
+        request.session['user_email'] = nv.email if nv else 'ketoan@academix.edu.vn'
+        request.session['user_name'] = nv.ho_ten if nv else 'Nguyễn Thu Ngân'
+        return redirect(next_url or 'users:accountant_dashboard')
+
     elif demo == 'new_student':
+        request.session.flush()
         # Học viên mới lần đầu làm test: bắt buộc điền thông tin mới được làm test
         kh, _ = KhachHang.objects.get_or_create(
             email='new.student@gmail.com',
@@ -111,10 +143,10 @@ def student_auth(request, default_tab='login'):
                     request.session['user_name'] = nv.ho_ten
                     return redirect(next_target or 'users:staff_dashboard')
                 elif nv.vai_tro == NhanVien.VaiTro.KE_TOAN:
-                    request.session['role'] = 'STAFF'
+                    request.session['role'] = 'ACCOUNTANT'
                     request.session['user_email'] = nv.email
                     request.session['user_name'] = nv.ho_ten
-                    return redirect(next_target or 'billing:invoice_list')
+                    return redirect(next_target or 'users:accountant_dashboard')
 
             # 2. Kiểm tra tài khoản trong bảng KhachHang (Học viên)
             kh = KhachHang.objects.filter(email=email).first()
@@ -241,6 +273,14 @@ def get_sample_accounts():
             'icon': 'fa-bullseye',
             'color': 'emerald',
             'demo': 'staff'
+        },
+        {
+            'role': 'Kế toán trung tâm',
+            'email': 'ketoan@academix.edu.vn',
+            'name': 'Nguyễn Thu Ngân (Đối soát & Thu học phí)',
+            'icon': 'fa-file-invoice-dollar',
+            'color': 'indigo',
+            'demo': 'accountant'
         },
         {
             'role': 'Học viên mới',
