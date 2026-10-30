@@ -25,6 +25,9 @@
 </head>
 
 <body>
+  <!-- Mobile Sidebar Overlay Backdrop -->
+  <div class="mobile-overlay" id="mobile-overlay" onclick="closeMobileSidebar()"></div>
+
   <div class="app-wrapper">
 
     <!-- ═══════════════════════════════════════════════════════
@@ -182,8 +185,12 @@
 
         <!-- Left Title / Breadcrumb Box -->
         <div class="header-left">
-          <button class="header-btn" id="menu-toggle" onclick="toggleSidebar()" title="Toggle Menu">
+          <!-- Hamburger: chỉ hiện trên mobile -->
+          <button class="mobile-menu-btn" id="mobile-menu-btn" onclick="openMobileSidebar()" title="Mở menu" style="display:none;">
             <i class="fa-solid fa-bars"></i>
+          </button>
+          <button class="header-btn" id="menu-toggle" onclick="toggleSidebar()" title="Toggle Menu">
+            <i class="fa-solid fa-bars-staggered"></i>
           </button>
           <div class="header-title-box">
             <div class="header-title">{% block page_heading %}Dashboard{% endblock %}</div>
@@ -306,6 +313,46 @@
 
   <!-- JavaScript Core -->
   <script src="{% static 'js/academix.js' %}"></script>
+
+  <script>
+  // ── Mobile Sidebar Toggle ──────────────────────────────────
+  function openMobileSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('mobile-overlay').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeMobileSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('mobile-overlay').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+  // Esc key đóng sidebar
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeMobileSidebar();
+  });
+  // Trên mobile, click nav item tự đóng sidebar
+  document.querySelectorAll('.sidebar .nav-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      if (window.innerWidth <= 768) closeMobileSidebar();
+    });
+  });
+  // Hiện/ẩn hamburger dựa theo screen size
+  function handleMobileHeader() {
+    var mobileBtn  = document.getElementById('mobile-menu-btn');
+    var desktopBtn = document.getElementById('menu-toggle');
+    if (window.innerWidth <= 768) {
+      if (mobileBtn)  mobileBtn.style.display  = 'flex';
+      if (desktopBtn) desktopBtn.style.display = 'none';
+    } else {
+      if (mobileBtn)  mobileBtn.style.display  = 'none';
+      if (desktopBtn) desktopBtn.style.display = '';
+      closeMobileSidebar(); // đóng nếu đang mở khi resize lên desktop
+    }
+  }
+  window.addEventListener('resize', handleMobileHeader);
+  handleMobileHeader(); // chạy ngay khi load
+  </script>
+
   {% block extra_js %}{% endblock %}
 </body>
 

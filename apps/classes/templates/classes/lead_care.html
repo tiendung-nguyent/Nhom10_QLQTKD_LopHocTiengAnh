@@ -122,25 +122,25 @@
       <!-- Dropdown Filter theo Trạng thái hồ sơ -->
       <select class="form-control" style="max-width: 230px;" id="status-filter" onchange="filterLeads()">
         <option value="">-- Tất cả trạng thái --</option>
-        <option value="MOI" {% if selected_status=='MOI' %}selected{% endif %}>📥 Mới tiếp nhận</option>
-        <option value="DANG_XU_LY" {% if selected_status=='DANG_XU_LY' %}selected{% endif %}>⏳ Đang tư vấn lộ trình
+        <option value="MOI" {% if selected_status == 'MOI' %}selected{% endif %}>📥 Mới tiếp nhận</option>
+        <option value="DANG_XU_LY" {% if selected_status == 'DANG_XU_LY' %}selected{% endif %}>⏳ Đang tư vấn lộ trình
         </option>
-        <option value="CHO_TEST" {% if selected_status=='CHO_TEST' %}selected{% endif %}>📝 Hẹn lịch test (105')
+        <option value="CHO_TEST" {% if selected_status == 'CHO_TEST' %}selected{% endif %}>📝 Hẹn lịch test (105')
         </option>
-        <option value="DA_TEST" {% if selected_status=='DA_TEST' %}selected{% endif %}>✦ Đã test (Chờ tư vấn lớp)
+        <option value="DA_TEST" {% if selected_status == 'DA_TEST' %}selected{% endif %}>✦ Đã test (Chờ tư vấn lớp)
         </option>
-        <option value="DE_XUAT_LOP" {% if selected_status=='DE_XUAT_LOP' %}selected{% endif %}>🎯 Đã đề xuất lớp
+        <option value="DE_XUAT_LOP" {% if selected_status == 'DE_XUAT_LOP' %}selected{% endif %}>🎯 Đã đề xuất lớp
         </option>
-        <option value="TU_CHOI" {% if selected_status=='TU_CHOI' %}selected{% endif %}>❌ Từ chối / Đổi khung giờ
+        <option value="TU_CHOI" {% if selected_status == 'TU_CHOI' %}selected{% endif %}>❌ Từ chối / Đổi khung giờ
         </option>
-        <option value="HOAN_THANH" {% if selected_status=='HOAN_THANH' %}selected{% endif %}>✔ Đã nhập học</option>
+        <option value="HOAN_THANH" {% if selected_status == 'HOAN_THANH' %}selected{% endif %}>✔ Đã nhập học</option>
       </select>
 
       <!-- Dropdown Filter theo Chuyên viên tư vấn -->
       <select class="form-control" style="max-width: 220px;" id="advisor-filter" onchange="filterLeads()">
         <option value="">-- Tất cả chuyên viên --</option>
         {% for adv in advisors %}
-        <option value="{{ adv.id }}" {% if selected_advisor==adv.id %}selected{% endif %}>{{ adv.ho_ten }}</option>
+        <option value="{{ adv.id }}" {% if selected_advisor == adv.id %}selected{% endif %}>{{ adv.ho_ten }}</option>
         {% endfor %}
       </select>
 
@@ -319,7 +319,7 @@
           <label class="form-label">Chuyên viên phụ trách *</label>
           <select name="nhan_vien_id" class="form-control" id="modal-advisor-select" required style="font-weight: 600;">
             {% for adv in advisors %}
-            <option value="{{ adv.id }}" {% if current_advisor_id and adv.id==current_advisor_id %}selected{% endif %}>
+            <option value="{{ adv.id }}" {% if current_advisor_id and adv.id == current_advisor_id %}selected{% endif %}>
               {{ adv.ho_ten }} ({{ adv.email }})</option>
             {% endfor %}
           </select>

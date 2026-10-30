@@ -641,3 +641,147 @@
 .shadow-sm {
   box-shadow: var(--shadow-sm) !important;
 }
+
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE MOBILE — components.css additions
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── MODAL BOX (tất cả modal toàn hệ thống) ────────────── */
+@media (max-width: 768px) {
+  /* Modal overlay: padding nhỏ để modal full-width */
+  .modal-overlay {
+    padding: 8px !important;
+    align-items: flex-end !important; /* slide up từ dưới */
+  }
+
+  /* Tất cả modal box */
+  .modal-box,
+  div[style*="modal-box"],
+  .modal-content {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    margin: 0 !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* Header của modal */
+  .modal-header,
+  div[style*="modal-header"] {
+    padding: 14px 16px !important;
+    font-size: 15px !important;
+  }
+
+  /* Body của modal */
+  .modal-body,
+  div[style*="modal-body"] {
+    padding: 14px 16px !important;
+  }
+
+  /* Form layout trong modal: stack vertical */
+  .form-row-2 {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Class card trong lead_care, lead_consult */
+  .class-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .class-card > div:last-child {
+    width: 100%;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* Filter bar (search + dropdowns) */
+  div[style*="display: flex"][style*="gap"] > .header-search,
+  div[style*="display:flex"][style*="gap"] > .header-search {
+    max-width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+
+  /* Dropdown filter xếp thành 2 cột trên mobile */
+  div.filter-bar,
+  div[style*="flex-wrap: wrap"] {
+    flex-direction: column !important;
+  }
+
+  /* Action button groups trong table: stack */
+  td > div[style*="display: flex"],
+  td > div[style*="display:flex"] {
+    flex-direction: column !important;
+    gap: 4px !important;
+    align-items: stretch !important;
+  }
+
+  /* Payment amount nhỏ hơn */
+  .payment-amount { font-size: 28px; }
+
+  /* Score ring nhỏ hơn */
+  .score-ring { width: 100px; height: 100px; }
+  .score-ring::before { width: 74px; height: 74px; }
+  .score-ring .score-val { font-size: 22px; }
+
+  /* Speaking timer */
+  .timer-display { font-size: 26px; }
+
+  /* Dropdown menu: toàn màn hình */
+  .user-dropdown-menu,
+  .notif-popover {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    min-width: unset !important;
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 70vh !important;
+    overflow-y: auto !important;
+    z-index: 600 !important;
+  }
+
+  /* Notification items */
+  .notif-item { padding: 10px 14px; font-size: 11.5px; }
+  .notif-header { padding: 12px 14px; font-size: 12.5px; }
+
+  /* Timeline */
+  .timeline { padding-left: 22px; }
+  .timeline-title { font-size: 12.5px; }
+
+  /* AI Feedback criteria */
+  .criterion { flex-wrap: wrap; }
+  .criterion-name { min-width: 80px; font-size: 11px; }
+
+  /* Recording area */
+  .recorder-area { padding: 20px 16px; }
+  .record-btn { width: 60px; height: 60px; font-size: 22px; }
+
+  /* QR */
+  .qr-container { padding: 16px; }
+  .qr-img { width: 160px; height: 160px; }
+}
+
+@media (max-width: 480px) {
+  .modal-overlay { padding: 0 !important; }
+  .modal-box { border-radius: 20px 20px 0 0 !important; }
+
+  .payment-amount { font-size: 24px; }
+  .score-ring { width: 88px; height: 88px; }
+  .score-ring::before { width: 64px; height: 64px; }
+  .score-ring .score-val { font-size: 18px; }
+
+  .timer-display { font-size: 22px; letter-spacing: 1px; }
+
+  /* Class card actions: full width buttons */
+  .class-card .btn { width: 100%; justify-content: center; }
+
+  /* Criteria bar compact */
+  .criterion-name { min-width: 70px; font-size: 10.5px; }
+}

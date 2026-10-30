@@ -1497,7 +1497,7 @@ def calculate_goal_based_score(mcq_score: float, writing_result: dict, speaking_
             'writing_scaled': w_scaled,
             'speaking_scaled': s_scaled,
             'evaluation_note': evaluation_note,
-            'cefr_equivalent': "B2" if overall_band >= 5.5 else ("B1" if overall_band >= 4.5 else "A2"),
+            'cefr_equivalent': "C1" if overall_band >= 7.0 else ("B2" if overall_band >= 5.5 else ("B1" if overall_band >= 4.5 else "A2")),
         }
 
     elif 'DAU_RA' in goal_key or 'DH' in goal_key:
@@ -1609,3 +1609,169 @@ def calculate_goal_based_score(mcq_score: float, writing_result: dict, speaking_
             'evaluation_note': desc,
             'cefr_equivalent': "A2" if total_100 >= 60 else "A1",
         }
+
+
+# ═══════════════════════════════════════════════════════════════════
+# BỘ QUY ĐỔI KHUNG NĂNG LỰC & GỢI Ý XẾP LỚP THEO TỪNG MỤC TIÊU HỌC TẬP
+# (IELTS Band, Chuẩn đầu ra ĐH VSTEP, Giao tiếp Công sở, Xóa mất gốc)
+# ═══════════════════════════════════════════════════════════════════
+
+def get_goal_placement_info(goal_type: str, total_score: float, mcq_score: float = 0.0, writing_score: float = 0.0, speaking_score: float = 0.0) -> dict:
+    """
+    Chuẩn hóa gợi ý xếp lớp và khung năng lực xếp loại chuẩn mực:
+    1. IELTS: Phân loại theo chuẩn Band IELTS & Khóa học lớp Band tương ứng
+       - Pre-IELTS (Band 3.0 - 4.0 · Nền tảng A2) -> Lớp Pre-IELTS Foundation
+       - IELTS Fighter (Band 4.5 - 5.5 · Chuẩn B1) -> Lớp IELTS Fighter B1
+       - IELTS Master (Band 5.5 - 6.5 · Chuẩn B2) -> Lớp IELTS Master B2
+       - IELTS Advanced (Band 6.5 - 7.5+ · Chuẩn C1) -> Lớp IELTS Advanced Intensive
+    2. DAU_RA_DH (Chuẩn đầu ra ĐH / VSTEP 6 bậc):
+       - VSTEP Bậc 2 (A2 - Chưa đạt chuẩn ĐH) -> Lớp Tiếng Anh Bổ trợ Chuẩn đầu ra A2
+       - VSTEP Bậc 3 (B1 - Đạt chuẩn Cử nhân ĐH) -> Lớp Luyện thi Chuẩn đầu ra Đại học B1 (VSTEP)
+       - VSTEP Bậc 4 (B2 - Đạt chuẩn Thạc sĩ/CLC) -> Lớp Luyện thi Chuẩn đầu ra Cao học B2 (VSTEP)
+       - VSTEP Bậc 5 (C1 - Xuất sắc/Chuyên ngữ) -> Lớp Chuyên sâu Chuẩn đầu ra C1 VSTEP
+    3. GIAO_TIEP (Tiếng Anh Giao tiếp & Đi làm):
+       - A2 Sơ cấp (Workplace Starter) -> Lớp Tiếng Anh Giao tiếp Căn bản A2
+       - B1 Độc lập (Workplace Independent) -> Lớp Giao tiếp & Phản xạ Công sở B1
+       - B2 Thành thạo (Business Fluent) -> Lớp Giao tiếp & Thuyết trình Công sở B2
+       - C1 Chuyên sâu (Global Professional) -> Lớp Giao tiếp Chuyên sâu C1
+    4. MAT_GOC (Xóa mất gốc & Lấy lại nền tảng):
+       - A0-A1 Mất gốc toàn diện -> Lớp Xóa Mất Gốc Cấp Tốc từ con số 0 (A0-A1)
+       - A2 Vững vàng nền tảng -> Lớp Tiếng Anh Nền tảng Vững chắc A2
+       - B1 Bứt phá trung cấp -> Lớp Bứt phá Lên Trung cấp B1
+    """
+    g = (goal_type or 'IELTS').upper()
+    total = round(float(total_score or 0.0), 1)
+
+    if 'IELTS' in g:
+        norm_goal = 'IELTS'
+        goal_title = 'Luyện thi IELTS'
+        if total >= 80:
+            cefr = 'C1'
+            level_label = 'IELTS Advanced (Band 6.5 - 7.5+ · Chuẩn C1)'
+            khoa_de_xuat = 'Lớp IELTS Advanced Intensive (Mục tiêu 6.5 - 7.5+)'
+            khoa_id = 5
+        elif total >= 60:
+            cefr = 'B2'
+            level_label = 'IELTS Master (Band 5.5 - 6.5 · Chuẩn B2)'
+            khoa_de_xuat = 'Lớp IELTS Master B2 (Mục tiêu 5.5 - 6.5)'
+            khoa_id = 4
+        elif total >= 40:
+            cefr = 'B1'
+            level_label = 'IELTS Fighter (Band 4.5 - 5.5 · Chuẩn B1)'
+            khoa_de_xuat = 'Lớp IELTS Fighter B1 (Mục tiêu 4.5 - 5.5)'
+            khoa_id = 3
+        else:
+            cefr = 'A2'
+            level_label = 'Pre-IELTS Foundation (Band 3.0 - 4.0 · Chuẩn A2)'
+            khoa_de_xuat = 'Lớp Pre-IELTS Foundation (Xây nền 3.0 - 4.0)'
+            khoa_id = 2
+
+        levels_list = [
+            {'value': 'A2', 'code': 'IELTS_PRE', 'label': 'Pre-IELTS (Band 3.0 - 4.0 · Nền tảng A2)', 'course': 'Lớp Pre-IELTS Foundation (Band 3.0 - 4.0)'},
+            {'value': 'B1', 'code': 'IELTS_FIGHTER', 'label': 'IELTS Fighter (Band 4.5 - 5.5 · Chuẩn B1)', 'course': 'Lớp IELTS Fighter B1 (Band 4.5 - 5.5)'},
+            {'value': 'B2', 'code': 'IELTS_MASTER', 'label': 'IELTS Master (Band 5.5 - 6.5 · Chuẩn B2)', 'course': 'Lớp IELTS Master B2 (Band 5.5 - 6.5)'},
+            {'value': 'C1', 'code': 'IELTS_ADVANCED', 'label': 'IELTS Advanced (Band 6.5 - 7.5+ · Chuẩn C1)', 'course': 'Lớp IELTS Advanced Intensive (Band 7.0+)'},
+        ]
+
+    elif 'DAU_RA' in g or 'DH' in g or 'VSTEP' in g:
+        norm_goal = 'DAU_RA_DH'
+        goal_title = 'Chuẩn đầu ra Đại học (VSTEP)'
+        if total >= 85:
+            cefr = 'C1'
+            level_label = 'VSTEP Bậc 5 (C1 - Xuất sắc / Chuyên ngữ)'
+            khoa_de_xuat = 'Lớp Chuyên sâu Chuẩn đầu ra C1 VSTEP'
+            khoa_id = 5
+        elif total >= 65:
+            cefr = 'B2'
+            level_label = 'VSTEP Bậc 4 (B2 - Đạt chuẩn Thạc sĩ / CLC)'
+            khoa_de_xuat = 'Lớp Luyện thi Chuẩn đầu ra Cao học B2 (VSTEP)'
+            khoa_id = 4
+        elif total >= 40:
+            cefr = 'B1'
+            level_label = 'VSTEP Bậc 3 (B1 - Đạt chuẩn Cử nhân ĐH)'
+            khoa_de_xuat = 'Lớp Luyện thi Chuẩn đầu ra Đại học B1 (VSTEP)'
+            khoa_id = 3
+        else:
+            cefr = 'A2'
+            level_label = 'VSTEP Bậc 2 (A2 - Chưa đạt chuẩn ĐH)'
+            khoa_de_xuat = 'Lớp Bổ trợ Tiếng Anh Chuẩn đầu ra Căn bản A2'
+            khoa_id = 2
+
+        levels_list = [
+            {'value': 'A2', 'code': 'VSTEP_A2', 'label': 'VSTEP Bậc 2 (A2 · Chưa đạt chuẩn đầu ra ĐH)', 'course': 'Lớp Bổ trợ Tiếng Anh Đầu ra A2'},
+            {'value': 'B1', 'code': 'VSTEP_B1', 'label': 'VSTEP Bậc 3 (B1 · Đạt chuẩn Cử nhân ĐH)', 'course': 'Lớp Luyện thi Chuẩn đầu ra Đại học B1 (VSTEP)'},
+            {'value': 'B2', 'code': 'VSTEP_B2', 'label': 'VSTEP Bậc 4 (B2 · Đạt chuẩn Thạc sĩ / CLC)', 'course': 'Lớp Luyện thi Chuẩn đầu ra Cao cấp B2 (VSTEP)'},
+            {'value': 'C1', 'code': 'VSTEP_C1', 'label': 'VSTEP Bậc 5 (C1 · Xuất sắc / Chuyên ngữ)', 'course': 'Lớp Chuyên sâu Chuẩn đầu ra C1 VSTEP'},
+        ]
+
+    elif 'GIAO_TIEP' in g:
+        norm_goal = 'GIAO_TIEP'
+        goal_title = 'Tiếng Anh Giao tiếp & Đi làm'
+        if total >= 85:
+            cefr = 'C1'
+            level_label = 'Giao tiếp Chuyên sâu (C1 - Global Professional)'
+            khoa_de_xuat = 'Lớp Giao tiếp Chuyên sâu & Hợp tác Quốc tế C1'
+            khoa_id = 5
+        elif total >= 65:
+            cefr = 'B2'
+            level_label = 'Giao tiếp Thành thạo (B2 - Business Fluent)'
+            khoa_de_xuat = 'Lớp Giao tiếp & Thuyết trình Công sở B2'
+            khoa_id = 4
+        elif total >= 40:
+            cefr = 'B1'
+            level_label = 'Giao tiếp Độc lập (B1 - Workplace Independent)'
+            khoa_de_xuat = 'Lớp Tiếng Anh Giao tiếp & Phản xạ Công sở B1'
+            khoa_id = 3
+        else:
+            cefr = 'A2'
+            level_label = 'Giao tiếp Sơ cấp (A2 - Workplace Starter)'
+            khoa_de_xuat = 'Lớp Tiếng Anh Giao tiếp Căn bản A2'
+            khoa_id = 2
+
+        levels_list = [
+            {'value': 'A2', 'code': 'COMM_A2', 'label': 'A2 Sơ cấp (Giao tiếp & Phát âm căn bản)', 'course': 'Lớp Tiếng Anh Giao tiếp Căn bản A2'},
+            {'value': 'B1', 'code': 'COMM_B1', 'label': 'B1 Độc lập (Phản xạ công sở thường nhật)', 'course': 'Lớp Giao tiếp & Phản xạ Công sở B1'},
+            {'value': 'B2', 'code': 'COMM_B2', 'label': 'B2 Thành thạo (Thuyết trình & Đàm phán đối tác)', 'course': 'Lớp Giao tiếp & Thuyết trình B2'},
+            {'value': 'C1', 'code': 'COMM_C1', 'label': 'C1 Chuyên sâu (Đàm phán quốc tế & Lãnh đạo)', 'course': 'Lớp Giao tiếp Chuyên sâu C1'},
+        ]
+
+    else:  # MAT_GOC
+        norm_goal = 'MAT_GOC'
+        goal_title = 'Xóa mất gốc & Lấy lại nền tảng'
+        if total >= 80:
+            cefr = 'B1'
+            level_label = 'Tự tin Bứt phá (B1 - Sẵn sàng lên chuyên sâu)'
+            khoa_de_xuat = 'Lớp Bứt phá Lên Trung cấp B1'
+            khoa_id = 3
+        elif total >= 60:
+            cefr = 'A2'
+            level_label = 'Vững vàng Nền tảng (A2 - Khôi phục toàn diện)'
+            khoa_de_xuat = 'Lớp Tiếng Anh Nền tảng Vững chắc A2'
+            khoa_id = 2
+        elif total >= 40:
+            cefr = 'A1'
+            level_label = 'Khởi động Phục hồi (A1 - Căn bản đời sống)'
+            khoa_de_xuat = 'Lớp Phục hồi Nền tảng Tiếng Anh Toàn diện A1'
+            khoa_id = 1
+        else:
+            cefr = 'A1'
+            level_label = 'Mất gốc sơ khai (A0 - Bắt đầu từ số 0)'
+            khoa_de_xuat = 'Lớp Xóa Mất Gốc Cấp Tốc từ con số 0 (A0-A1)'
+            khoa_id = 1
+
+        levels_list = [
+            {'value': 'A1', 'code': 'BASE_A0', 'label': 'A0 - A1 (Mất gốc hoàn toàn · Bắt đầu từ số 0)', 'course': 'Lớp Xóa Mất Gốc Cấp Tốc (A0-A1)'},
+            {'value': 'A2', 'code': 'BASE_A2', 'label': 'A2 Nền tảng (Củng cố ngữ pháp & Phát âm chuẩn)', 'course': 'Lớp Tiếng Anh Nền tảng Vững chắc A2'},
+            {'value': 'B1', 'code': 'BASE_B1', 'label': 'B1 Trung cấp (Tự tin bứt phá lên IELTS / Giao tiếp)', 'course': 'Lớp Bứt phá Lên Trung cấp B1'},
+        ]
+
+    return {
+        'goal_type': norm_goal,
+        'goal_title': goal_title,
+        'cefr': cefr,
+        'total_score': total,
+        'level_label': level_label,
+        'khoa_de_xuat': khoa_de_xuat,
+        'khoa_id': khoa_id,
+        'levels_list': levels_list,
+    }

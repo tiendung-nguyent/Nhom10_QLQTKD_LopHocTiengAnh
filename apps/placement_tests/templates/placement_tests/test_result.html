@@ -4,6 +4,40 @@
 {% block title %}Kết quả Kiểm tra Trình độ{% endblock %}
 {% block page_heading %}Kết quả Kiểm tra{% endblock %}
 
+{% block extra_css %}
+<style>
+  @media (max-width: 768px) {
+    .page-header {
+      margin-bottom: 16px !important;
+    }
+    .page-title {
+      font-size: 19px !important;
+    }
+    .two-col {
+      grid-template-columns: 1fr !important;
+      gap: 14px !important;
+    }
+    .card-body {
+      padding: 16px 14px !important;
+    }
+    .score-ring {
+      width: 100px !important;
+      height: 100px !important;
+    }
+    .score-ring::before {
+      width: 74px !important;
+      height: 74px !important;
+    }
+    .score-ring .score-val {
+      font-size: 22px !important;
+    }
+    div[style*="display: grid"][style*="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))"] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 {% if has_test_results %}
 <div class="page-header">

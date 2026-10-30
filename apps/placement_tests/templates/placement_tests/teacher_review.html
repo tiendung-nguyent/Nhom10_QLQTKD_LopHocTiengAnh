@@ -4,6 +4,40 @@
 {% block title %}Duyệt bài Chấm điểm AI – Giáo viên{% endblock %}
 {% block page_heading %}Thẩm định & Duyệt bài AI{% endblock %}
 
+{% block extra_css %}
+<style>
+  @media (max-width: 992px) {
+    .review-grid {
+      grid-template-columns: 1fr !important;
+      gap: 16px !important;
+    }
+  }
+  @media (max-width: 768px) {
+    .page-header {
+      margin-bottom: 16px !important;
+    }
+    .page-title {
+      font-size: 18px !important;
+    }
+    .page-subtitle {
+      font-size: 12px !important;
+    }
+    .card-header {
+      padding: 12px 14px !important;
+    }
+    .card-body {
+      padding: 12px 14px !important;
+    }
+    #local-test-search {
+      width: 100% !important;
+    }
+    form#test-search-form > div {
+      width: 100% !important;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 
 {# ══════════════════════════════════════════════════════════════ #}
@@ -208,6 +242,37 @@
       </span>
     </div>
     <div class="card-body">
+      <!-- ═══════════════════════════════════════════════════════
+           TỔNG HỢP ĐIỂM 3 PHẦN THI (THANG 100) & GỢI Ý XẾP LỚP
+           ═══════════════════════════════════════════════════════ -->
+      <div style="background: #FAF5FF; border: 1.5px solid #E9D5FF; border-radius: var(--radius-lg); padding: 14px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 12px; font-weight: 700; color: var(--accent-purple);">📊 Điểm 3 phần thi</span>
+          <span class="badge badge-purple" style="font-size: 10px; font-weight: 700;">{{ detail.goal_title }}</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; border-bottom: 1px dashed #DDD6FE; padding-bottom: 10px; margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">📝 Trắc nghiệm &amp; Nghe (40đ):</span>
+            <strong style="color: var(--text-primary);">{{ detail.scores.mcq }}đ</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">✍️ Writing (Tự luận 30đ):</span>
+            <strong style="color: var(--text-primary);">{{ detail.scores.writing }}đ</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">🎙️ Speaking (Ghi âm 30đ):</span>
+            <strong style="color: var(--text-primary);">{{ detail.scores.speaking }}đ</strong>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 12.5px; font-weight: 700; color: var(--text-primary);">Tổng điểm tích lũy:</span>
+          <span style="font-size: 18px; font-weight: 800; color: var(--accent-orange); background: #FFF4ED; padding: 2px 10px; border-radius: 6px; border: 1px solid #FFD8C2;">{{ detail.scores.total }} / 100đ</span>
+        </div>
+        <div style="font-size: 12px; color: #581C87; background: #F3E8FF; padding: 8px 10px; border-radius: 8px; line-height: 1.45;">
+          🎓 <strong>Gợi ý xếp lớp:</strong> {{ detail.khoa_de_xuat }}
+        </div>
+      </div>
+
       <form method="POST" action="{% url 'placement_tests:approve_skill' %}">
         {% csrf_token %}
         <input type="hidden" name="phien_id" value="{{ detail.phien_id }}">
@@ -247,14 +312,20 @@
                     placeholder="Nhập nhận xét chi tiết gửi cho học viên và tư vấn viên…">{{ detail.bai_lam.nhan_xet_gv|default:"Học viên hoàn thành bài kiểm tra theo đúng chuẩn yêu cầu." }}</textarea>
         </div>
 
-        <!-- Dropdown Xếp loại Trình độ năng lực -->
+        <!-- Dropdown Xếp loại Trình độ năng lực theo đúng chuẩn Mục tiêu -->
         <div class="form-group">
-          <label class="form-label">🎯 Khung năng lực CEFR xếp loại</label>
+          <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>🎯 Khung năng lực CEFR xếp loại</span>
+            <span class="badge badge-purple" style="font-size: 10px;">Chuẩn {{ detail.goal_title }}</span>
+          </label>
           <select name="trinh_do" class="form-control" style="font-weight: 600;" required>
             {% for lv in levels %}
             <option value="{{ lv.value }}" {% if lv.value == detail.trinh_do %}selected{% endif %}>{{ lv.label }}</option>
             {% endfor %}
           </select>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+            💡 Đề xuất xếp lớp theo đúng mục tiêu: <strong>{{ detail.khoa_de_xuat }}</strong>
+          </div>
         </div>
 
         <!-- Cảnh báo quy trình chuyển tiếp BPMN -->

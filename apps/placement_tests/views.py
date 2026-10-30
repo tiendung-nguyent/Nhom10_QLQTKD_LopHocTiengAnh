@@ -22,6 +22,7 @@ from apps.placement_tests.services import (
     grade_speaking_with_gemini,
     get_fallback_mcq_test,
     calculate_goal_based_score,
+    get_goal_placement_info,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,24 +77,24 @@ def test_room(request):
         or (request.user.email if (hasattr(request, 'user') and request.user.is_authenticated) else '')
     ).strip().lower()
 
-    # NGUYÊN TẮC: Nếu học viên ĐÃ CÓ họ tên & số điện thoại -> KHÔNG BAO GIỜ HIỂN THỊ LẠI POPUP
-    if student and student.ho_ten and student.so_dien_thoai:
+    # NGUYÊN TẮC: Nếu học viên ĐÃ CÓ họ tên, số điện thoại & ngày sinh -> Đủ điều kiện làm test
+    if student and student.ho_ten and student.so_dien_thoai and student.ngay_sinh:
         can_take_test = True
         is_new_student = False
         student_data = {
             'ho_ten': student.ho_ten,
             'email': effective_email,
             'so_dien_thoai': student.so_dien_thoai,
-            'ngay_sinh': student.ngay_sinh.strftime('%Y-%m-%d') if student.ngay_sinh else '2003-05-15',
+            'ngay_sinh': student.ngay_sinh.strftime('%Y-%m-%d') if student.ngay_sinh else '',
         }
-    elif request.session.get('profile_completed'):
+    elif request.session.get('profile_completed') and request.session.get('student_dob'):
         can_take_test = True
         is_new_student = False
         student_data = {
             'ho_ten': cand_name or request.session.get('student_name', 'Học viên'),
             'email': effective_email,
             'so_dien_thoai': student.so_dien_thoai if student else request.session.get('student_phone', ''),
-            'ngay_sinh': student.ngay_sinh.strftime('%Y-%m-%d') if (student and student.ngay_sinh) else '2003-05-15',
+            'ngay_sinh': student.ngay_sinh.strftime('%Y-%m-%d') if (student and student.ngay_sinh) else request.session.get('student_dob', ''),
         }
     else:
         can_take_test = False
@@ -102,7 +103,7 @@ def test_room(request):
             'ho_ten': cand_name,
             'email': effective_email,
             'so_dien_thoai': student.so_dien_thoai if student else request.session.get('student_phone', ''),
-            'ngay_sinh': student.ngay_sinh.strftime('%Y-%m-%d') if (student and student.ngay_sinh) else '2003-05-15',
+            'ngay_sinh': student.ngay_sinh.strftime('%Y-%m-%d') if (student and student.ngay_sinh) else '',
         }
 
     # Trích xuất mục tiêu học tập cụ thể của học viên
@@ -1245,6 +1246,8 @@ def test_result(request):
     writing_comment = w_eval.get('detailed_feedback') or 'Bài viết đáp ứng tốt yêu cầu đề tài. Cấu trúc câu mạch lạc và có sử dụng từ vựng liên kết.'
     speaking_comment = s_eval.get('detailed_feedback') or 'Phản xạ giao tiếp tự tin, phát âm rõ ràng, duy trì nhịp điệu tương đối tự nhiên.'
 
+    goal_placement = get_goal_placement_info(goal_type, total, mcq, writing, speaking)
+
     context = {
         'has_test_results': True,
         'phien': {'ma_phien': phien_id, 'hoan_thanh': hoan_thanh_time, 'id': selected_phien.id if selected_phien else '001'},
@@ -1259,11 +1262,11 @@ def test_result(request):
         'goal_type': goal_type,
         'target_detail': target_detail,
         'ket_qua': {
-            'tong_diem': int(total),
-            'trinh_do': goal_score.get('level_label') or f'{cefr} – {"Intermediate" if cefr == "B1" else "Upper Intermediate"}',
+            'tong_diem': round(total, 1),
+            'trinh_do': goal_placement['level_label'],
             'trang_thai': 'GV_DA_DUYET' if is_teacher_approved else 'CHO_DUYET',
         },
-        'khoa_de_xuat': f'{cefr} {goal_type} Foundation & Bứt phá – 30 buổi',
+        'khoa_de_xuat': goal_placement['khoa_de_xuat'],
         'skill_scores': [
             {'label': '📖 Trắc nghiệm & Nghe', 'score': int(mcq), 'max': 40, 'pct': int((mcq / 40) * 100), 'color': '#10B981', 'is_ai': False},
             {'label': '✍️ Writing (AI)', 'score': int(writing), 'max': 30, 'pct': int((writing / 30) * 100), 'color': '#8B5CF6', 'is_ai': True},
@@ -1367,9 +1370,12 @@ def teacher_review(request):
             'so_dien_thoai': kh.so_dien_thoai if kh else 'Chưa có SĐT',
             'ten_bai': p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else 'Placement Test',
             'thoi_gian': p.hoan_thanh or p.bat_dau or now,
-            'speaking_score': spk_ai_score,
-            'writing_score': wri_ai_score,
-            'mcq_score': mcq_ai_score,
+            'speaking_score': eff_spk,
+            'writing_score': eff_wri,
+            'mcq_score': eff_mcq,
+            'speaking_ai': spk_ai_score,
+            'writing_ai': wri_ai_score,
+            'mcq_ai': mcq_ai_score,
             'speaking_adj': spk_adj_score,
             'writing_adj': wri_adj_score,
             'mcq_adj': mcq_adj_score,
@@ -1560,8 +1566,32 @@ def teacher_review(request):
                     {'name': 'Pronunciation & Intonation', 'score': '7.2', 'pct': 72},
                 ]
 
-        total_3_skills = (teacher_wri_score or ai_wri_score) + (teacher_spk_score or ai_spk_score) + (teacher_mcq_score or ai_mcq_score)
-        suggested_cefr = 'B2' if total_3_skills >= 75 else ('B1' if total_3_skills >= 55 else 'A2')
+        # Nhận diện mục tiêu học tập của bài thi
+        bai_ten = phien_db.bai_kiem_tra.ten_bai if phien_db.bai_kiem_tra else ''
+        if 'IELTS' in bai_ten:
+            candidate_goal = 'IELTS'
+        elif 'DAU_RA' in bai_ten or 'DH' in bai_ten or 'VSTEP' in bai_ten:
+            candidate_goal = 'DAU_RA_DH'
+        elif 'GIAO_TIEP' in bai_ten:
+            candidate_goal = 'GIAO_TIEP'
+        elif 'MAT_GOC' in bai_ten:
+            candidate_goal = 'MAT_GOC'
+        elif phien_db.ho_so_tu_van and phien_db.ho_so_tu_van.khoa_de_xuat:
+            kd_name = phien_db.ho_so_tu_van.khoa_de_xuat.ten_khoa.upper()
+            if 'IELTS' in kd_name: candidate_goal = 'IELTS'
+            elif 'GIAO TIEP' in kd_name or 'COMMUNICATION' in kd_name: candidate_goal = 'GIAO_TIEP'
+            else: candidate_goal = 'IELTS'
+        else:
+            candidate_goal = 'IELTS'
+
+        eff_spk_curr = teacher_spk_score if teacher_spk_score is not None else (ai_spk_score or 0.0)
+        eff_wri_curr = teacher_wri_score if teacher_wri_score is not None else (ai_wri_score or 0.0)
+        eff_mcq_curr = teacher_mcq_score if teacher_mcq_score is not None else (ai_mcq_score or 0.0)
+        total_3_skills = round(eff_spk_curr + eff_wri_curr + eff_mcq_curr, 1)
+
+        placement_info = get_goal_placement_info(
+            candidate_goal, total_3_skills, eff_mcq_curr, eff_wri_curr, eff_spk_curr
+        )
 
         detail_data = {
             'hoc_vien_name': kh_obj.ho_ten if (kh_obj and kh_obj.ho_ten) else 'Học viên',
@@ -1579,6 +1609,17 @@ def teacher_review(request):
             'speaking_status': spk_status,
             'writing_status': wri_status,
             'mcq_status': mcq_status,
+            'scores': {
+                'mcq': round(eff_mcq_curr, 1),
+                'writing': round(eff_wri_curr, 1),
+                'speaking': round(eff_spk_curr, 1),
+                'total': total_3_skills,
+            },
+            'goal_type': candidate_goal,
+            'goal_title': placement_info['goal_title'],
+            'level_label': placement_info['level_label'],
+            'khoa_de_xuat': placement_info['khoa_de_xuat'],
+            'trinh_do': placement_info['cefr'],
             'cau_tra_loi': {
                 'transcript': s_transcript,
                 'writing_text': w_answer,
@@ -1598,7 +1639,6 @@ def teacher_review(request):
                 'nhan_xet_gv': 'Học viên hoàn thành bài kiểm tra theo đúng chuẩn yêu cầu.',
                 'trang_thai_cham': bl_cur.trang_thai_cham if bl_cur else 'CHO_CHAM',
             },
-            'trinh_do': suggested_cefr,
         }
 
     context = {
@@ -1611,7 +1651,7 @@ def teacher_review(request):
         'pending_tests_count': pending_tests_count,
         'approved_tests_count': approved_tests_count,
         'is_approved_now': is_approved_now,
-        'levels': [
+        'levels': placement_info['levels_list'] if is_detail_view else [
             {'value': 'A1', 'label': 'A1 – Beginner (0–39đ)'},
             {'value': 'A2', 'label': 'A2 – Elementary (40–59đ)'},
             {'value': 'B1', 'label': 'B1 – Intermediate (60–79đ)'},
@@ -1653,32 +1693,75 @@ def approve_skill(request):
             bai_lam.trang_thai_cham = BaiLamKyNang.TrangThaiCham.GV_DA_DUYET
             bai_lam.save()
 
-            # Tính tổng điểm tích lũy từ các bài làm kỹ năng
-            p_total = 0.0
+            # Nhận diện mục tiêu học tập của bài thi
+            bai_ten = phien_db.bai_kiem_tra.ten_bai if phien_db.bai_kiem_tra else ''
+            if 'IELTS' in bai_ten:
+                candidate_goal = 'IELTS'
+            elif 'DAU_RA' in bai_ten or 'DH' in bai_ten or 'VSTEP' in bai_ten:
+                candidate_goal = 'DAU_RA_DH'
+            elif 'GIAO_TIEP' in bai_ten:
+                candidate_goal = 'GIAO_TIEP'
+            elif 'MAT_GOC' in bai_ten:
+                candidate_goal = 'MAT_GOC'
+            elif phien_db.ho_so_tu_van and phien_db.ho_so_tu_van.khoa_de_xuat:
+                kd_name = phien_db.ho_so_tu_van.khoa_de_xuat.ten_khoa.upper()
+                if 'IELTS' in kd_name: candidate_goal = 'IELTS'
+                elif 'GIAO TIEP' in kd_name or 'COMMUNICATION' in kd_name: candidate_goal = 'GIAO_TIEP'
+                else: candidate_goal = 'IELTS'
+            else:
+                candidate_goal = 'IELTS'
+
+            # Tính chính xác tổng điểm 3 bài kiểm tra
+            eff_mcq = 0.0
+            eff_wri = 0.0
+            eff_spk = 0.0
             for b in phien_db.bai_lam_ky_nangs.all():
-                p_total += float(b.diem_dieu_chinh if b.diem_dieu_chinh is not None else (b.diem_tu_dong or 0.0))
+                val = float(b.diem_dieu_chinh if b.diem_dieu_chinh is not None else (b.diem_tu_dong or 0.0))
+                if b.ky_nang == 'TRAC_NGHIEM':
+                    eff_mcq = val
+                elif b.ky_nang == 'WRITING':
+                    eff_wri = val
+                elif b.ky_nang == 'SPEAKING':
+                    eff_spk = val
+            total_3_skills = round(eff_mcq + eff_wri + eff_spk, 1)
+
+            # Lấy thông tin xếp loại & gợi ý xếp lớp chuẩn theo mục tiêu
+            placement_info = get_goal_placement_info(candidate_goal, total_3_skills, eff_mcq, eff_wri, eff_spk)
+
+            # Xác định nhãn trình độ chính xác (ví dụ IELTS Fighter Band 4.5-5.5)
+            final_level_label = placement_info['level_label']
+            for opt in placement_info['levels_list']:
+                if opt['value'] == trinh_do:
+                    final_level_label = opt['label']
+                    break
 
             # Tạo / Cập nhật KetQuaKiemTra
             kq, created = KetQuaKiemTra.objects.get_or_create(
                 phien_lam_bai=phien_db,
                 defaults={
-                    'tong_diem': round(p_total, 1),
-                    'trinh_do': trinh_do,
+                    'tong_diem': total_3_skills,
+                    'trinh_do': final_level_label,
                     'trang_thai': KetQuaKiemTra.TrangThai.DA_XAC_NHAN,
                     'ngay_xac_nhan': timezone.now(),
                 }
             )
             if not created:
-                kq.tong_diem = round(p_total, 1)
-                kq.trinh_do = trinh_do
+                kq.tong_diem = total_3_skills
+                kq.trinh_do = final_level_label
                 kq.trang_thai = KetQuaKiemTra.TrangThai.DA_XAC_NHAN
                 kq.ngay_xac_nhan = timezone.now()
                 kq.save()
 
-            # Cập nhật trạng thái Hồ sơ tư vấn sang ĐÃ TEST
+            # Cập nhật trạng thái Hồ sơ tư vấn sang ĐÃ TEST và gán khóa học đề xuất chuẩn
             if phien_db.ho_so_tu_van:
-                phien_db.ho_so_tu_van.trang_thai = HoSoTuVan.TrangThai.DA_TEST
-                phien_db.ho_so_tu_van.save(update_fields=['trang_thai'])
+                hstv = phien_db.ho_so_tu_van
+                hstv.trang_thai = HoSoTuVan.TrangThai.DA_TEST
+                khoa_obj = KhoaHoc.objects.filter(id=placement_info['khoa_id']).first()
+                if not khoa_obj:
+                    khoa_obj = KhoaHoc.objects.filter(trinh_do=placement_info['cefr']).first()
+                if khoa_obj:
+                    hstv.khoa_de_xuat = khoa_obj
+                hstv.save()
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
         return JsonResponse({

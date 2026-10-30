@@ -247,6 +247,67 @@
     padding: 10px 14px;
     margin-top: 12px;
   }
+
+  /* ─── RESPONSIVE MOBILE CHO PHÒNG THI ─── */
+  @media (max-width: 768px) {
+    .candidate-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+      padding: 12px 14px;
+    }
+    .candidate-info-left {
+      gap: 10px;
+    }
+    .candidate-status-right {
+      justify-content: space-between;
+      width: 100%;
+    }
+    .candidate-meta {
+      gap: 8px;
+      font-size: 11.5px;
+    }
+    .test-segmented-bar {
+      flex-direction: column;
+      border-radius: var(--radius-lg);
+      gap: 4px;
+    }
+    .test-segmented-tab {
+      justify-content: center;
+      width: 100%;
+    }
+    .question-card {
+      padding: 16px 14px;
+    }
+    .speaking-task-card {
+      padding: 14px;
+    }
+    .start-test-banner {
+      padding: 16px 12px;
+    }
+    /* Grid 4 thẻ thống kê trắc nghiệm: thành 2 cột */
+    div[style*="grid-template-columns: repeat(4, 1fr)"],
+    div[style*="grid-template-columns:repeat(4,1fr)"] {
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 8px !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .candidate-name {
+      font-size: 14px;
+    }
+    .question-text {
+      font-size: 13.5px;
+    }
+    .option-item {
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .card-header {
+      padding: 12px;
+    }
+  }
 </style>
 {% endblock %}
 
@@ -1032,8 +1093,8 @@
 
       <div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
         <div class="form-group">
-          <label class="form-label" style="font-size: 12.5px;">Ngày sinh</label>
-          <input type="date" id="gate-ngaysinh" name="ngay_sinh" class="form-control" value="2003-05-15">
+          <label class="form-label" style="font-size: 12.5px;">Ngày sinh <span style="color:var(--accent-coral)">*</span></label>
+          <input type="date" id="gate-ngaysinh" name="ngay_sinh" class="form-control" value="{% if student.ngay_sinh %}{{ student.ngay_sinh }}{% endif %}" required title="Vui lòng chọn ngày tháng năm sinh của học viên (bắt buộc)">
         </div>
         <div class="form-group">
           <label class="form-label" style="font-size: 12.5px;">Mục tiêu học tập <span style="color:var(--accent-coral)">*</span></label>
@@ -1867,6 +1928,12 @@
 
     if (!hoTen || !email || !sdt) {
       Toast.show('Vui lòng điền đầy đủ Họ tên, Email và Số điện thoại liên hệ!', 'warning');
+      return;
+    }
+
+    if (!ngaySinh) {
+      Toast.show('Vui lòng chọn Ngày sinh của học viên (bắt buộc)!', 'warning');
+      document.getElementById('gate-ngaysinh')?.focus();
       return;
     }
 

@@ -135,13 +135,13 @@ def student_auth(request, default_tab='login'):
                         trang_thai=PhienLamBai.TrangThai.HOAN_THANH
                     ).exists()
 
-                # Nếu học viên đã điền họ tên & số điện thoại -> KHÔNG BAO GIỜ hiển thị lại popup
-                if kh.ho_ten and kh.so_dien_thoai:
+                # Nếu học viên đã điền họ tên, số điện thoại & ngày sinh -> Đủ điều kiện làm test
+                if kh.ho_ten and kh.so_dien_thoai and kh.ngay_sinh:
                     request.session['can_take_test'] = True
                     request.session['first_time_test'] = False
                     request.session['profile_completed'] = True
                 else:
-                    # Học viên hoàn toàn mới chưa điền thông tin lần đầu
+                    # Học viên hoàn toàn mới chưa điền đầy đủ thông tin lần đầu (hoặc thiếu ngày sinh)
                     request.session['can_take_test'] = False
                     request.session['first_time_test'] = True
                     request.session['profile_completed'] = False
@@ -334,11 +334,16 @@ def quick_profile_api(request):
                 'message': 'Vui lòng điền đầy đủ Họ và tên học viên!'
             }, status=400)
 
+        if not ngay_sinh_str or not ngay_sinh:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Vui lòng chọn Ngày sinh của học viên (bắt buộc)!'
+            }, status=400)
+
         if existing_kh:
             existing_kh.ho_ten = ho_ten
             existing_kh.so_dien_thoai = so_dien_thoai
-            if ngay_sinh:
-                existing_kh.ngay_sinh = ngay_sinh
+            existing_kh.ngay_sinh = ngay_sinh
             existing_kh.trang_thai = KhachHang.TrangThai.DANG_TU_VAN
             existing_kh.save()
             kh = existing_kh
@@ -384,6 +389,7 @@ def quick_profile_api(request):
     request.session['user_name'] = kh.ho_ten
     request.session['student_id'] = kh.id
     request.session['student_phone'] = kh.so_dien_thoai
+    request.session['student_dob'] = kh.ngay_sinh.strftime('%Y-%m-%d') if kh.ngay_sinh else ''
     request.session['student_goal'] = muc_tieu
     request.session['student_goal_type'] = goal_type
     request.session['student_target_detail'] = target_detail or muc_tieu
