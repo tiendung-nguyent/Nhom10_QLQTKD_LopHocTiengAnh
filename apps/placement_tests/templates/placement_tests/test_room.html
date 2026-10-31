@@ -312,67 +312,47 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div class="page-breadcrumb">📝 <span>Học viên</span> / Phòng thi kiểm tra đầu vào</div>
+<div class="page-header" style="margin-bottom: 16px;">
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
-      <h1 class="page-title">Phòng thi Kiểm tra Trình độ 📝</h1>
-      <p class="page-subtitle">{{ test_title|default:"Entrance Placement Test" }} · Khảo sát thích ứng năng lực học viên</p>
+      <h1 class="page-title">Kiểm tra đầu vào</h1>
+      <p class="page-subtitle">Đánh giá trình độ {{ goal_display_text|default:"IELTS 5.0–6.5" }} để xếp lớp phù hợp</p>
     </div>
     <!-- Đồng hồ đếm ngược thời gian thi -->
-    <div style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 16px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow-sm);">
-      <span style="font-size: 18px;">⏳</span>
+    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 16px; display: flex; align-items: center; gap: 10px;">
+      <i class="fa-regular fa-clock" style="color: var(--text-muted); font-size: 16px;"></i>
       <div>
-        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;" id="countdown-label">TRẮC NGHIỆM (45 PHÚT)</div>
-        <div id="countdown" style="font-size: 18px; font-weight: 800; color: var(--accent-coral); font-variant-numeric: tabular-nums;">
-          45:00 (Sẵn sàng)
+        <div style="font-size: 11px; color: var(--text-muted);" id="countdown-label">Thời gian làm bài</div>
+        <div id="countdown" style="font-size: 15px; font-weight: 600; color: var(--text-secondary); font-variant-numeric: tabular-nums;">
+          45 phút
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ─── THANH THÔNG TIN THÍ SINH / HỌC VIÊN DỰ THI ─── -->
-<div class="candidate-bar {% if can_take_test %}verified{% else %}unverified{% endif %}" id="candidate-bar">
-  <div class="candidate-info-left">
-    <div class="candidate-avatar">
-      {% if can_take_test %}<i class="fa-solid fa-user-check"></i>{% else %}<i class="fa-solid fa-user-clock"></i>{% endif %}
-    </div>
-    <div>
-      <div class="candidate-name" id="display-student-name">
-        {% if student.ho_ten %}{{ student.ho_ten }}{% else %}Học viên mới (Chưa điền thông tin){% endif %}
-      </div>
-      <div class="candidate-meta" id="display-student-meta">
-        {% if student.email %}<span><i class="fa-regular fa-envelope"></i> {{ student.email }}</span>{% endif %}
-        {% if student.so_dien_thoai %}<span><i class="fa-solid fa-phone"></i> {{ student.so_dien_thoai }}</span>{% endif %}
-        <span style="color:var(--accent-coral); font-weight:700;"><i class="fa-solid fa-bullseye"></i> Mục tiêu: {{ goal_display_text|default:"Luyện thi IELTS" }}</span>
-        <span><i class="fa-solid fa-id-card"></i> Mã hồ sơ: #HSTV-2026-001</span>
-      </div>
-    </div>
+<!-- ─── THANH THÔNG TIN THÍ SINH DỰ THI (1 DÒNG GỌN) ─── -->
+<div class="candidate-bar-compact" id="candidate-bar">
+  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <span style="font-weight: 600; color: var(--text-primary);" id="display-student-name">
+      {{ student.ho_ten|default:"Học viên mới" }}
+    </span>
+    <span style="color: var(--border-color);">·</span>
+    <span>Mục tiêu: {{ goal_display_text|default:"Luyện thi IELTS" }}</span>
+    <span style="color: var(--border-color);">·</span>
+    <span style="color: var(--text-muted);">Mã hồ sơ: #HSTV-2026-001</span>
   </div>
 
-  <div class="candidate-status-right">
+  <div class="candidate-status-right" style="display: flex; align-items: center; gap: 10px;">
     {% if can_take_test %}
-    <span class="badge badge-emerald" id="student-status-badge">
-      <i class="fa-solid fa-circle-check"></i> Đã đủ điều kiện làm test
-    </span>
-    {% if has_paid_tuition %}
-    <span class="badge badge-emerald" title="Học viên đã nộp học phí chính thức"><i class="fa-solid fa-receipt"></i> Đã đóng học phí</span>
-    <button type="button" class="btn btn-outline btn-sm" onclick="openEditProfileModal(true)" title="Đã nộp học phí: Chỉ được đổi Số điện thoại">
-      <i class="fa-solid fa-phone"></i> Đổi số điện thoại
-    </button>
+      {% if has_paid_tuition %}
+      <a href="javascript:void(0)" onclick="openEditProfileModal(true)" style="font-size: 12px; color: var(--text-muted); text-decoration: underline;">Đổi số điện thoại</a>
+      {% else %}
+      <a href="javascript:void(0)" onclick="openEditProfileModal(false)" style="font-size: 12px; color: var(--text-muted); text-decoration: underline;">Đổi thông tin &amp; mục tiêu</a>
+      {% endif %}
     {% else %}
-    <button type="button" class="btn btn-outline btn-sm" onclick="openEditProfileModal(false)" title="Chỉnh sửa thông tin học viên & Mục tiêu học tập">
-      <i class="fa-solid fa-user-pen"></i> Đổi thông tin & Mục tiêu
-    </button>
-    {% endif %}
-    {% else %}
-    <span class="badge badge-coral pulse-badge" id="student-status-badge">
-      <i class="fa-solid fa-triangle-exclamation"></i> Cần điền thông tin mới được làm test
-    </span>
-    <button type="button" class="btn btn-primary btn-sm" onclick="openEditProfileModal(false)">
-      <i class="fa-solid fa-user-pen"></i> Điền thông tin ngay
-    </button>
+      <span class="badge badge-coral" id="student-status-badge">Cần điền thông tin</span>
+      <a href="javascript:void(0)" onclick="openEditProfileModal(false)" style="font-size: 12px; color: var(--accent-orange); font-weight: 600; text-decoration: underline;">Điền thông tin ngay</a>
     {% endif %}
   </div>
 </div>
@@ -455,70 +435,32 @@
     <div style="display: flex; gap: 8px;">
       <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary btn-sm">Xem bảng điểm 📊</a>
       <button type="button" class="btn btn-outline btn-sm" onclick="openEditProfileModal(false)" style="font-weight: 700;">
-        <i class="fa-solid fa-arrows-rotate"></i> Kiểm tra mục tiêu khác 🎯
+        <i class="fa-solid fa-arrows-rotate"></i> Đổi mục tiêu kiểm tra
       </button>
     </div>
   </div>
   {% endif %}
 
-  <!-- 1. HERO 2-CARD SELECTION GRID -->
-  <div class="test-section-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
-
-    <!-- Card 1: Trắc nghiệm (45 phút) -->
-    <div class="test-section-card active" data-tab="test-sections" data-tab-target="mcq" id="card-sec-mcq" role="button" tabindex="0">
-      <div class="test-card-top">
-        <div class="test-icon-box coral">
-          <i class="fa-solid fa-list-check"></i>
-        </div>
-        <div class="test-card-badges">
-          <span class="badge badge-coral">{{ goal_type }} MCQ (40đ)</span>
-          <span class="test-active-pill" id="pill-mcq-status"><i class="fa-solid fa-play"></i> Phần 1</span>
-        </div>
+  <!-- ─── THANH TIẾN TRÌNH PHẦN THI (GỘP GỌN, KHÔNG TRÙNG LẶP) ─── -->
+  <div class="test-progress-strip">
+    <div class="test-progress-phase active" data-tab="test-sections" data-tab-target="mcq" id="card-sec-mcq" role="button" tabindex="0">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+        <span style="font-weight: 600; font-size: 14px; color: var(--text-primary);">Phần 1 · Trắc nghiệm</span>
+        <span class="badge {% if mcq_submitted %}badge-emerald{% else %}badge-coral{% endif %}" id="pill-mcq-status">40 điểm</span>
       </div>
-      <div class="test-card-content">
-        <h3 class="test-card-title">1. Thi Trắc nghiệm (45 phút)</h3>
-        <p class="test-card-desc">Đề thi thích ứng linh hoạt theo mục tiêu <strong>{{ goal_display_text }}</strong>: 40% Ngữ pháp, 40% Từ vựng, 20% Đọc hiểu.</p>
-      </div>
-      <div class="test-card-meta">
-        <div class="meta-item"><i class="fa-regular fa-clock" style="color: var(--accent-coral);"></i> <strong>45 phút</strong></div>
-        <div class="meta-item"><i class="fa-solid fa-bolt" style="color: var(--accent-orange);"></i> Tự động chấm</div>
-        <div class="meta-item"><i class="fa-solid fa-clipboard-question"></i> {{ cau_hoi_mcq|length }} câu hỏi</div>
-      </div>
+      <div style="font-size: 12px; color: var(--text-secondary);">45 phút · {{ cau_hoi_mcq|length|default:25 }} câu</div>
     </div>
 
-    <!-- Card 2: Writing & Speaking gộp chung (60 phút) -->
-    <div class="test-section-card {% if not mcq_submitted and not test_already_completed %}tab-locked{% endif %}" data-tab="test-sections" data-tab-target="writing-speaking" id="card-sec-ws" role="button" tabindex="0">
-      <div class="test-card-top">
-        <div class="test-icon-box purple">
-          <i class="fa-solid fa-pen-nib"></i>
-        </div>
-        <div class="test-card-badges">
-          <span class="badge badge-purple">Tự luận & Nói (60đ)</span>
-          <span class="badge-locked" id="pill-ws-lock"><i class="fa-solid fa-lock"></i> {% if test_already_completed %}Đã hoàn thành{% elif mcq_submitted %}Đã mở khóa{% else %}Khóa (Nộp P1 trước){% endif %}</span>
-        </div>
-      </div>
-      <div class="test-card-content">
-        <h3 class="test-card-title">2. Writing & Speaking (60 phút)</h3>
-        <p class="test-card-desc">Speaking làm trước (15' - 3 Task thu âm tự động ngắt giờ, có thể nghe lại voice), Writing làm sau (40' - Viết thư & Luận). Gemini AI chấm 4 tiêu chí.</p>
-      </div>
-      <div class="test-card-meta">
-        <div class="meta-item"><i class="fa-regular fa-clock" style="color: var(--accent-purple);"></i> <strong>60 phút</strong></div>
-        <div class="meta-item"><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-purple);"></i> Gemini AI chấm</div>
-        <div class="meta-item"><i class="fa-solid fa-microphone-lines" style="color: var(--accent-emerald);"></i> Nghe lại Voice</div>
-      </div>
-    </div>
+    <div class="test-progress-divider"></div>
 
-  </div>
-
-  <!-- 2. CAPSULE SEGMENTED CONTROL BAR -->
-  <div class="test-segmented-container">
-    <div class="test-segmented-bar">
-      <button type="button" class="test-segmented-tab active" data-tab="test-sections" data-tab-target="mcq" id="tab-btn-mcq">
-        <i class="fa-solid fa-list-check"></i> 1. Trắc nghiệm (45 phút)
-      </button>
-      <button type="button" class="test-segmented-tab {% if not mcq_submitted and not test_already_completed %}tab-locked{% endif %}" data-tab="test-sections" data-tab-target="writing-speaking" id="tab-btn-writing-speaking">
-        <i class="fa-solid fa-pen-nib"></i> 2. Writing & Speaking (60 phút) <span id="tab-ws-lock-icon">{% if not mcq_submitted and not test_already_completed %}<i class="fa-solid fa-lock" style="font-size:11px; margin-left:4px;"></i>{% endif %}</span>
-      </button>
+    <div class="test-progress-phase {% if not mcq_submitted and not test_already_completed %}tab-locked{% endif %}" data-tab="test-sections" data-tab-target="writing-speaking" id="card-sec-ws" role="button" tabindex="0">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+        <span style="font-weight: 600; font-size: 14px; color: {% if mcq_submitted or test_already_completed %}var(--text-primary){% else %}var(--text-secondary){% endif %};">Phần 2 · Viết và Nói</span>
+        <span class="badge {% if test_already_completed %}badge-emerald{% elif mcq_submitted %}badge-purple{% else %}badge-gray{% endif %}" id="pill-ws-lock">
+          60 điểm
+        </span>
+      </div>
+      <div style="font-size: 12px; color: var(--text-secondary);">60 phút · {% if test_already_completed %}Đã hoàn thành{% elif mcq_submitted %}Đã mở{% else %}Mở sau Phần 1{% endif %}</div>
     </div>
   </div>
 
@@ -527,20 +469,62 @@
        ═══════════════════════════════════════════════════════ -->
   <div data-tab-panel="test-sections" data-panel="mcq" id="panel-mcq">
 
-    <!-- Banner bắt đầu thi Trắc nghiệm (Hiển thị khi chưa bấm bắt đầu) -->
-    <div class="start-test-banner" id="mcq-start-banner" style="{% if test_already_completed or mcq_submitted %}display:none;{% endif %}">
-      <div style="font-size: 32px; margin-bottom: 8px;">🚀</div>
-      <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px; color: var(--text-primary);">
-        {{ test_title|default:"Bài kiểm tra Trắc nghiệm Đầu vào" }}
-      </h2>
-      <p style="font-size: 13.5px; color: var(--text-secondary); max-width: 600px; margin: 0 auto 16px; line-height: 1.6;">
-        Đề thi được sinh phù hợp với mục tiêu <strong>{{ goal_display_text }}</strong> gồm <strong>{{ cau_hoi_mcq|length }} câu hỏi</strong>. 
-        Khi bấm <strong>"Bắt đầu làm bài"</strong>, các câu hỏi sẽ mở ra và đồng hồ đếm ngược 45 phút bắt đầu chạy.
-        Bạn phải nộp bài trắc nghiệm xong thì hệ thống mới mở khóa phần thi Writing & Speaking!
-      </p>
-      <button type="button" class="btn btn-primary btn-lg" id="btn-start-mcq" onclick="startMCQTest()">
-        <i class="fa-solid fa-play"></i> Bắt đầu làm bài Trắc nghiệm (45 phút) ⚡
-      </button>
+    <!-- Trước khi bắt đầu: Chia 2 cột (Trái: Quy tắc & Nút bắt đầu; Phải: Thẻ tóm tắt) -->
+    <div class="test-intro-layout" id="mcq-start-banner" style="{% if test_already_completed or mcq_submitted %}display:none;{% else %}display:grid; grid-template-columns: 1fr 300px; gap: 20px; margin-bottom: 20px;{% endif %}">
+      <!-- Cột trái (rộng): Trước khi bắt đầu -->
+      <div class="card" style="padding: 24px;">
+        <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 14px; color: var(--text-primary);">
+          Trước khi bắt đầu
+        </h2>
+        <ul style="list-style: none; padding: 0; margin: 0 0 24px 0; display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; color: var(--text-secondary); line-height: 1.6;">
+          <li style="display: flex; gap: 8px; align-items: flex-start;">
+            <span style="color: var(--accent-orange); font-weight: bold;">•</span>
+            <span>Đồng hồ chạy ngay khi bấm bắt đầu và không thể tạm dừng.</span>
+          </li>
+          <li style="display: flex; gap: 8px; align-items: flex-start;">
+            <span style="color: var(--accent-orange); font-weight: bold;">•</span>
+            <span>Phải nộp Phần 1 thì Phần 2 mới mở.</span>
+          </li>
+          <li style="display: flex; gap: 8px; align-items: flex-start;">
+            <span style="color: var(--accent-orange); font-weight: bold;">•</span>
+            <span>Cần kết nối ổn định và không thoát trang.</span>
+          </li>
+        </ul>
+        <div>
+          <button type="button" class="btn btn-primary" id="btn-start-mcq" onclick="startMCQTest()" style="padding: 10px 24px;">
+            Bắt đầu làm bài (45 phút)
+          </button>
+        </div>
+      </div>
+
+      <!-- Cột phải (hẹp): Thẻ tóm tắt -->
+      <div class="card" style="padding: 20px;">
+        <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px;">
+          Tóm tắt Phần 1
+        </div>
+        <div class="payment-meta" style="margin: 0;">
+          <div class="payment-meta-row">
+            <span class="label">Hình thức</span>
+            <span class="value">Trắc nghiệm</span>
+          </div>
+          <div class="payment-meta-row">
+            <span class="label">Số câu hỏi</span>
+            <span class="value">{{ cau_hoi_mcq|length|default:25 }} câu</span>
+          </div>
+          <div class="payment-meta-row">
+            <span class="label">Thời gian</span>
+            <span class="value">45 phút</span>
+          </div>
+          <div class="payment-meta-row">
+            <span class="label">Thang điểm</span>
+            <span class="value">40 điểm</span>
+          </div>
+          <div class="payment-meta-row">
+            <span class="label">Trạng thái</span>
+            <span class="value" style="color: var(--accent-orange);">Chưa bắt đầu</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Thông báo kết quả Trắc nghiệm khi đã nộp (Lưu tiến trình & Tùy chọn làm lại) -->
@@ -732,25 +716,62 @@
        ═══════════════════════════════════════════════════════ -->
   <div data-tab-panel="test-sections" data-panel="writing-speaking" id="panel-ws" style="display:none;">
 
-    <!-- Banner bắt đầu thi Writing & Speaking -->
-    <div class="start-test-banner" id="ws-start-banner" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(255, 126, 95, 0.08)); border-color: #DDD6FE;">
-      <div style="font-size: 32px; margin-bottom: 8px;">🎙️✍️</div>
-      <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 8px; color: var(--text-primary);">
-        Phần thi Tự luận & Nói: Writing & Speaking (Tổng 60 phút)
-      </h2>
-      <div style="font-size: 13.5px; color: var(--text-secondary); max-width: 680px; margin: 0 auto 16px; line-height: 1.6; text-align: left; background: var(--bg-card); padding: 14px 18px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-        <p style="margin-bottom: 8px;"><strong>1. Phần thi Speaking (15 phút) — Làm trước để tâm lý thoải mái:</strong><br>
-        • <em>Task 1:</em> Trả lời 3 câu hỏi cá nhân ngắn (chuẩn bị 10s, nói 30s/câu - <strong>hệ thống tự động ngắt thu âm 30s</strong>, có thể nghe lại voice).<br>
-        • <em>Task 2:</em> Trình bày quan điểm / Miêu tả (chuẩn bị 1', nói 2' - auto stop 120s).<br>
-        • <em>Task 3:</em> Thảo luận tình huống thực tế (chuẩn bị 1.5', nói 2-3' - auto stop 150s).</p>
-        <p style="margin: 0;"><strong>2. Phần thi Writing (40 phút) — Làm sau:</strong><br>
-        • <em>Task 1:</em> Viết Email / Thư phản hồi ngắn (80 - 120 từ, 12-15 phút).<br>
-        • <em>Task 2:</em> Viết bài luận Essay (180 - 220 từ, 25 phút).<br>
-        ✨ <strong>AI Gemini</strong> chấm điểm theo 4 tiêu chí phù hợp mục tiêu <strong>{{ goal_display_text }}</strong>, sau đó bài làm và đánh giá của AI sẽ tự động chuyển sang <strong>Lane của Giảng viên</strong> để thẩm định chính thức.</p>
+    <!-- Banner bắt đầu thi Writing & Speaking (Chia 2 cột) -->
+    <div class="test-intro-layout" id="ws-start-banner" style="display:grid; grid-template-columns: 1fr 300px; gap: 20px; margin-bottom: 20px;">
+      <!-- Cột trái (rộng): Hướng dẫn & Quy tắc -->
+      <div class="card" style="padding: 24px;">
+        <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 14px; color: var(--text-primary);">
+          Trước khi làm bài Viết và Nói
+        </h2>
+        <ul style="list-style: none; padding: 0; margin: 0 0 24px 0; display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; color: var(--text-secondary); line-height: 1.6;">
+          <li style="display: flex; gap: 8px; align-items: flex-start;">
+            <span style="color: var(--accent-orange); font-weight: bold;">•</span>
+            <span>Phần Speaking (15 phút): 3 câu hỏi thu âm trực tiếp qua micro, có thể nghe lại trước khi nộp.</span>
+          </li>
+          <li style="display: flex; gap: 8px; align-items: flex-start;">
+            <span style="color: var(--accent-orange); font-weight: bold;">•</span>
+            <span>Phần Writing (40 phút): 1 bài viết ngắn (80–120 từ) và 1 bài luận (180–220 từ).</span>
+          </li>
+          <li style="display: flex; gap: 8px; align-items: flex-start;">
+            <span style="color: var(--accent-orange); font-weight: bold;">•</span>
+            <span>Kết quả sẽ được giảng viên chuyên môn thẩm định chính thức để xếp lớp phù hợp.</span>
+          </li>
+        </ul>
+        <div>
+          <button type="button" class="btn btn-primary" id="btn-start-ws" onclick="startWSTest()" style="padding: 10px 24px;">
+            Bắt đầu làm bài (60 phút)
+          </button>
+        </div>
       </div>
-      <button type="button" class="btn btn-purple btn-lg" id="btn-start-ws" onclick="startWSTest()" style="font-weight: 700;">
-        <i class="fa-solid fa-play"></i> Bắt đầu làm bài Writing & Speaking (60 phút) 🚀
-      </button>
+
+      <!-- Cột phải (hẹp): Thẻ tóm tắt -->
+      <div class="card" style="padding: 20px;">
+        <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px;">
+          Tóm tắt Phần 2
+        </div>
+        <div class="payment-meta" style="margin: 0;">
+          <div class="payment-meta-row">
+            <span class="label">Hình thức</span>
+            <span class="value">Viết luận &amp; Ghi âm</span>
+          </div>
+          <div class="payment-meta-row">
+            <span class="label">Nội dung</span>
+            <span class="value">3 Task Nói · 2 Bài Viết</span>
+          </div>
+          <div class="payment-meta-row">
+            <span class="label">Thời gian</span>
+            <span class="value">60 phút</span>
+          </div>
+          <div class="payment-meta-row">
+            <span class="label">Thang điểm</span>
+            <span class="value">60 điểm</span>
+          </div>
+          <div class="payment-meta-row">
+            <span class="label">Trạng thái</span>
+            <span class="value" style="color: var(--accent-emerald);">Đã mở khóa</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Nội dung bài làm Writing & Speaking (Ẩn đến khi bấm Bắt đầu) -->
@@ -1060,7 +1081,7 @@
             </a>
           </div>
           <button type="button" class="btn btn-primary btn-lg" id="btn-submit-combined" onclick="submitCombinedWritingSpeaking()" style="font-weight: 700; background: linear-gradient(135deg, var(--accent-purple), var(--accent-coral)); border: none;">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Nộp bài & Nhận kết quả chấm điểm AI Gemini 🚀
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Nộp bài & Nhận kết quả đánh giá
           </button>
         </div>
       </div>
@@ -1126,7 +1147,7 @@
         <div class="form-group">
           <label class="form-label" style="font-size: 12.5px;">Mục tiêu học tập <span style="color:var(--accent-coral)">*</span></label>
           <select id="gate-muctieu" name="goal_type" class="form-control" onchange="handleTargetGoalChange(this.value)">
-            <option value="IELTS" selected>🎯 Luyện thi IELTS</option>
+            <option value="IELTS" selected>Luyện thi IELTS</option>
             <option value="DAU_RA_DH">🎓 Chuẩn đầu ra Đại học</option>
             <option value="GIAO_TIEP">💼 Giao tiếp công sở & Đi làm</option>
             <option value="MAT_GOC">🌱 Mất gốc tiếng Anh cần xây nền</option>
@@ -1170,7 +1191,7 @@
           Đăng nhập tài khoản khác
         </a>
         <button type="submit" class="btn btn-primary" id="gate-submit-btn" style="font-size: 13px; font-weight: 700;">
-          <i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài 🚀
+          <i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài
         </button>
       </div>
     </form>
@@ -1246,28 +1267,40 @@
   function updateTimerText() {
     if (!cdEl) return;
     if (testAlreadyCompleted) {
-      if (cdLabelEl) cdLabelEl.textContent = 'HOÀN THÀNH TOÀN BỘ';
+      if (cdLabelEl) cdLabelEl.textContent = 'Trạng thái';
       cdEl.textContent = 'Đã nộp bài';
       cdEl.style.color = 'var(--accent-emerald)';
+      cdEl.style.fontSize = '15px';
+      cdEl.style.fontWeight = '600';
       return;
     }
     if (currentActiveTab === 'mcq') {
-      cdLabelEl.textContent = 'TRẮC NGHIỆM (45 PHÚT)';
       if (!mcqStarted) {
-        cdEl.textContent = '45:00 (Sẵn sàng)';
-        cdEl.style.color = 'var(--accent-coral)';
+        if (cdLabelEl) cdLabelEl.textContent = 'Thời gian làm bài';
+        cdEl.textContent = '45 phút';
+        cdEl.style.color = 'var(--text-secondary)';
+        cdEl.style.fontSize = '15px';
+        cdEl.style.fontWeight = '600';
       } else {
+        if (cdLabelEl) cdLabelEl.textContent = 'Thời gian còn lại';
         cdEl.textContent = formatTime(mcqTimeRemaining);
-        cdEl.style.color = (mcqTimeRemaining <= 300) ? '#EF4444' : 'var(--accent-coral)';
+        cdEl.style.color = (mcqTimeRemaining <= 300) ? '#EF4444' : 'var(--accent-orange)';
+        cdEl.style.fontSize = '17px';
+        cdEl.style.fontWeight = '700';
       }
     } else {
-      cdLabelEl.textContent = 'WRITING & SPEAKING (60 PHÚT)';
       if (!wsStarted) {
-        cdEl.textContent = '60:00 (Sẵn sàng)';
-        cdEl.style.color = 'var(--accent-purple)';
+        if (cdLabelEl) cdLabelEl.textContent = 'Thời gian làm bài';
+        cdEl.textContent = '60 phút';
+        cdEl.style.color = 'var(--text-secondary)';
+        cdEl.style.fontSize = '15px';
+        cdEl.style.fontWeight = '600';
       } else {
+        if (cdLabelEl) cdLabelEl.textContent = 'Thời gian còn lại';
         cdEl.textContent = formatTime(wsTimeRemaining);
-        cdEl.style.color = (wsTimeRemaining <= 300) ? '#EF4444' : 'var(--accent-purple)';
+        cdEl.style.color = (wsTimeRemaining <= 300) ? '#EF4444' : 'var(--accent-orange)';
+        cdEl.style.fontSize = '17px';
+        cdEl.style.fontWeight = '700';
       }
     }
   }
@@ -1845,7 +1878,7 @@
       });
       const data = await res.json();
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Nộp bài & Nhận kết quả chấm điểm AI Gemini 🚀';
+      btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Nộp bài & Nhận kết quả đánh giá';
 
       if (data.status === 'success') {
         const sum = data.exam_summary || {};
@@ -1854,7 +1887,7 @@
         document.getElementById('modal-feedback-desc').textContent = 'Bài làm của bạn đã được Gemini AI chấm sơ bộ theo chuẩn mục tiêu và gửi trực tiếp tới Giảng viên chuyên môn để thẩm định.';
 
         if (gs.scale_type === 'IELTS_BAND') {
-          document.getElementById('modal-feedback-scalelabel').textContent = '🎯 ĐIỂM DỰ KIẾN THEO THANG IELTS BAND';
+          document.getElementById('modal-feedback-scalelabel').textContent = 'ĐIỂM DỰ KIẾN THEO THANG IELTS BAND';
           document.getElementById('modal-feedback-score').textContent = gs.main_score_display || 'Band 6.5';
           document.getElementById('modal-feedback-note').textContent = `${gs.level_label}`;
           document.getElementById('modal-feedback-target-compare').textContent = gs.target_comparison || '';
@@ -1933,7 +1966,7 @@
       }
     } catch (err) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Nộp bài & Nhận kết quả chấm điểm AI Gemini 🚀';
+      btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Nộp bài & Nhận kết quả đánh giá';
       Toast.show('Đã gửi bài thi cho AI Gemini phân tích.', 'info');
     }
   }
@@ -2007,7 +2040,7 @@
       });
       const data = await res.json();
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài 🚀';
+      btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài';
 
       if (data.status === 'success') {
         canTakeTest = true;
@@ -2039,7 +2072,7 @@
       }
     } catch (err) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài 🚀';
+      btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài';
       Toast.show('Lỗi kết nối máy chủ. Vui lòng thử lại!', 'error');
     }
   }
@@ -2109,7 +2142,7 @@
       selIeltsBand.disabled = false;
       selDaura.disabled = false;
 
-      btnSubmit.innerHTML = '<i class="fa-solid fa-bolt"></i> Cập nhật & Áp dụng đề thi mới 🚀';
+      btnSubmit.innerHTML = '<i class="fa-solid fa-bolt"></i> Cập nhật & Áp dụng đề thi mới';
     }
 
     inpEmail.readOnly = true;

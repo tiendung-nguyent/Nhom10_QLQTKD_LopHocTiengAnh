@@ -1,205 +1,110 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Dashboard Học viên{% endblock %}
+{% block title %}Tổng quan{% endblock %}
 
-{# ══════════════════════════════════════════════════════════ #}
-{# YÊU CẦU: BẢNG THỐNG KÊ, THÔNG TIN HỌC, TÀI CHÍNH VIÊN Ở SIDEBAR #}
-{# ══════════════════════════════════════════════════════════ #}
-{% block sidebar_extra %}
-<div class="sidebar-widgets-section">
+{# Sidebar chỉ dùng để điều hướng, đã bỏ hoàn toàn block sidebar_extra theo yêu cầu #}
 
-  <!-- 1. BẢNG THỐNG KÊ HỌC VIÊN -->
-  <div class="sidebar-widget">
-    <div class="sidebar-widget-header">
-      <div class="sidebar-widget-title">📊 Thống kê năng lực</div>
-      <span class="badge badge-purple" style="font-size: 10px;">{{ trinh_do_du_kien|default:"B1" }}</span>
-    </div>
-    <div class="sidebar-stat-row">
-      <span class="sidebar-stat-label">Điểm AI sơ bộ:</span>
-      <span class="sidebar-stat-val" style="color: var(--accent-purple);">{{ ai_score|default:72 }}/100</span>
-    </div>
-    <div class="sidebar-progress-track">
-      <div class="sidebar-progress-fill purple" style="width: {{ ai_score|default:72 }}%;"></div>
-    </div>
-    <div class="sidebar-stat-row">
-      <span class="sidebar-stat-label">Kỹ năng hoàn thành:</span>
-      <span class="sidebar-stat-val">{{ so_ky_nang_da_thi|default:4 }}/{{ so_ky_nang_tong|default:4 }} kỹ năng</span>
-    </div>
-    <div class="sidebar-stat-row">
-      <span class="sidebar-stat-label">Tiến trình hồ sơ:</span>
-      <span class="sidebar-stat-val" style="color: var(--accent-coral);">Bước 2/4</span>
-    </div>
-  </div>
-
-  <!-- 2. THÔNG TIN HỌC VIÊN -->
-  <div class="sidebar-widget">
-    <div class="sidebar-widget-header">
-      <div class="sidebar-widget-title">👤 Thông tin học viên</div>
-      <span style="font-size: 10px; color: #94A3B8;">#HV-089</span>
-    </div>
-    <div class="sidebar-stat-row">
-      <span class="sidebar-stat-label">Họ tên:</span>
-      <span class="sidebar-stat-val">{{ student.ho_ten|default:"Nguyễn Văn A" }}</span>
-    </div>
-    <div class="sidebar-stat-row">
-      <span class="sidebar-stat-label">Email:</span>
-      <span class="sidebar-stat-val" style="font-size: 11px;">{{ student.email|default:"a.nguyen@email.com" }}</span>
-    </div>
-    <div class="sidebar-stat-row">
-      <span class="sidebar-stat-label">Điện thoại:</span>
-      <span class="sidebar-stat-val">{{ student.so_dien_thoai|default:"0912 345 678" }}</span>
-    </div>
-    <div class="sidebar-stat-row">
-      <span class="sidebar-stat-label">Khóa mục tiêu:</span>
-      <span class="sidebar-stat-val" style="color: #60A5FA;">B1 IELTS</span>
-    </div>
-  </div>
-
-  <!-- 3. TÀI CHÍNH HỌC VIÊN -->
-  <div class="sidebar-widget">
-    <div class="sidebar-widget-header">
-      <div class="sidebar-widget-title">💰 Tài chính học viên</div>
-      {% if has_tuition_bill %}
-      <span class="badge {% if is_tuition_paid %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 9px;">
-        {% if is_tuition_paid %}Đã TT{% else %}Chưa TT{% endif %}
-      </span>
-      {% else %}
-      <span class="badge badge-purple" style="font-size: 9px;">Chờ xếp lớp</span>
-      {% endif %}
-    </div>
-    {% if has_tuition_bill %}
-    <div class="sidebar-stat-row">
-      <span class="sidebar-stat-label">Học phí khóa:</span>
-      <span class="sidebar-stat-val" style="color: var(--accent-coral); font-weight: 700;">{{ khoa_hoc_phi|default:"0" }} đ</span>
-    </div>
-    <div class="sidebar-stat-row">
-      <span class="sidebar-stat-label">Đã đóng:</span>
-      <span class="sidebar-stat-val">{{ hoc_phi_da_dong|default:0|floatformat:0 }} đ</span>
-    </div>
-    <div class="sidebar-stat-row">
-      <span class="sidebar-stat-label">Hạn nộp:</span>
-      <span class="sidebar-stat-val" style="color: #F87171;">{{ next_class_date|date:"d/m/Y"|default:"05/11/2026" }}</span>
-    </div>
-    <a href="{% url 'billing:payment_detail' %}" class="sidebar-widget-btn btn-coral">
-      💳 Đóng học phí ngay →
-    </a>
-    {% else %}
-    <div style="font-size: 11.5px; color: #94A3B8; line-height: 1.5; padding: 6px 0;">
-      Chưa phát sinh học phí. Thông tin tài chính sẽ hiển thị khi bạn được tư vấn tuyển sinh áp lớp học.
-    </div>
-    {% endif %}
-  </div>
-
-</div>
-{% endblock %}
-
-{# ══════════════════════════════════════════════════════════ #}
-{# NỘI DUNG CHÍNH (PAGE CONTENT)                              #}
-{# ══════════════════════════════════════════════════════════ #}
 {% block content %}
-<div class="page-header">
-  <div class="page-breadcrumb">🏠 <span>Học viên</span> / Dashboard</div>
+<div class="page-header" style="margin-bottom: 24px;">
+  <div class="page-breadcrumb" style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">
+    <span>Học viên</span> / Tổng quan hồ sơ
+  </div>
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
     <div>
-      <h1 class="page-title">Xin chào, {{ student.ho_ten|default:"Nguyễn Văn A" }} 👋</h1>
-      <p class="page-subtitle">
-        Hồ sơ học viên: <strong>{{ student.email|default:"a.nguyen@email.com" }}</strong> · 
+      <h1 class="page-title" style="font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">
+        Xin chào, {{ student.ho_ten|default:"Học viên" }}
+      </h1>
+      <p class="page-subtitle" style="font-size: 13.5px; color: var(--text-secondary); margin: 0;">
+        Email: <strong style="color: var(--text-primary);">{{ student.email|default:"Chưa đăng ký" }}</strong> · 
         Trạng thái: <span class="badge {% if test_completed %}badge-emerald{% else %}badge-coral{% endif %}">{{ ho_so.trang_thai|default:"Đang xử lý" }}</span>
       </p>
     </div>
-    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-      <a href="{% url 'users:student_login' %}" class="btn btn-outline btn-sm">
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <a href="{% url 'users:student_login' %}" class="btn btn-outline btn-sm" style="font-size: 13px; font-weight: 500;">
         <i class="fa-solid fa-arrow-right-to-bracket"></i> Đổi tài khoản
-      </a>
-      <a href="{% url 'placement_tests:test_room' %}" class="btn btn-primary btn-sm">
-        <i class="fa-solid fa-pen-to-square"></i> {% if test_completed %}Vào lại phòng thi{% else %}Làm bài test ngay 📝{% endif %}
       </a>
     </div>
   </div>
 </div>
 
-<!-- ─── 1. THANH TIẾN TRÌNH TRẠNG THÁI HỒ SƠ (BPMN 4 BƯỚC) ─── -->
-<div class="card rounded-2xl shadow-sm" style="margin-bottom: 24px;">
+<!-- ─── 1. TIẾN TRÌNH TRẠNG THÁI HỒ SƠ (BPMN 4 BƯỚC) ───────── -->
+<div class="card" style="margin-bottom: 24px;">
   <div class="card-header">
     <div>
-      <div class="card-title">📋 Tiến trình Hồ sơ Đăng ký & Nhập học</div>
-      <div class="card-subtitle">Cập nhật lúc: {{ today|date:"d/m/Y H:i" }} · Phụ trách: <strong>{{ advisor_name }}</strong></div>
+      <div class="card-title">Tiến trình hồ sơ nhập học</div>
+      <div class="card-subtitle">Cập nhật: {{ today|date:"d/m/Y H:i" }} · Phụ trách: <strong>{{ advisor_name }}</strong></div>
     </div>
-    <span class="badge {% if current_step == 4 %}badge-emerald{% elif current_step >= 2 %}badge-coral{% else %}badge-purple{% endif %}">
+    <span class="badge {% if current_step == 4 %}badge-emerald{% elif current_step >= 2 %}badge-coral{% else %}badge-gray{% endif %}">
       {{ current_step_label }}
     </span>
   </div>
   <div class="card-body">
 
     <!-- 4 Bước chuẩn BPMN -->
-    <div class="progress-steps">
+    <div class="progress-steps" style="margin-bottom: 24px;">
       <div class="step {% if current_step > 1 %}done{% elif current_step == 1 %}active{% endif %}">
         <div class="step-circle">{% if current_step > 1 %}✓{% else %}1{% endif %}</div>
-        <div class="step-label">1. Đăng ký &<br>Tiếp nhận hồ sơ</div>
+        <div class="step-label">1. Đăng ký &amp;<br>Tiếp nhận</div>
       </div>
       <div class="step {% if current_step > 2 %}done{% elif current_step == 2 %}active{% endif %}">
         <div class="step-circle">{% if current_step > 2 %}✓{% else %}2{% endif %}</div>
-        <div class="step-label">2. Test 105'<br>& Duyệt điểm</div>
+        <div class="step-label">2. Kiểm tra 105'<br>&amp; Duyệt điểm</div>
       </div>
       <div class="step {% if current_step > 3 %}done{% elif current_step == 3 %}active{% endif %}">
         <div class="step-circle">{% if current_step > 3 %}✓{% else %}3{% endif %}</div>
-        <div class="step-label">3. Tư vấn lộ trình<br>& Nhận lớp</div>
+        <div class="step-label">3. Tư vấn lộ trình<br>&amp; Nhận lớp</div>
       </div>
       <div class="step {% if current_step == 4 %}done{% else %}{% endif %}">
         <div class="step-circle">{% if current_step == 4 %}✓{% else %}4{% endif %}</div>
-        <div class="step-label">4. Đóng học phí<br>& Nhập học</div>
+        <div class="step-label">4. Học phí<br>&amp; Nhập học</div>
       </div>
     </div>
 
-    {% if test_completed %}
-      {% if is_teacher_approved %}
-      <div style="background: linear-gradient(135deg, var(--emerald-light), #ECFDF5); border: 1.5px solid #A7F3D0; border-radius: var(--radius-md); padding: 14px 18px; display: flex; align-items: center; gap: 14px;">
-        <span style="font-size: 26px;">🎉</span>
-        <div style="flex: 1;">
-          <div style="font-size: 13.5px; font-weight: 700; color: #065F46;">Giáo viên chuyên môn đã phê duyệt điểm chính thức</div>
-          <div style="font-size: 12.5px; color: #047857; margin-top: 2px;">
-            Điểm chính thức: <strong>{{ display_score }}/100</strong> (Xếp loại: <strong>{{ trinh_do_du_kien }}</strong>). 
-            Hồ sơ đã tự động chuyển sang bộ phận Tuyển sinh để tư vấn lộ trình và áp lớp học phù hợp.
-          </div>
+    {% if not test_completed %}
+    <!-- BANNER NỔI BẬT NHẤT: VIỆC CẦN LÀM NGAY (NÚT CAM ĐẶC DUY NHẤT) -->
+    <div style="background: #FFF0E6; border: 1.5px solid #FED7AA; border-left: 5px solid var(--accent-orange); border-radius: var(--radius-md); padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; box-shadow: var(--shadow-sm);">
+      <div style="flex: 1; min-width: 260px;">
+        <div style="font-size: 16px; font-weight: 700; color: #9A3412; margin-bottom: 4px;">
+          Cần hoàn thành bài kiểm tra đầu vào (105 phút)
         </div>
-        <a href="{% url 'placement_tests:test_result' %}" class="btn btn-emerald btn-sm" style="flex-shrink:0;">Xem bảng điểm →</a>
-      </div>
-      {% else %}
-      <div style="background: linear-gradient(135deg, var(--purple-light), #EDE9FE); border: 1.5px solid #DDD6FE; border-radius: var(--radius-md); padding: 14px 18px; display: flex; align-items: center; gap: 14px;">
-        <span style="font-size: 26px;">✦</span>
-        <div style="flex: 1;">
-          <div style="font-size: 13.5px; font-weight: 700; color: var(--accent-purple);">AI Agent đã chấm điểm sơ bộ · Chờ GV duyệt</div>
-          <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">
-            Điểm tổng hợp: <strong style="color: var(--accent-purple);">{{ ai_score }}/100</strong> (Dự kiến: <strong>{{ trinh_do_du_kien }}</strong>). 
-            Giáo viên đang nghe lại Voice và thẩm định bài viết. Điểm chính thức sẽ được cập nhật sớm nhất.
-          </div>
+        <div style="font-size: 13.5px; color: #7C2D12; line-height: 1.5;">
+          Hồ sơ đã được tiếp nhận. Bài kiểm tra 4 kỹ năng là căn cứ bắt buộc để trung tâm phân lớp và sắp xếp lộ trình học tập phù hợp nhất cho bạn.
         </div>
-        <a href="{% url 'placement_tests:test_result' %}" class="btn btn-purple btn-sm" style="flex-shrink:0;">Xem điểm AI →</a>
       </div>
-      {% endif %}
+      <a href="{% url 'placement_tests:test_room' %}" class="btn btn-primary" style="padding: 12px 24px; font-size: 14.5px; font-weight: 700; flex-shrink: 0; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);">
+        Vào phòng thi ngay <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
+    {% elif is_teacher_approved %}
+    <div style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-left: 5px solid #16A34A; border-radius: var(--radius-md); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+      <div>
+        <div style="font-size: 15.5px; font-weight: 700; color: #15803D; margin-bottom: 3px;">Giáo viên chuyên môn đã duyệt điểm chính thức</div>
+        <div style="font-size: 13.5px; color: #166534; line-height: 1.5;">
+          Điểm chính thức: <strong>{{ display_score }}/100</strong> (Xếp loại: <strong>{{ trinh_do_du_kien }}</strong>). Hồ sơ đang được bộ phận Tuyển sinh tiến hành xếp lớp học phù hợp.
+        </div>
+      </div>
+      <a href="{% url 'placement_tests:test_result' %}" class="btn btn-emerald btn-sm" style="flex-shrink:0;">Xem bảng điểm</a>
+    </div>
     {% else %}
-    <!-- Callout Box dành cho học viên mới chưa làm test -->
-    <div style="background: linear-gradient(135deg, var(--coral-light), #FFF5F2); border: 1.5px solid #FFD4C5; border-radius: var(--radius-md); padding: 14px 18px; display: flex; align-items: center; gap: 14px;">
-      <span style="font-size: 26px;">📝</span>
-      <div style="flex: 1;">
-        <div style="font-size: 13.5px; font-weight: 700; color: var(--accent-orange);">Học viên mới: Sẵn sàng làm bài kiểm tra đầu vào (105 phút)</div>
-        <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">
-          Hồ sơ của bạn đã được ghi nhận. Hãy vào phòng thi để làm bài kiểm tra 4 kỹ năng (Trắc nghiệm/Nghe 45' + Viết/Nói 60') 
-          để hệ thống chẩn đoán trình độ và xếp lớp chính xác.
+    <div style="background: #F5F3FF; border: 1.5px solid #DDD6FE; border-left: 5px solid #7C3AED; border-radius: var(--radius-md); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+      <div>
+        <div style="font-size: 15.5px; font-weight: 700; color: #6B21A8; margin-bottom: 3px;">Bài kiểm tra đã nộp · Đang chờ giáo viên duyệt</div>
+        <div style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.5;">
+          Điểm sơ bộ: <strong style="color: #6B21A8;">{{ ai_score }}/100</strong> (Dự kiến: <strong>{{ trinh_do_du_kien }}</strong>). Giáo viên đang thẩm định phần thi Nói và Viết để có kết quả chính xác nhất.
         </div>
       </div>
-      <a href="{% url 'placement_tests:test_room' %}" class="btn btn-primary btn-sm" style="flex-shrink:0;">Vào phòng thi ngay 🚀</a>
+      <a href="{% url 'placement_tests:test_result' %}" class="btn btn-outline btn-sm" style="flex-shrink:0;">Xem chi tiết bài làm</a>
     </div>
     {% endif %}
 
     {% if latest_contact %}
-    <div style="margin-top: 14px; padding: 12px 16px; background: #F8FAFC; border-left: 3.5px solid var(--accent-purple); border-radius: var(--radius-sm); font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+    <div style="margin-top: 14px; padding: 11px 16px; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
       <div>
-        <span style="font-weight: 700; color: var(--text-primary);">✦ Tương tác gần nhất ({{ latest_contact.thoi_gian|date:"d/m/Y H:i" }} · {{ latest_contact.kenh_lien_he }}):</span>
+        <span style="font-weight: 600; color: var(--text-primary);"><i class="fa-regular fa-comment-dots"></i> Tương tác gần nhất ({{ latest_contact.thoi_gian|date:"d/m/Y H:i" }} · {{ latest_contact.kenh_lien_he }}):</span>
         <span style="margin-left: 4px;">{{ latest_contact.ket_qua }}</span>
       </div>
-      <a href="#consultation-history" style="color: var(--accent-purple); font-weight: 700; text-decoration: none; font-size: 12px;">
+      <a href="#consultation-history" style="color: var(--accent-orange); font-weight: 600; text-decoration: none; font-size: 12.5px;">
         Xem lịch sử tương tác ↓
       </a>
     </div>
@@ -208,358 +113,340 @@
   </div>
 </div>
 
-<!-- ─── KPI STAT GRID ─────────────────────────────────────── -->
-<div class="stat-grid">
-  <div class="stat-card">
-    <div class="stat-icon coral">📝</div>
-    <div class="stat-info">
-      <div class="stat-value" style="font-size: 18px;">{{ ho_so.trang_thai }}</div>
-      <div class="stat-label">Trạng thái hồ sơ</div>
-      <div class="stat-delta up">{% if test_completed %}● Đã nộp 4 kỹ năng{% else %}● Chờ làm test 105'{% endif %}</div>
+<!-- ─── 2. DẢI 4 Ô THỐNG KÊ (ĐỒNG NHẤT BASELINE, GIÁ TRỊ RÕ NÉT) ─── -->
+<div class="stats-strip">
+  <div class="stats-strip-item">
+    <div class="stats-strip-label">Trạng thái hồ sơ</div>
+    <div class="stats-strip-val text-sm">{{ ho_so.trang_thai }}</div>
+    <div class="stats-strip-sub">{% if test_completed %}Đã nộp bài kiểm tra{% else %}Chờ làm bài 105 phút{% endif %}</div>
+  </div>
+
+  <div class="stats-strip-item">
+    <div class="stats-strip-label">Điểm kiểm tra</div>
+    <div class="stats-strip-val">
+      {% if test_completed %}
+        {{ ai_score }}<span style="font-size: 14px; font-weight: 500; color: var(--text-muted); margin-left: 2px;">/100</span>
+      {% else %}
+        --
+      {% endif %}
+    </div>
+    <div class="stats-strip-sub">
+      {% if is_teacher_approved %}Điểm GV đã duyệt{% elif test_completed %}Đang thẩm định{% else %}Chưa có điểm{% endif %}
     </div>
   </div>
 
-  <div class="stat-card">
-    <div class="stat-icon purple">✦</div>
-    <div class="stat-info">
-      <div class="stat-value">{% if test_completed %}{{ ai_score }}<span style="font-size:14px">/100</span>{% else %}--{% endif %}</div>
-      <div class="stat-label">Điểm kiểm tra</div>
-      <div class="stat-delta up">{% if is_teacher_approved %}✓ Điểm chính thức GV duyệt{% elif test_completed %}Điểm AI đang thẩm định{% else %}Chưa có điểm{% endif %}</div>
+  <div class="stats-strip-item">
+    <div class="stats-strip-label">Xếp loại trình độ</div>
+    <div class="stats-strip-val text-sm">
+      {% if test_completed %}{{ trinh_do_du_kien }}{% else %}Chưa xác định{% endif %}
+    </div>
+    <div class="stats-strip-sub">
+      {% if test_completed %}Khung tham chiếu CEFR{% else %}Căn cứ theo bài test{% endif %}
     </div>
   </div>
 
-  <div class="stat-card">
-    <div class="stat-icon emerald">🎓</div>
-    <div class="stat-info">
-      <div class="stat-value">{{ trinh_do_du_kien|default:"Chờ test" }}</div>
-      <div class="stat-label">Trình độ xếp loại</div>
-      <div class="stat-delta up">{% if test_completed %}{{ trinh_do_du_kien }} (Khảo thí thích ứng){% else %}Chưa xác định{% endif %}</div>
+  <div class="stats-strip-item">
+    <div class="stats-strip-label">Lớp học dự kiến</div>
+    <div class="stats-strip-val text-sm">
+      {% if has_assigned_class and assigned_lop_hoc %}{{ assigned_lop_hoc.ten_lop }}{% else %}Chưa xếp lớp{% endif %}
     </div>
-  </div>
-
-  <div class="stat-card">
-    <div class="stat-icon blue">📅</div>
-    <div class="stat-info">
-      <div class="stat-value">{% if has_assigned_class and next_class_date %}{{ next_class_date|date:"d/m" }}{% else %}--/--{% endif %}</div>
-      <div class="stat-label">Khai giảng dự kiến</div>
-      <div class="stat-delta">{% if has_assigned_class and assigned_lop_hoc %}{{ assigned_lop_hoc.ten_lop }}{% else %}Chưa xếp lớp{% endif %}</div>
+    <div class="stats-strip-sub">
+      {% if has_assigned_class and next_class_date %}Khai giảng: {{ next_class_date|date:"d/m/Y" }}{% else %}Cập nhật sau khi có điểm{% endif %}
     </div>
   </div>
 </div>
 
-<!-- ─── 2. THẺ BÀI TEST ĐẦU VÀO & LỊCH HỌC CHÍNH THỨC ────── -->
+<!-- ─── 3. BÀI TEST ĐẦU VÀO & THÔNG TIN HỌC VIÊN (CÂN ĐỐI 2 BÊN) ─── -->
 <div class="two-col" style="margin-bottom: 24px;">
 
-  <!-- THẺ 1: BÀI TEST ĐẦU VÀO (105 PHÚT) -->
-  <div class="card rounded-2xl shadow-sm">
+  <!-- CỘT TRÁI: BÀI TEST ĐẦU VÀO -->
+  <div class="card">
     <div class="card-header">
-      <div class="card-title">📝 Bài test đầu vào</div>
+      <div class="card-title">Bài test đầu vào</div>
       {% if test_completed %}
         {% if is_teacher_approved %}
-        <span class="badge badge-emerald"><i class="fa-solid fa-circle-check"></i> Điểm chính thức GV duyệt</span>
+        <span class="badge badge-emerald"><i class="fa-solid fa-check"></i> Điểm chính thức</span>
         {% else %}
-        <span class="badge badge-purple"><i class="fa-solid fa-wand-magic-sparkles"></i> Điểm dự kiến AI chấm</span>
+        <span class="badge badge-purple">Chờ GV duyệt</span>
         {% endif %}
       {% else %}
-      <span class="badge badge-coral"><i class="fa-solid fa-triangle-exclamation"></i> Chưa thực hiện</span>
+      <span class="badge badge-coral">Chưa thực hiện</span>
       {% endif %}
     </div>
     <div class="card-body">
       {% if test_completed %}
       <div class="payment-meta">
         <div class="payment-meta-row">
-          <span class="label">📝 Bài kiểm tra</span>
-          <span class="value">{{ latest_phien.bai_kiem_tra.ten_bai|default:"Entrance Placement Test (Đầu vào)" }}</span>
+          <span class="label">Bài kiểm tra</span>
+          <span class="value">{{ latest_phien.bai_kiem_tra.ten_bai|default:"Entrance Placement Test" }}</span>
         </div>
         <div class="payment-meta-row">
-          <span class="label">📅 Thời gian thi</span>
+          <span class="label">Thời gian hoàn thành</span>
           <span class="value">{{ latest_phien.hoan_thanh|date:"d/m/Y H:i"|default:today|date:"d/m/Y H:i" }}</span>
         </div>
         <div class="payment-meta-row">
-          <span class="label">🕐 Thời lượng làm</span>
-          <span class="value"><strong>105 phút</strong> (45' Trắc nghiệm & Nghe + 60' Viết & Nói)</span>
+          <span class="label">Thời lượng bài làm</span>
+          <span class="value">105 phút (Trắc nghiệm, Nghe, Viết, Nói)</span>
         </div>
         <div class="payment-meta-row">
-          <span class="label">📊 Kỹ năng đã nộp</span>
-          <span class="value">Listening, Reading, Writing (AI), Speaking (AI)</span>
-        </div>
-        <div class="payment-meta-row">
-          <span class="label">🏆 Điểm đánh giá</span>
-          {% if is_teacher_approved %}
-          <span class="badge badge-emerald" style="font-size: 13px; font-weight: 700;">{{ display_score }}đ · GV đã duyệt</span>
-          {% else %}
-          <span class="badge badge-ai" style="font-size: 13px; font-weight: 700;">{{ display_score }}đ · Chờ GV duyệt</span>
-          {% endif %}
+          <span class="label">Điểm đánh giá</span>
+          <span class="value" style="color: {% if is_teacher_approved %}var(--accent-emerald){% else %}#7C3AED{% endif %};">
+            {{ display_score }}/100 {% if is_teacher_approved %}(GV duyệt){% else %}(Sơ bộ){% endif %}
+          </span>
         </div>
       </div>
-
-      <div style="background: var(--bg-app); border-radius: var(--radius-md); padding: 12px 14px; margin-top: 14px; font-size: 12px; color: var(--text-secondary);">
-        💡 Điểm số đã được hệ thống AI chấm và chuyển tới chuyên viên tư vấn để xếp lớp học phù hợp. Bạn có thể xem bảng phân tích rubric chi tiết hoặc làm lại bài test.
+      <div style="margin-top: 12px; font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+        Kết quả bài test đã được chuyển đến bộ phận tư vấn để xây dựng lộ trình học tập phù hợp.
       </div>
       {% else %}
-      <!-- Chưa làm test đầu vào -->
-      <div style="background: linear-gradient(135deg, rgba(255, 126, 95, 0.08), rgba(254, 243, 199, 0.4)); border: 1.5px solid #FFD4C5; border-radius: var(--radius-md); padding: 16px; margin-bottom: 14px;">
-        <div style="font-size: 14px; font-weight: 800; color: var(--accent-orange); margin-bottom: 6px;">
-          <i class="fa-solid fa-circle-exclamation"></i> Bạn chưa hoàn thành bài test đầu vào
-        </div>
-        <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
-          Để bộ phận Tư vấn tuyển sinh có căn cứ xếp bạn vào đúng lớp học theo trình độ, bạn cần hoàn thành bài kiểm tra trực tuyến 4 kỹ năng.
-        </div>
-      </div>
-
       <div class="payment-meta">
         <div class="payment-meta-row">
-          <span class="label">📝 Bài kiểm tra</span>
-          <span class="value">Entrance Placement Test (Khảo sát 4 kỹ năng)</span>
+          <span class="label">Bài kiểm tra</span>
+          <span class="value">Entrance Placement Test (4 kỹ năng)</span>
         </div>
         <div class="payment-meta-row">
-          <span class="label">🕐 Thời lượng làm</span>
-          <span class="value" style="color: var(--accent-coral); font-weight: 800; font-size: 14px;">105 phút</span>
+          <span class="label">Thời lượng</span>
+          <span class="value" style="color: var(--accent-orange);">105 phút</span>
         </div>
         <div class="payment-meta-row">
-          <span class="label">📌 Phân bổ thời gian</span>
-          <span class="value">Trắc nghiệm & Nghe: 45' · Viết & Nói: 60'</span>
+          <span class="label">Phân bổ</span>
+          <span class="value">Trắc nghiệm &amp; Nghe: 45' · Viết &amp; Nói: 60'</span>
         </div>
         <div class="payment-meta-row">
-          <span class="label">🤖 Công nghệ chấm</span>
-          <span class="badge badge-ai">Gemini AI Chẩn đoán CEFR</span>
+          <span class="label">Hình thức</span>
+          <span class="value">Trực tuyến có giám sát thời gian</span>
         </div>
       </div>
+      <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-top: 12px;">
+        Vui lòng chuẩn bị tai nghe và micro trước khi bắt đầu bài kiểm tra.
+      </p>
       {% endif %}
     </div>
-    <div class="card-footer" style="display: flex; gap: 10px;">
+    <div class="card-footer">
       {% if test_completed %}
-      <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary btn-sm btn-block">
-        📊 Xem chi tiết kết quả AI chấm →
-      </a>
-      <a href="{% url 'placement_tests:test_room' %}" class="btn btn-outline btn-sm">
-        Vào phòng thi 📝
-      </a>
+      <div style="display: flex; gap: 10px;">
+        <a href="{% url 'placement_tests:test_result' %}" class="btn btn-outline btn-sm btn-block">
+          Xem chi tiết kết quả
+        </a>
+        <a href="{% url 'placement_tests:test_room' %}" class="btn btn-outline btn-sm">
+          Vào phòng thi
+        </a>
+      </div>
       {% else %}
-      <a href="{% url 'placement_tests:test_room' %}" class="btn btn-primary btn-sm btn-block" style="font-weight: 700;">
-        🚀 Bắt đầu làm bài test đầu vào (105 phút) →
+      {# Nút ở đây dùng kiểu VIỀN (outline) để không cạnh tranh với nút cam trong banner #}
+      <a href="{% url 'placement_tests:test_room' %}" class="btn btn-outline btn-block" style="font-size: 14px; font-weight: 600; color: var(--text-primary); border-color: var(--border-color);">
+        Bắt đầu làm bài test (105 phút) →
       </a>
       {% endif %}
     </div>
   </div>
 
-  <!-- THẺ 2: LỊCH HỌC CHÍNH THỨC (CHỈ HIỆN KHI TƯ VẤN TUYỂN SINH ĐÃ ÁP LỚP) -->
-  <div class="card rounded-2xl shadow-sm">
+  <!-- CỘT PHẢI: THÔNG TIN HỌC VIÊN -->
+  <div class="card">
     <div class="card-header">
-      <div class="card-title">🏫 Lịch học chính thức</div>
-      {% if has_assigned_class and assigned_lop_hoc %}
-        {% if is_tuition_paid %}
-        <span class="badge badge-emerald">Đã xếp lớp chính thức</span>
-        {% else %}
-        <span class="badge badge-coral">Chờ đóng học phí</span>
-        {% endif %}
+      <div class="card-title">Thông tin học viên</div>
+      <span class="badge badge-gray">Hồ sơ #HV-{{ student.id|default:"089" }}</span>
+    </div>
+    <div class="card-body">
+      <div class="payment-meta">
+        <div class="payment-meta-row">
+          <span class="label">Họ và tên</span>
+          <span class="value">{{ student.ho_ten|default:"Chưa cập nhật" }}</span>
+        </div>
+        <div class="payment-meta-row">
+          <span class="label">Email liên hệ</span>
+          <span class="value">{{ student.email|default:"Chưa cập nhật" }}</span>
+        </div>
+        <div class="payment-meta-row">
+          <span class="label">Số điện thoại</span>
+          <span class="value">{{ student.so_dien_thoai|default:"Chưa cập nhật" }}</span>
+        </div>
+        <div class="payment-meta-row">
+          <span class="label">Ngày sinh</span>
+          <span class="value">{{ student.ngay_sinh|default:"Chưa cập nhật" }}</span>
+        </div>
+        <div class="payment-meta-row">
+          <span class="label">Mục tiêu học tập</span>
+          <span class="value">{{ student_goal|default:"Đạt chuẩn đầu ra & Luyện thi chứng chỉ" }}</span>
+        </div>
+      </div>
+      <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-top: 12px;">
+        Thông tin trên dùng để cấp chứng chỉ và quản lý hồ sơ học viên.
+      </p>
+    </div>
+    <div class="card-footer">
+      <a href="{% url 'placement_tests:test_room' %}" class="btn btn-outline btn-block" style="font-size: 14px; font-weight: 500; color: var(--text-secondary); border-color: var(--border-color);">
+        Cập nhật thông tin &amp; Mục tiêu
+      </a>
+    </div>
+  </div>
+
+</div><!-- .two-col -->
+
+<!-- ─── 4. CÁC PHẦN VIỆC TIẾP THEO (LỊCH HỌC & TÀI CHÍNH) ───── -->
+{% if has_assigned_class or has_tuition_bill %}
+<div class="two-col" style="margin-bottom: 24px;">
+
+  <!-- THẺ LỊCH HỌC (ĐÃ CÓ LỚP) -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Lịch học chính thức</div>
+      {% if is_tuition_paid %}
+      <span class="badge badge-emerald">Đã xếp lớp</span>
       {% else %}
-      <span class="badge badge-purple">Chờ xếp lớp</span>
+      <span class="badge badge-coral">Chờ đóng học phí</span>
       {% endif %}
     </div>
     <div class="card-body">
-      {% if has_assigned_class and assigned_lop_hoc %}
-      <div style="background: linear-gradient(135deg, #1E293B, #0F172A); border-radius: var(--radius-md); padding: 16px 18px; color: #fff; margin-bottom: 14px;">
-        <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px;">KHÓA HỌC ĐƯỢC XẾP LỚP</div>
-        <div style="font-size: 17px; font-weight: 700;">{{ assigned_lop_hoc.khoa_hoc.ten_khoa|default:"Khóa học tiếng Anh" }}</div>
-        <div style="font-size: 12px; color: #94A3B8; margin-top: 4px;">
-          Trình độ: {{ assigned_lop_hoc.khoa_hoc.trinh_do }} · {{ assigned_lop_hoc.khoa_hoc.so_buoi }} buổi · Sĩ số chuẩn: {{ assigned_lop_hoc.si_so_toi_da }} học viên
+      {% if assigned_lop_hoc %}
+      <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 12px;">
+        <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 2px;">Khóa học</div>
+        <div style="font-size: 15.5px; font-weight: 700; color: var(--text-primary);">{{ assigned_lop_hoc.khoa_hoc.ten_khoa|default:"Khóa học tiếng Anh" }}</div>
+        <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+          Trình độ: {{ assigned_lop_hoc.khoa_hoc.trinh_do }} · {{ assigned_lop_hoc.khoa_hoc.so_buoi }} buổi
         </div>
       </div>
 
       <div class="payment-meta">
         <div class="payment-meta-row">
-          <span class="label">🏫 Tên lớp học</span>
-          <span class="value"><strong>{{ assigned_lop_hoc.ten_lop }}</strong></span>
+          <span class="label">Tên lớp học</span>
+          <span class="value">{{ assigned_lop_hoc.ten_lop }}</span>
         </div>
         <div class="payment-meta-row">
-          <span class="label">📅 Lịch học trong tuần</span>
+          <span class="label">Lịch học</span>
           <span class="value">{{ assigned_lop_hoc.lich_hoc }}</span>
         </div>
         <div class="payment-meta-row">
-          <span class="label">🚀 Khai giảng</span>
+          <span class="label">Khai giảng</span>
           <span class="value">{{ assigned_lop_hoc.ngay_khai_giang|date:"d/m/Y" }}</span>
         </div>
         <div class="payment-meta-row">
-          <span class="label">💰 Học phí khóa</span>
-          <span class="value" style="color: var(--accent-coral); font-weight: 700;">{{ khoa_hoc_phi }} đ</span>
-        </div>
-      </div>
-      {% else %}
-      <!-- Chưa được tư vấn tuyển sinh áp lớp -->
-      <div style="background: var(--bg-app); border: 1.5px dashed var(--border-color); border-radius: var(--radius-md); padding: 28px 18px; text-align: center;">
-        <div style="font-size: 34px; margin-bottom: 8px;">🏫</div>
-        <div style="font-size: 15px; font-weight: 800; color: var(--text-primary); margin-bottom: 6px;">
-          Chưa có Lịch học chính thức
-        </div>
-        <div style="font-size: 12.5px; color: var(--text-secondary); max-width: 380px; margin: 0 auto; line-height: 1.6;">
-          {% if test_completed %}
-          Bộ phận Tư vấn tuyển sinh đang thẩm định kết quả test và chuẩn bị <strong>áp lớp học phù hợp</strong> cho bạn. Lịch học chính thức sẽ tự động hiển thị tại đây khi hoàn tất.
-          {% else %}
-          Bạn cần hoàn thành <strong>Bài test đầu vào (105 phút)</strong> để tư vấn tuyển sinh có căn cứ xếp bạn vào lớp học phù hợp.
-          {% endif %}
+          <span class="label">Học phí</span>
+          <span class="value" style="color: var(--accent-orange);">{{ khoa_hoc_phi }} đ</span>
         </div>
       </div>
       {% endif %}
     </div>
     <div class="card-footer">
-      {% if has_assigned_class and assigned_lop_hoc %}
-        {% if is_tuition_paid %}
-        <span class="badge badge-emerald" style="display: block; text-align: center; padding: 10px; font-size: 13px;">
-          ✓ Bạn đã hoàn tất thủ tục nhập học!
-        </span>
-        {% else %}
-        <a href="{% url 'billing:payment_detail' %}" class="btn btn-emerald btn-sm btn-block">
-          💳 Xem mã VietQR & Đóng học phí →
-        </a>
-        {% endif %}
+      {% if is_tuition_paid %}
+      <span class="badge badge-emerald" style="display: block; text-align: center; padding: 9px; font-size: 13px;">
+        Đã hoàn tất thủ tục nhập học
+      </span>
       {% else %}
-      <button type="button" class="btn btn-outline btn-sm btn-block" disabled style="opacity: 0.6;">
-        ⏳ Đang chờ Tư vấn tuyển sinh xếp lớp
-      </button>
+      <a href="{% url 'billing:payment_detail' %}" class="btn btn-primary btn-sm btn-block">
+        Đóng học phí ngay <i class="fa-solid fa-arrow-right"></i>
+      </a>
       {% endif %}
     </div>
   </div>
 
-</div><!-- .two-col -->
-
-<!-- ─── THÔNG TIN HỌC VIÊN & TÀI CHÍNH CHI TIẾT ────────────── -->
-<div class="two-col" style="margin-bottom: 24px;">
-
-  <!-- Thông tin cá nhân -->
-  <div class="card rounded-2xl shadow-sm">
+  <!-- THẺ TÀI CHÍNH (ĐÃ CÓ PHIẾU) -->
+  <div class="card">
     <div class="card-header">
-      <div class="card-title">👤 Thông tin Học viên</div>
-      <span class="badge badge-blue">Đã xác thực</span>
-    </div>
-    <div class="card-body">
-      <div class="payment-meta">
-        <div class="payment-meta-row">
-          <span class="label">👤 Họ và tên</span>
-          <span class="value">{{ student.ho_ten|default:"Nguyễn Văn A" }}</span>
-        </div>
-        <div class="payment-meta-row">
-          <span class="label">📧 Email liên lạc</span>
-          <span class="value">{{ student.email|default:"a.nguyen@email.com" }}</span>
-        </div>
-        <div class="payment-meta-row">
-          <span class="label">📞 Số điện thoại</span>
-          <span class="value">{{ student.so_dien_thoai|default:"0912 345 678" }}</span>
-        </div>
-        <div class="payment-meta-row">
-          <span class="label">🎂 Ngày sinh</span>
-          <span class="value">{{ student.ngay_sinh|default:"15/03/2002" }}</span>
-        </div>
-        <div class="payment-meta-row">
-          <span class="label">🎯 Mục tiêu học tập</span>
-          <span class="value">{{ student_goal|default:"Đạt chuẩn đầu ra & Luyện thi chứng chỉ quốc tế" }}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Thống kê tài chính & học phí (CHỈ HIỆN KHI ĐÃ CÓ LỚP VÀ PHIẾU HỌC PHÍ) -->
-  <div class="card rounded-2xl shadow-sm">
-    <div class="card-header">
-      <div class="card-title">💰 Tình trạng Tài chính & Học phí</div>
-      {% if has_tuition_bill and phieu_hp %}
-        {% if is_tuition_paid %}
-        <span class="badge badge-emerald">Đã thanh toán đủ</span>
-        {% else %}
-        <span class="badge badge-coral">Chưa thanh toán</span>
-        {% endif %}
+      <div class="card-title">Tình trạng tài chính &amp; học phí</div>
+      {% if is_tuition_paid %}
+      <span class="badge badge-emerald">Đã thanh toán</span>
       {% else %}
-      <span class="badge badge-blue">Chưa phát sinh</span>
+      <span class="badge badge-coral">Chưa thanh toán</span>
       {% endif %}
     </div>
     <div class="card-body">
-      {% if has_tuition_bill and phieu_hp %}
-      <div style="text-align: center; margin-bottom: 16px;">
-        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px;">TỔNG HỌC PHÍ PHẢI NỘP</div>
-        <div class="payment-amount">{{ khoa_hoc_phi }} đ</div>
-      </div>
-
+      {% if phieu_hp %}
       <div class="payment-meta">
         <div class="payment-meta-row">
-          <span class="label">Mã phiếu học phí</span>
-          <span class="value" style="color: var(--accent-coral); font-weight: 700;">{{ phieu_hp.ma_tham_chieu }}</span>
+          <span class="label">Mã phiếu</span>
+          <span class="value">{{ phieu_hp.ma_tham_chieu }}</span>
         </div>
         <div class="payment-meta-row">
-          <span class="label">Đã thanh toán</span>
-          <span class="value" style="color: {% if is_tuition_paid %}var(--accent-emerald){% else %}var(--accent-coral){% endif %}; font-weight: 700;">{{ hoc_phi_da_dong|floatformat:0 }} đ</span>
+          <span class="label">Tổng học phí</span>
+          <span class="value">{{ khoa_hoc_phi }} đ</span>
         </div>
         <div class="payment-meta-row">
-          <span class="label">Số tiền còn lại</span>
-          <span class="value" style="color: {% if is_tuition_paid %}var(--accent-emerald){% else %}#EF4444{% endif %}; font-weight: 700;">
-            {% if is_tuition_paid %}0 đ (Đã thanh toán đủ){% else %}{{ khoa_hoc_phi }} đ{% endif %}
+          <span class="label">Đã đóng</span>
+          <span class="value" style="color: {% if is_tuition_paid %}var(--accent-emerald){% else %}var(--text-secondary){% endif %};">
+            {{ hoc_phi_da_dong|floatformat:0 }} đ
           </span>
         </div>
         <div class="payment-meta-row">
-          <span class="label">Hạn chót thanh toán</span>
-          <span class="value" style="color: var(--accent-coral);">{{ phieu_hp.han_thanh_toan|date:"d/m/Y"|default:next_class_date|date:"d/m/Y" }}</span>
+          <span class="label">Còn lại</span>
+          <span class="value" style="color: {% if is_tuition_paid %}var(--accent-emerald){% else %}#DC2626{% endif %};">
+            {% if is_tuition_paid %}0 đ{% else %}{{ khoa_hoc_phi }} đ{% endif %}
+          </span>
         </div>
-      </div>
-      {% else %}
-      <!-- Chưa có phiếu học phí -->
-      <div style="background: var(--bg-app); border: 1.5px dashed var(--border-color); border-radius: var(--radius-md); padding: 28px 18px; text-align: center;">
-        <div style="font-size: 34px; margin-bottom: 8px;">💳</div>
-        <div style="font-size: 15px; font-weight: 800; color: var(--text-primary); margin-bottom: 6px;">
-          Chưa phát sinh học phí
-        </div>
-        <div style="font-size: 12.5px; color: var(--text-secondary); max-width: 380px; margin: 0 auto; line-height: 1.6;">
-          Học phí và mã thanh toán VietQR sẽ được tự động tạo sau khi bạn được bộ phận Tư vấn tuyển sinh áp lớp học.
+        <div class="payment-meta-row">
+          <span class="label">Hạn thanh toán</span>
+          <span class="value">{{ phieu_hp.han_thanh_toan|date:"d/m/Y"|default:next_class_date|date:"d/m/Y" }}</span>
         </div>
       </div>
       {% endif %}
     </div>
     <div class="card-footer">
-      {% if has_tuition_bill and phieu_hp %}
-        {% if is_tuition_paid %}
-        <a href="{% url 'billing:payment_detail' %}" class="btn btn-outline btn-block">
-          Xem biên lai điện tử & Chi tiết giao dịch →
-        </a>
-        {% else %}
-        <a href="{% url 'billing:payment_detail' %}" class="btn btn-primary btn-block">
-          Thanh toán chuyển khoản qua VietQR →
-        </a>
-        {% endif %}
+      {% if is_tuition_paid %}
+      <a href="{% url 'billing:payment_detail' %}" class="btn btn-outline btn-sm btn-block">
+        Xem biên lai thanh toán
+      </a>
       {% else %}
-      <button type="button" class="btn btn-outline btn-block" disabled style="opacity: 0.6;">
-        Chưa có phiếu học phí để thanh toán
-      </button>
+      <a href="{% url 'billing:payment_detail' %}" class="btn btn-primary btn-sm btn-block">
+        Thanh toán qua VietQR <i class="fa-solid fa-arrow-right"></i>
+      </a>
       {% endif %}
     </div>
   </div>
 
-</div><!-- .two-col -->
+</div>
+{% else %}
+<!-- KHI CHƯA CÓ LỚP & HỌC PHÍ: THU GỌN VỀ CHIỀU CAO THẤP 1 DÒNG ĐỂ BỚT TRỐNG VÀ NỔI VIỆC CẦN LÀM -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px;">
+  <div class="card" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+    <div>
+      <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">
+        Lịch học chính thức
+      </div>
+      <div style="font-size: 13px; color: var(--text-muted);">
+        Chưa xếp lớp · Lịch học sẽ được sắp xếp sau khi hoàn thành bài test.
+      </div>
+    </div>
+    <span class="badge badge-gray" style="flex-shrink: 0;">Chờ xếp lớp</span>
+  </div>
 
-<!-- ─── TIMELINE LỊCH SỬ TƯ VẤN ───────────────────────────── -->
-<div class="card rounded-2xl shadow-sm" id="consultation-history" style="scroll-margin-top: 80px;">
+  <div class="card" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+    <div>
+      <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px;">
+        Tình trạng tài chính &amp; học phí
+      </div>
+      <div style="font-size: 13px; color: var(--text-muted);">
+        Chưa phát sinh · Phiếu học phí và VietQR sẽ tạo sau khi xếp lớp.
+      </div>
+    </div>
+    <span class="badge badge-gray" style="flex-shrink: 0;">Chưa phát sinh</span>
+  </div>
+</div>
+{% endif %}
+
+<!-- ─── 5. TIMELINE LỊCH SỬ TƯ VẤN ────────────────────────── -->
+<div class="card" id="consultation-history" style="scroll-margin-top: 80px;">
   <div class="card-header">
     <div>
-      <div class="card-title">📞 Lịch sử Tư vấn & Tiếp nhận</div>
+      <div class="card-title">Lịch sử tư vấn &amp; tiếp nhận</div>
       <div class="card-subtitle">Nhân viên phụ trách: <strong>{{ advisor_name }}</strong> · Hotline hỗ trợ: 1900 6868</div>
     </div>
-    <span class="badge {% if lan_lien_hes %}badge-blue{% else %}badge-gray{% endif %}">
-      {% if lan_lien_hes %}{{ lan_lien_hes|length }} lần tương tác{% else %}Chưa có liên hệ{% endif %}
+    <span class="badge badge-gray">
+      {% if lan_lien_hes %}{{ lan_lien_hes|length }} lượt trao đổi{% else %}Chưa có liên hệ{% endif %}
     </span>
   </div>
   <div class="card-body">
     {% if appointment_time %}
-    <div style="background: var(--coral-light); border: 1.5px solid #FFD4C5; border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <span style="font-size: 26px;">📅</span>
-        <div>
-          <div style="font-weight: 800; font-size: 14.5px; color: var(--text-primary);">
-            Lịch hẹn làm bài kiểm tra đầu vào (105 phút)
-          </div>
-          <div style="font-size: 13px; color: var(--accent-coral); font-weight: 700; margin-top: 2px;">
-            Thời gian: {{ appointment_time|date:"d/m/Y lúc H:i" }}
-          </div>
+    <div style="background: #FFF0E6; border: 1px solid #FED7AA; border-left: 4px solid var(--accent-orange); border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+      <div>
+        <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">
+          Lịch hẹn làm bài kiểm tra đầu vào
+        </div>
+        <div style="font-size: 13px; color: var(--accent-orange); font-weight: 600; margin-top: 2px;">
+          Thời gian hẹn: {{ appointment_time|date:"d/m/Y lúc H:i" }}
         </div>
       </div>
-      <a href="{% url 'placement_tests:test_room' %}" class="btn btn-primary btn-sm" style="font-weight: 700;">
-        Vào phòng thi ngay 🚀
+      <a href="{% url 'placement_tests:test_room' %}" class="btn btn-primary btn-sm">
+        Vào phòng thi <i class="fa-solid fa-arrow-right"></i>
       </a>
     </div>
     {% endif %}
@@ -568,38 +455,36 @@
     <div class="timeline">
       {% for llh in lan_lien_hes %}
       <div class="timeline-item">
-        <div class="timeline-dot" {% if forloop.first %}style="background: var(--accent-emerald); box-shadow: 0 0 0 2px var(--accent-emerald);"{% endif %}></div>
-        <div class="timeline-time">{{ llh.thoi_gian|date:"d/m/Y H:i" }}</div>
+        <div class="timeline-dot" {% if forloop.first %}style="background: var(--accent-orange); border-color: var(--accent-orange);"{% endif %}></div>
+        <div class="timeline-time" style="font-size: 12.5px; color: var(--text-muted);">{{ llh.thoi_gian|date:"d/m/Y H:i" }}</div>
         <div class="timeline-title" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-          <span>{{ llh.kenh_lien_he }} – Tương tác tư vấn</span>
+          <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);">{{ llh.kenh_lien_he }} – Tư vấn tuyển sinh</span>
           {% if llh.nhan_vien %}
-          <span style="font-size: 11.5px; font-weight: 700; color: var(--accent-purple); background: var(--purple-light); padding: 2px 10px; border-radius: 999px;">
-            👤 {{ llh.nhan_vien.ho_ten }} ({{ llh.nhan_vien.email }})
+          <span style="font-size: 12px; color: var(--text-secondary); background: var(--bg-app); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-color);">
+            {{ llh.nhan_vien.ho_ten }}
           </span>
           {% elif advisor_name and advisor_name != 'Chưa có nhân viên tư vấn tiếp nhận' %}
-          <span style="font-size: 11.5px; font-weight: 700; color: var(--accent-purple); background: var(--purple-light); padding: 2px 10px; border-radius: 999px;">
-            👤 {{ advisor_name }}
+          <span style="font-size: 12px; color: var(--text-secondary); background: var(--bg-app); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-color);">
+            {{ advisor_name }}
           </span>
           {% endif %}
         </div>
-        <div class="timeline-desc" style="margin-top: 4px; line-height: 1.5;">{{ llh.ket_qua }}</div>
+        <div class="timeline-desc" style="margin-top: 6px; line-height: 1.5; font-size: 13.5px; color: var(--text-secondary);">{{ llh.ket_qua }}</div>
       </div>
       {% endfor %}
     </div>
     {% else %}
-    <!-- Trạng thái khi chưa có ai tư vấn -->
-    <div style="background: var(--bg-app); border: 1.5px dashed var(--border-color); border-radius: var(--radius-md); padding: 32px 20px; text-align: center;">
-      <div style="font-size: 34px; margin-bottom: 8px;">📞</div>
-      <div style="font-size: 15px; font-weight: 800; color: var(--text-primary); margin-bottom: 6px;">
-        Chưa có lịch sử tư vấn & tiếp nhận
+    <div style="padding: 24px 12px; text-align: center;">
+      <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">
+        Chưa có lịch sử tư vấn
       </div>
-      <div style="font-size: 13px; color: var(--text-secondary); max-width: 440px; margin: 0 auto; line-height: 1.6;">
+      <p style="font-size: 13px; color: var(--text-muted); max-width: 440px; margin: 0 auto; line-height: 1.6;">
         {% if not test_completed %}
-        Hồ sơ của bạn hiện đang ở trạng thái <strong>Chờ làm bài kiểm tra đầu vào (105 phút)</strong>. Sau khi hoàn thành bài test hoặc đăng ký lộ trình, nhân viên tư vấn sẽ liên hệ qua Số điện thoại / Zalo và cập nhật lịch sử tại đây.
+        Hồ sơ đang ở trạng thái <strong>Chờ làm bài kiểm tra đầu vào</strong>. Sau khi hoàn thành bài test, chuyên viên tư vấn sẽ liên hệ qua điện thoại hoặc Zalo để hỗ trợ bạn.
         {% else %}
-        Bài test của bạn đang được Giảng viên thẩm định. Tư vấn viên tuyển sinh sẽ liên hệ để tư vấn xếp lớp học và ghi nhận chi tiết tại đây.
+        Bài kiểm tra đang được giảng viên thẩm định. Chuyên viên tư vấn sẽ liên hệ xếp lớp trong thời gian sớm nhất.
         {% endif %}
-      </div>
+      </p>
     </div>
     {% endif %}
   </div>
