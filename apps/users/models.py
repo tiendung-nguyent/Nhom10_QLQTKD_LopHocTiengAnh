@@ -56,6 +56,16 @@ class NhanVien(models.Model):
     def __str__(self):
         return f'{self.ho_ten} – {self.get_vai_tro_display()}'
 
+    @property
+    def ma_nhan_vien(self):
+        prefix = 'GV' if self.vai_tro == self.VaiTro.GIAO_VIEN else ('TV' if self.vai_tro == self.VaiTro.TU_VAN else 'KT')
+        return f"{prefix}{self.id:03d}"
+
+    @property
+    def ho_ten_ma(self):
+        return f"{self.ho_ten} - {self.ma_nhan_vien}"
+
+
 
 class ThongBaoEmail(models.Model):
     """Thông báo email gửi tới khách hàng."""

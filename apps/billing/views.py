@@ -197,6 +197,10 @@ def invoice_list(request):
             'so_tien_giam': float(p.so_tien_giam or 0),
         })
 
+    # Phân trang tối đa 20 phiếu học phí / trang chuẩn hệ thống
+    from apps.users.helpers import paginate_items
+    page_obj = paginate_items(request, items, per_page=20)
+
     context = {
         'today': now,
         'total_invoices': total_invoices,
@@ -205,7 +209,8 @@ def invoice_list(request):
         'total_revenue': total_revenue_str,
         'tyle_thu': tyle_thu,
         'so_chua_thu': so_chua_thu,
-        'invoice_list': items,
+        'invoice_list': page_obj,
+        'page_obj': page_obj,
     }
     return render(request, 'billing/invoice_list.html', context)
 

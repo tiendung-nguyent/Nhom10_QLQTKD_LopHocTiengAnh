@@ -57,9 +57,11 @@ class RequireLoginMiddleware:
             r'^/users/teacher/?$',
             r'^/tests/review/?$',
             r'^/tests/approve/?$',
+            r'^/tests/finalize/?$',
             r'^/tests/result/?$',
             r'^/placement/review/?$',
             r'^/placement/approve/?$',
+            r'^/placement/finalize/?$',
             r'^/placement/result/?$',
         ],
         'STAFF': [

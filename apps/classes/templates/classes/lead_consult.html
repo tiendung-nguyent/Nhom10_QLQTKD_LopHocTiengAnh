@@ -54,6 +54,11 @@
       <div style="font-size: 20px; font-weight: 800; color: var(--accent-purple); margin-top: 2px;">
         {{ test_score }}đ <span class="badge badge-purple" style="font-size: 12px; vertical-align: middle;">CEFR: {{ test_level|default:"B1" }}</span>
       </div>
+      {% if giao_vien_cham %}
+      <div style="font-size: 11.5px; color: var(--accent-emerald); font-weight: 700; margin-top: 4px;">
+        <i class="fa-solid fa-user-check"></i> GV chấm: {{ giao_vien_cham }}
+      </div>
+      {% endif %}
       {% else %}
       <div style="margin-top: 4px;">
         <span class="badge badge-coral" style="font-size: 12px; font-weight: 700;">

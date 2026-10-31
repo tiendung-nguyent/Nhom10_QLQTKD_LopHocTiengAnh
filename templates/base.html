@@ -101,7 +101,7 @@
           data-href="{% url 'placement_tests:teacher_review' %}">
           <span class="nav-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
           <span>Duyệt bài AI</span>
-          <span class="nav-badge">{{ pending_review_count|default:7 }}</span>
+          <span class="nav-badge">{{ pending_review_count|default:0 }}</span>
           <span class="nav-arrow">→</span>
         </a>
 

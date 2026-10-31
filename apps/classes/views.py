@@ -94,9 +94,14 @@ def class_status(request):
         hasattr(request, 'user') and request.user.is_authenticated and request.user.is_staff
     )
 
+    # Phân trang tối đa 20 lớp học / trang
+    from apps.users.helpers import paginate_items
+    page_obj = paginate_items(request, lop_hocs, per_page=20)
+
     context = {
         'today': now,
-        'lop_hocs': lop_hocs,
+        'lop_hocs': page_obj,
+        'page_obj': page_obj,
         'stats': classes_stats,
         'khoa_hocs': khoa_hocs,
         'is_staff': is_staff,
@@ -297,12 +302,24 @@ def lead_care(request):
 
         badge_class, badge_label = status_badges.get(h.trang_thai, ('badge-gray', h.get_trang_thai_display()))
 
-        # Lấy điểm test nếu có từ các phiên làm bài
+        # Lấy điểm test và giáo viên duyệt nếu có từ các phiên làm bài
         latest_phien = h.phien_lam_bais.filter(
             Q(ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN) |
             Q(bai_lam_ky_nangs__trang_thai_cham='GV_DA_DUYET')
         ).order_by('-id').first()
         kq = getattr(latest_phien, 'ket_qua_kiem_tra', None) if latest_phien else None
+
+        giao_vien_cham = None
+        if kq and kq.nhan_vien_xac_nhan:
+            giao_vien_cham = kq.nhan_vien_xac_nhan.ho_ten_ma
+        elif latest_phien:
+            bl_gv = latest_phien.bai_lam_ky_nangs.filter(nhan_vien_duyet__isnull=False).first()
+            if bl_gv and bl_gv.nhan_vien_duyet:
+                giao_vien_cham = bl_gv.nhan_vien_duyet.ho_ten_ma
+            elif kq:
+                df_gv = NhanVien.objects.filter(vai_tro=NhanVien.VaiTro.GIAO_VIEN).first()
+                if df_gv:
+                    giao_vien_cham = df_gv.ho_ten_ma
 
         # Mục tiêu học tập của học viên
         target_goal = '🎯 Luyện thi IELTS'
@@ -340,6 +357,7 @@ def lead_care(request):
             'target_goal': target_goal,
             'test_score': round(kq.tong_diem, 1) if kq else None,
             'test_level': kq.trinh_do if kq else None,
+            'giao_vien_cham': giao_vien_cham,
             'contact_count': len(contacts),
             'latest_contact': latest_c,
             'da_xep_lop': da_xep,
@@ -349,9 +367,14 @@ def lead_care(request):
     # Danh sách nhân viên tư vấn
     advisors = NhanVien.objects.filter(vai_tro__in=['TU_VAN', 'QUAN_LY']).order_by('ho_ten')
 
+    # Phân trang tối đa 20 hồ sơ / trang chuẩn UI hệ thống
+    from apps.users.helpers import paginate_items
+    page_obj = paginate_items(request, leads_data, per_page=20)
+
     context = {
         'today': now,
-        'leads': leads_data,
+        'leads': page_obj,
+        'page_obj': page_obj,
         'total_leads_count': total_leads_all,
         'new_leads_count': new_leads_count,
         'consulting_count': consulting_count,
@@ -570,12 +593,24 @@ def lead_consult(request, hstv_id):
 
     kh = hstv.khach_hang
 
-    # Điểm test nếu có
+    # Điểm test và giáo viên chấm nếu có
     latest_phien = hstv.phien_lam_bais.filter(
         Q(ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN) |
         Q(bai_lam_ky_nangs__trang_thai_cham='GV_DA_DUYET')
     ).order_by('-id').first()
     kq = getattr(latest_phien, 'ket_qua_kiem_tra', None) if latest_phien else None
+
+    giao_vien_cham = None
+    if kq and kq.nhan_vien_xac_nhan:
+        giao_vien_cham = kq.nhan_vien_xac_nhan.ho_ten_ma
+    elif latest_phien:
+        bl_gv = latest_phien.bai_lam_ky_nangs.filter(nhan_vien_duyet__isnull=False).first()
+        if bl_gv and bl_gv.nhan_vien_duyet:
+            giao_vien_cham = bl_gv.nhan_vien_duyet.ho_ten_ma
+        elif kq:
+            df_gv = NhanVien.objects.filter(vai_tro=NhanVien.VaiTro.GIAO_VIEN).first()
+            if df_gv:
+                giao_vien_cham = df_gv.ho_ten_ma
 
     # Lịch sử liên hệ
     contacts = list(LanLienHe.objects.filter(ho_so_tu_van=hstv).select_related('nhan_vien').order_by('-thoi_gian'))
@@ -630,6 +665,7 @@ def lead_consult(request, hstv_id):
         'student': kh,
         'test_score': round(kq.tong_diem, 1) if kq else None,
         'test_level': kq.trinh_do if kq else None,
+        'giao_vien_cham': giao_vien_cham,
         'contacts': contacts,
         'advisors': advisors,
         'current_advisor_id': current_advisor_id,

@@ -196,6 +196,11 @@
             <span class="badge badge-purple" style="font-size: 11px; margin-top: 2px;">
               CEFR: {{ lead.test_level|default:"B1" }}
             </span>
+            {% if lead.giao_vien_cham %}
+            <div style="font-size: 11px; color: var(--accent-emerald); font-weight: 700; margin-top: 3px;">
+              <i class="fa-solid fa-user-check"></i> GV: {{ lead.giao_vien_cham }}
+            </div>
+            {% endif %}
             {% else %}
             <div style="font-weight: 700; color: var(--text-primary); font-size: 13px;">
               {{ lead.target_goal|default:"🎯 Luyện thi IELTS" }}
@@ -273,6 +278,8 @@
       </tbody>
     </table>
   </div>
+  <!-- ─── PHÂN TRANG (TỐI ĐA 20 BẢN GHI / TRANG) ─────────────── -->
+  {% include 'components/pagination.html' %}
 </div>
 
 <!-- ─── MODAL 1: GHI NHẬN LIÊN HỆ & CHĂM SÓC KHÁCH HÀNG ────── -->

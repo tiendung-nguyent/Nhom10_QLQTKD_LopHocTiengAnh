@@ -505,11 +505,13 @@ def grade_speaking_with_gemini(transcript: str, task_details: dict = None, targe
     if is_empty_or_placeholder_speaking(transcript):
         return get_fallback_speaking_evaluation('', target_goal)
 
-    # Đếm số lượng từ thực tế và từ đệm ngập ngừng
+    # Đếm số lượng từ thực tế, từ đệm ngập ngừng và khoảng dừng ngắt quãng
     spoken_words = re.findall(r'\b[a-zA-Z]+\b', transcript)
     words_count = len(spoken_words)
-    hesitations = re.findall(r'\b(uh|um|uhm|er|erm|ah|ahh|hmm|like|you know)\b', transcript.lower())
-    hesitation_count = len(hesitations)
+    hesitations = re.findall(r'\b(uh|um|uhm|er|erm|ah|ahh|hmm|like|you know|well)\b', transcript.lower())
+    pauses = re.findall(r'(\.\.\.+|\[pause.*?\]|\[khoảng dừng.*?\]|\[ngập ngừng.*?\])', transcript.lower())
+    pause_count = len(pauses)
+    total_hesitations = len(hesitations) + pause_count
 
     t1_info = task_details.get('task1', '')
     t2_info = task_details.get('task2', '')
@@ -520,19 +522,21 @@ def grade_speaking_with_gemini(transcript: str, task_details: dict = None, targe
         Bạn là giám khảo IELTS Speaking Examiner chính thức khắt khe và công bằng.
         Chấm bài nói của thí sinh (mục tiêu IELTS: {target_detail}) dựa trên 3 phần thu âm sau:
 
-        [NỘI DUNG BÀI NÓI THỰC TẾ CỦA THÍ SINH (Số từ: {words_count}, Từ đệm ngập ngừng: {hesitation_count})]:
+        [NỘI DUNG BÀI NÓI THỰC TẾ CỦA THÍ SINH (Số từ: {words_count}, Từ đệm ngập ngừng: {len(hesitations)}, Khoảng dừng ngắt quãng: {pause_count})]:
         \"\"\"{transcript}\"\"\"
 
-        - Task 1 (Part 1 Personal Qs): {t1_info}
+        - Task 1 (Part 1 Personal Q): {t1_info}
         - Task 2 (Part 2 Cue Card): {t2_info}
         - Task 3 (Part 3 In-depth Discussion): {t3_info}
 
         QUY TẮC KHẢO THÍ BẮT BUỘC (CHẤM ĐIỂM THẬT & ĐÁNH GIÁ CỤ THỂ):
         1. NÓI ÍT / QUÁ NGẮN: Nếu thí sinh nói dưới 15 từ, overall tối đa Band 1.5 - 2.0; nếu từ 15 - 35 từ, overall tối đa Band 2.5 - 3.5. Nhận xét rõ vi phạm độ dài tối thiểu của bài thi.
-        2. NÓI ẬM Ừ / NGẮC NGỨ: Nếu xuất hiện nhiều từ đệm ('uh', 'um', 'er', 'ah', 'like') hoặc ngắt quãng liên tục, TRỪ NẶNG tiêu chí Fluency & Coherence xuống Band 2.0 - 3.5. Nhận xét cụ thể tật ngập ngừng.
+        2. ĐÁNH GIÁ KHOẢNG DỪNG & NGẬP NGỪNG (PAUSES & HESITATIONS):
+           - Phân tích kỹ các khoảng dừng không tự nhiên (unnatural pauses), ngắt quãng luồng tư duy và các từ đệm ậm ừ ('uh', 'um', 'er', 'ah', 'like', 'you know').
+           - Nếu thí sinh ngập ngừng, khoảng dừng ngắt quãng liên tục: BẮT BUỘC TRỪ ĐIỂM TRỰC TIẾP tiêu chí Fluency & Coherence xuống Band 2.0 - 4.0. Nhận xét chi tiết cụ thể số lần ngập ngừng ngắt quãng làm mất điểm lưu loát.
         3. KHÔNG ĐÚNG TRỌNG TÂM / LẠC ĐỀ: Nếu không trả lời đúng câu hỏi của Task 1, 2, 3 (ví dụ hỏi mentor/milestone lại nói lan man chuyện khác), TRỪ NẶNG Lexical Resource & Task Response xuống Band 2.5 - 3.5.
         4. SAI FORMAT: Nếu câu trả lời cộc lốc 1-2 từ, thiếu cấu trúc mở đầu - phát triển - kết thúc, trừ điểm Grammar và Coherence.
-        5. NHẬN XÉT: Phải đánh giá chi tiết, chỉ rõ lỗi ngập ngừng, dung lượng nói và độ chính xác của chủ đề.
+        5. NHẬN XÉT: Phải đánh giá chi tiết, chỉ rõ lỗi ngập ngừng, khoảng dừng ngắt quãng, dung lượng nói và độ chính xác của chủ đề.
 
         Chấm theo đúng 4 tiêu chí chính thức IELTS Speaking (thang điểm 0.0 - 9.0):
         1. Fluency and Coherence (Độ trôi chảy, tốc độ nói, khoảng dừng tự nhiên, tính mạch lạc)
@@ -1213,11 +1217,13 @@ def get_fallback_speaking_evaluation(transcript: str, target_goal: str):
             "transcript_evaluated": "Không có dữ liệu giọng nói / Chưa thu âm"
         }
 
-    # 2. PHÂN TÍCH TỪ NGỮ THỰC TẾ, TỪ ĐỆM ẬM Ừ VÀ TÍNH TRỌNG TÂM
+    # 2. PHÂN TÍCH TỪ NGỮ THỰC TẾ, TỪ ĐỆM ẬM Ừ, KHOẢNG DỪNG VÀ TÍNH TRỌNG TÂM
     words = re.findall(r'\b[a-zA-Z]+\b', transcript)
     words_count = len(words)
-    hesitations = re.findall(r'\b(uh|um|uhm|er|erm|ah|ahh|hmm|like|you know)\b', transcript.lower())
-    hesitation_count = len(hesitations)
+    hesitations = re.findall(r'\b(uh|um|uhm|er|erm|ah|ahh|hmm|like|you know|well)\b', transcript.lower())
+    pauses = re.findall(r'(\.\.\.+|\[pause.*?\]|\[khoảng dừng.*?\]|\[ngập ngừng.*?\])', transcript.lower())
+    pause_count = len(pauses)
+    total_hesitation_count = len(hesitations) + pause_count
 
     # Kiểm tra từ khóa trọng tâm
     keywords_general = {'study', 'work', 'live', 'english', 'learn', 'mentor', 'experience', 'technology', 'communication', 'future', 'career', 'hometown', 'important'}
@@ -1241,16 +1247,16 @@ def get_fallback_speaking_evaluation(transcript: str, target_goal: str):
         base_score = 6.5
         len_comment = f"Thời lượng nói đầy đủ ({words_count} từ), triển khai được ý chi tiết cho cả 3 Tasks."
 
-    # Phạt điểm ậm ừ ngập ngừng
+    # Phạt điểm ậm ừ ngập ngừng & khoảng dừng ngắt quãng
     fluency_deduction = 0.0
-    if hesitation_count >= 5:
-        fluency_deduction = 1.5
-        hesitation_comment = f"Xuất hiện nhiều từ đệm ngập ngừng ậm ừ ({hesitation_count} lần: {', '.join(set(hesitations))}) làm đứt quãng nhịp nói."
-    elif hesitation_count >= 2:
-        fluency_deduction = 0.8
-        hesitation_comment = f"Có xuất hiện từ đệm ngập ngừng ('{', '.join(set(hesitations))}'), phản xạ nói đôi chỗ còn chập chờn."
+    if total_hesitation_count >= 5:
+        fluency_deduction = 1.6
+        hesitation_comment = f"Xuất hiện nhiều từ đệm ngập ngừng và khoảng dừng ngắt quãng ({len(hesitations)} từ đệm, {pause_count} khoảng dừng ngập ngừng) làm đứt đoạn dòng suy nghĩ."
+    elif total_hesitation_count >= 2:
+        fluency_deduction = 0.9
+        hesitation_comment = f"Có phát hiện tật ngập ngừng và khoảng dừng nói ({len(hesitations)} từ đệm, {pause_count} khoảng dừng), phản xạ nói đôi chỗ còn chập chờn."
     else:
-        hesitation_comment = "Tốc độ nói tương đối đều đặn, ít bị ngập ngừng."
+        hesitation_comment = "Tốc độ nói tương đối đều đặn, khoảng dừng tự nhiên, ít bị ngập ngừng."
 
     # Phạt điểm không đúng trọng tâm
     topic_deduction = 0.0
@@ -1264,7 +1270,7 @@ def get_fallback_speaking_evaluation(transcript: str, target_goal: str):
     score_lr = max(1.0, round(base_score - topic_deduction, 1))
     score_gr = max(1.0, round(base_score - (0.5 if words_count < 35 else 0.0), 1))
     score_fc = max(1.0, round(base_score - fluency_deduction, 1))
-    score_pr = max(1.0, round(base_score - (0.5 if hesitation_count >= 3 else 0.0), 1))
+    score_pr = max(1.0, round(base_score - (0.5 if total_hesitation_count >= 3 else 0.0), 1))
 
     overall_val = round((score_lr + score_gr + score_fc + score_pr) / 4.0, 1)
 

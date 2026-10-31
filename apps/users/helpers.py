@@ -117,28 +117,6 @@ def check_student_tuition_paid(student):
     if not student:
         return False
 
-
-def create_system_notification(vai_tro_nhan, tieu_de, noi_dung, khach_hang=None):
-    """
-    Tạo thông báo nội bộ hệ thống đẩy tới icon chuông Noti của các lane/actor tương ứng:
-    - STUDENT: Học viên
-    - TEACHER: Giảng viên
-    - STAFF: Tư vấn Tuyển sinh
-    - ACCOUNTANT: Kế toán
-    - ALL: Tất cả các actor
-    """
-    try:
-        from apps.users.models import ThongBaoNoiBo
-        return ThongBaoNoiBo.objects.create(
-            khach_hang=khach_hang,
-            vai_tro_nhan=vai_tro_nhan,
-            tieu_de=tieu_de,
-            noi_dung=noi_dung,
-            da_doc=False
-        )
-    except Exception:
-        return None
-
     try:
         from apps.billing.models import PhieuHocPhi, BienLai, GiaoDichThanhToan
         from apps.classes.models import GhiDanh
@@ -195,5 +173,29 @@ def create_system_notification(vai_tro_nhan, tieu_de, noi_dung, khach_hang=None)
         )
     except Exception:
         return None
+
+
+def paginate_items(request, items, per_page=20):
+    """
+    Phân trang chuẩn cho mọi danh sách trong toàn bộ hệ thống (tối đa 20 bản ghi/trang).
+    Hỗ trợ sinh dải trang có dấu 3 chấm (elided_pages) đúng chuẩn UI: < 1 2 3 4 ... 15 >.
+    """
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    paginator = Paginator(items, per_page)
+    page_num = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.page(page_num)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages if paginator.num_pages > 0 else 1)
+
+    if paginator.num_pages > 1:
+        page_obj.elided_pages = list(paginator.get_elided_page_range(page_obj.number, on_each_side=2, on_ends=1))
+    else:
+        page_obj.elided_pages = [1]
+
+    return page_obj
+
 
 

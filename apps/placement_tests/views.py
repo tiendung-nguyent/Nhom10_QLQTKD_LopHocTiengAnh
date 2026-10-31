@@ -37,6 +37,219 @@ def _normalize_goal(bai_ten):
     return ''
 
 
+def clean_mcq_summary_for_teacher(raw_summary):
+    """
+    Rút gọn đối soát trắc nghiệm cho Giảng viên:
+    Chỉ hiển thị đáp án học viên đã chọn và đáp án đúng, loại bỏ hoàn toàn đề bài dài và giải thích rườm rà.
+    """
+    if not raw_summary:
+        return "Chưa có kết quả Trắc nghiệm."
+    lines = raw_summary.splitlines()
+    clean_lines = []
+    in_details = False
+    cur_q = ""
+    cur_user = ""
+    cur_correct = ""
+
+    for line in lines:
+        s = line.strip()
+        if "CHI TIẾT 25 CÂU HỎI" in s or "CHI TIẾT CÁC CÂU HỎI" in s:
+            in_details = True
+            clean_lines.append(s)
+            clean_lines.append("-" * 45)
+            continue
+        if not in_details:
+            if not s.startswith("---") and not s.startswith("==="):
+                clean_lines.append(s)
+            continue
+
+        # Nếu đã ở định dạng rút gọn sẵn
+        if s.startswith("Câu ") and "Học viên chọn:" in s and "Đáp án đúng:" in s:
+            clean_lines.append(s)
+            continue
+
+        # Nếu ở định dạng cũ nhiều dòng
+        if s.startswith("Câu ") and ":" in s:
+            if cur_q:
+                clean_lines.append(f"{cur_q}: Học viên chọn: {cur_user or '[Bỏ trống]'} | Đáp án đúng: {cur_correct}")
+            cur_q = s.split("[")[0].strip() if "[" in s else s.split(":")[0].strip()
+            cur_user = ""
+            cur_correct = ""
+        elif "Lựa chọn của học viên:" in s or "Học viên chọn:" in s:
+            part = s.split(":", 1)[-1].strip()
+            if "-->" in part: part = part.split("-->")[0].strip()
+            if "." in part: part = part.split(".")[0].strip()
+            cur_user = part
+        elif "Đáp án đúng:" in s:
+            part = s.split(":", 1)[-1].strip()
+            if "." in part: part = part.split(".")[0].strip()
+            cur_correct = part
+
+    if cur_q:
+        clean_lines.append(f"{cur_q}: Học viên chọn: {cur_user or '[Bỏ trống]'} | Đáp án đúng: {cur_correct}")
+
+    return "\n".join(clean_lines) if clean_lines else raw_summary
+
+
+def parse_mcq_summary_structured(raw):
+    """
+    Phân tích kết quả trắc nghiệm thành dữ liệu cấu trúc (KPIs + Danh sách câu hỏi)
+    để hiển thị giao diện đối soát trực quan, hiện đại, thẩm mỹ chuẩn Academix cho Giảng viên.
+    """
+    res = {
+        'total_score': 0.0,
+        'max_score': 40.0,
+        'percentage': 0,
+        'correct_count': 0,
+        'wrong_count': 0,
+        'blank_count': 0,
+        'total_questions': 25,
+        'questions': []
+    }
+    if not raw:
+        return res
+
+    import re
+
+    # 1. Trích xuất thống kê tổng quan
+    m_score = re.search(r'Tổng điểm.*?:\s*([\d\.]+)\s*/\s*([\d\.]+).*?\((\d+)%\)', raw)
+    if m_score:
+        res['total_score'] = float(m_score.group(1))
+        res['max_score'] = float(m_score.group(2))
+        res['percentage'] = int(m_score.group(3))
+    else:
+        m_old_score = re.search(r'Điểm số.*?:\s*([\d\.]+)\s*/\s*([\d\.]+)', raw)
+        if m_old_score:
+            res['total_score'] = float(m_old_score.group(1))
+            res['max_score'] = float(m_old_score.group(2))
+        m_old_pct = re.search(r'\((\d+)%\)', raw)
+        if m_old_pct:
+            res['percentage'] = int(m_old_pct.group(1))
+
+    m_c = re.search(r'Số câu đúng:\s*(\d+)/(\d+)', raw)
+    if m_c:
+        res['correct_count'] = int(m_c.group(1))
+        res['total_questions'] = int(m_c.group(2))
+    else:
+        m_old_c = re.search(r'Đúng\s+(\d+)/(\d+)\s+câu', raw)
+        if m_old_c:
+            res['correct_count'] = int(m_old_c.group(1))
+            res['total_questions'] = int(m_old_c.group(2))
+
+    m_w = re.search(r'Số câu sai:\s*(\d+)', raw)
+    if m_w:
+        res['wrong_count'] = int(m_w.group(1))
+
+    m_b = re.search(r'Số câu bỏ trống:\s*(\d+)', raw)
+    if m_b:
+        res['blank_count'] = int(m_b.group(1))
+
+    # 2. Trích xuất chi tiết từng câu hỏi
+    lines = raw.splitlines()
+    in_details = False
+    cur_q = None
+    cur_cat = ''
+    cur_user = ''
+    cur_correct = ''
+
+    for line in lines:
+        s = line.strip()
+        if 'CHI TIẾT' in s or 'Chi tiết đáp án' in s:
+            in_details = True
+            continue
+        if not in_details:
+            continue
+
+        # Định dạng 1 dòng: Câu X: Học viên chọn: Y | Đáp án đúng: Z
+        m_inline = re.match(r'Câu\s+(\d+)(?:\s*\[([^\]]+)\])?:\s*Học viên chọn:\s*([^\|]+)\s*\|\s*Đáp án đúng:\s*(.+)', s)
+        if m_inline:
+            num = int(m_inline.group(1))
+            cat = m_inline.group(2) or ''
+            u_ans = m_inline.group(3).strip()
+            c_ans = m_inline.group(4).strip()
+
+            if ' (' in c_ans: c_ans = c_ans.split(' (')[0].strip()
+            if ' (' in u_ans: u_ans = u_ans.split(' (')[0].strip()
+
+            is_blank = ('BỎ TRỐNG' in u_ans.upper() or 'BỎ TRỐNG' in s.upper() or 'CHƯA LÀM' in u_ans.upper() or u_ans in ['', '[Bỏ trống]', '[BỎ TRỐNG - CHƯA LÀM]'])
+            is_correct = (not is_blank) and (u_ans.upper() == c_ans.upper() or '✔' in s or '[ĐÚNG]' in s or '(✔ Đúng)' in s)
+
+            status = 'BLANK' if is_blank else ('CORRECT' if is_correct else 'WRONG')
+            res['questions'].append({
+                'num': num,
+                'num_str': f"{num:02d}",
+                'category': cat,
+                'user_ans': '[Chưa làm]' if is_blank else u_ans,
+                'correct_ans': c_ans,
+                'status': status,
+                'is_correct': is_correct,
+                'is_blank': is_blank,
+                'points': 1.6 if is_correct else 0.0
+            })
+            continue
+
+        # Định dạng nhiều dòng: Câu 1 [Category]: / Lựa chọn: ... / Đáp án đúng: ...
+        m_qhead = re.match(r'Câu\s+(\d+)(?:\s*\[([^\]]+)\])?:', s)
+        if m_qhead:
+            if cur_q is not None:
+                is_blank = ('BỎ TRỐNG' in cur_user.upper() or 'CHƯA LÀM' in cur_user.upper() or cur_user in ['', '[Bỏ trống]', '[BỎ TRỐNG - CHƯA LÀM]'])
+                is_correct = (not is_blank) and (cur_user.upper() == cur_correct.upper())
+                status = 'BLANK' if is_blank else ('CORRECT' if is_correct else 'WRONG')
+                res['questions'].append({
+                    'num': cur_q,
+                    'num_str': f"{cur_q:02d}",
+                    'category': cur_cat,
+                    'user_ans': '[Chưa làm]' if is_blank else cur_user,
+                    'correct_ans': cur_correct,
+                    'status': status,
+                    'is_correct': is_correct,
+                    'is_blank': is_blank,
+                    'points': 1.6 if is_correct else 0.0
+                })
+            cur_q = int(m_qhead.group(1))
+            cur_cat = m_qhead.group(2) or ''
+            cur_user = ''
+            cur_correct = ''
+            continue
+
+        if 'Lựa chọn của học viên:' in s or 'Học viên chọn:' in s:
+            part = s.split(':', 1)[-1].strip()
+            if '-->' in part: part = part.split('-->')[0].strip()
+            if '.' in part: part = part.split('.')[0].strip()
+            cur_user = part
+        elif 'Đáp án đúng:' in s:
+            part = s.split(':', 1)[-1].strip()
+            if '.' in part: part = part.split('.')[0].strip()
+            cur_correct = part
+
+    if cur_q is not None:
+        is_blank = ('BỎ TRỐNG' in cur_user.upper() or 'CHƯA LÀM' in cur_user.upper() or cur_user in ['', '[Bỏ trống]', '[BỎ TRỐNG - CHƯA LÀM]'])
+        is_correct = (not is_blank) and (cur_user.upper() == cur_correct.upper())
+        status = 'BLANK' if is_blank else ('CORRECT' if is_correct else 'WRONG')
+        res['questions'].append({
+            'num': cur_q,
+            'num_str': f"{cur_q:02d}",
+            'category': cur_cat,
+            'user_ans': '[Chưa làm]' if is_blank else cur_user,
+            'correct_ans': cur_correct,
+            'status': status,
+            'is_correct': is_correct,
+            'is_blank': is_blank,
+            'points': 1.6 if is_correct else 0.0
+        })
+
+    # Nếu chưa có wrong_count/blank_count mà đã parse ra questions: tự động tính lại
+    if not res['wrong_count'] and not res['blank_count'] and res['questions']:
+        res['correct_count'] = sum(1 for q in res['questions'] if q['status'] == 'CORRECT')
+        res['wrong_count'] = sum(1 for q in res['questions'] if q['status'] == 'WRONG')
+        res['blank_count'] = sum(1 for q in res['questions'] if q['status'] == 'BLANK')
+        res['total_questions'] = len(res['questions'])
+        res['total_score'] = round(res['correct_count'] * 1.6, 1)
+        res['percentage'] = round((res['correct_count'] / max(res['total_questions'], 1)) * 100)
+
+    return res
+
+
 def test_room(request):
     """Phòng thi thích ứng linh hoạt theo mục tiêu học tập (IELTS, ĐH, Giao tiếp, Mất gốc)."""
     if request.method == 'POST':
@@ -286,15 +499,13 @@ def test_room(request):
 
     has_paid_tuition = check_student_tuition_paid(student)
 
-    # Đề bài Speaking & Writing thích ứng theo mục tiêu của học viên
+    # Đề bài Speaking & Writing thích ứng theo mục tiêu của học viên (Task 1 chỉ hỏi 1 câu ngắn)
     speaking_tasks_bank = {
         'IELTS': {
-            'task1_badge': 'Task 1 (3 - 4 phút) · IELTS Speaking Part 1',
-            'task1_title': 'Trả lời câu hỏi cá nhân ngắn (Bản thân, Thói quen & Dự định học tập)',
-            'task1_timer': 'Chuẩn bị: 10s · Nói: 30s/câu (Auto stop 30s)',
-            'task1_q1': 'Can you tell me about your hometown and what makes it a pleasant place to live?',
-            'task1_q2': 'Do you prefer studying or working in the early morning or late evening, and why?',
-            'task1_q3': 'How important is achieving a high IELTS band for your future international aspirations?',
+            'task1_badge': 'Task 1 (1 - 2 phút) · IELTS Speaking Part 1',
+            'task1_title': 'Trả lời 01 câu hỏi cá nhân ngắn (Bản thân, Thói quen & Dự định học tập)',
+            'task1_timer': 'Chuẩn bị: 10s · Nói: 30s (Auto stop 30s)',
+            'task1_q1': 'Can you introduce yourself, describe your current studies or profession, and explain how achieving your IELTS goal will benefit your future?',
             'task2_badge': 'Task 2 (5 - 6 phút) · IELTS Speaking Part 2 Cue Card',
             'task2_title': 'Trình bày theo chủ đề thẻ gợi ý (Long-turn Speaking 2 phút)',
             'task2_timer': 'Chuẩn bị: 1 phút · Nói: 2 phút (Auto stop 120s)',
@@ -307,12 +518,10 @@ def test_room(request):
             'task3_hints': 'Do you agree or disagree? Discuss the benefits and limitations of AI vs. genuine human intercultural communication.',
         },
         'DAU_RA_DH': {
-            'task1_badge': 'Phần 1 (3 - 4 phút) · Tương tác xã hội VSTEP',
+            'task1_badge': 'Phần 1 (1 - 2 phút) · Tương tác xã hội VSTEP',
             'task1_title': 'Tương tác xã hội & Giới thiệu thông tin sinh viên',
-            'task1_timer': 'Chuẩn bị: 10s · Nói: 30s/câu (Auto stop 30s)',
-            'task1_q1': 'Can you introduce your university, your current major, and why you selected this field?',
-            'task1_q2': 'What effective study habits have helped you manage academic deadlines at university?',
-            'task1_q3': 'Why is fulfilling the university foreign language exit requirement crucial for your graduation?',
+            'task1_timer': 'Chuẩn bị: 10s · Nói: 30s (Auto stop 30s)',
+            'task1_q1': 'Can you introduce your university, your current academic major, and why fulfilling the foreign language requirement is crucial for your graduation and future career?',
             'task2_badge': 'Phần 2 (5 - 6 phút) · Thảo luận giải pháp VSTEP',
             'task2_title': 'Thảo luận và lựa chọn giải pháp khả thi nhất',
             'task2_timer': 'Chuẩn bị: 1 phút · Nói: 2 phút (Auto stop 120s)',
@@ -325,12 +534,10 @@ def test_room(request):
             'task3_hints': 'Discuss the role of internships, adaptability to market demands, and how university students can prepare for real employment.',
         },
         'GIAO_TIEP': {
-            'task1_badge': 'Task 1 (3 - 4 phút) · Giới thiệu bản thân & Môi trường công sở',
+            'task1_badge': 'Task 1 (1 - 2 phút) · Giới thiệu bản thân & Môi trường công sở',
             'task1_title': 'Giới thiệu bản thân, vị trí công tác & Mục tiêu giao tiếp công việc',
-            'task1_timer': 'Chuẩn bị: 10s · Nói: 30s/câu (Auto stop 30s)',
-            'task1_q1': 'Could you please introduce yourself, your current job role, and your everyday workplace responsibilities?',
-            'task1_q2': 'In what professional situations do you find communicating in English most challenging?',
-            'task1_q3': 'What specific communication milestones do you hope to accomplish after this workplace course?',
+            'task1_timer': 'Chuẩn bị: 10s · Nói: 30s (Auto stop 30s)',
+            'task1_q1': 'Could you please introduce yourself, your current job role and workplace responsibilities, and share what communication milestones you hope to achieve?',
             'task2_badge': 'Task 2 (5 - 6 phút) · Thuyết trình công việc & Dự án',
             'task2_title': 'Thuyết trình 2 phút báo cáo tiến độ công việc hoặc giải pháp làm việc nhóm',
             'task2_timer': 'Chuẩn bị: 1 phút · Nói: 2 phút (Auto stop 120s)',
@@ -343,12 +550,10 @@ def test_room(request):
             'task3_hints': 'How would you address this issue diplomatically? Propose a collaborative resolution that protects company interests while preserving the client relationship.',
         },
         'MAT_GOC': {
-            'task1_badge': 'Task 1 (3 - 4 phút) · Hỏi đáp làm quen & Sinh hoạt thường ngày',
-            'task1_title': 'Trả lời 3 câu hỏi đời sống quen thuộc (Bản thân, Gia đình, Thói quen)',
-            'task1_timer': 'Chuẩn bị: 10s · Nói: 30s/câu (Auto stop 30s)',
-            'task1_q1': 'What is your name, where do you live, and what is your favorite daily hobby?',
-            'task1_q2': 'Can you describe what you usually do on Saturday and Sunday morning?',
-            'task1_q3': 'Why do you feel now is the right time for you to restart learning English from the basics?',
+            'task1_badge': 'Task 1 (1 - 2 phút) · Hỏi đáp làm quen căn bản',
+            'task1_title': 'Trả lời 01 câu hỏi làm quen (Bản thân & Sở thích đời sống)',
+            'task1_timer': 'Chuẩn bị: 10s · Nói: 30s (Auto stop 30s)',
+            'task1_q1': 'What is your full name, where are you currently living, and what is your favorite daily hobby that brings you happiness?',
             'task2_badge': 'Task 2 (5 - 6 phút) · Miêu tả một người thân hoặc sở thích',
             'task2_title': 'Nói về một chủ đề gần gũi, quen thuộc trong cuộc sống',
             'task2_timer': 'Chuẩn bị: 1 phút · Nói: 2 phút (Auto stop 120s)',
@@ -509,21 +714,15 @@ def submit_mcq(request):
         }
         detailed_results.append(item)
 
-        # Định dạng văn bản đối soát chi tiết
+        # Định dạng văn bản đối soát thu gọn: chỉ ghi đáp án học viên chọn và đáp án đúng
         if is_correct:
-            ans_str = f"Lựa chọn của học viên: {user_ans}. {user_opt_text}  -->  ✔ [ĐÚNG] (+{point_per_q}đ)"
+            ans_str = f"Học viên chọn: {user_ans} | Đáp án đúng: {correct_ans} (✔ Đúng)"
         elif is_blank:
-            ans_str = f"Lựa chọn của học viên: [BỎ TRỐNG - CHƯA LÀM]  -->  ⚠️ [TRỪ ĐIỂM - 0đ]"
+            ans_str = f"Học viên chọn: [Bỏ trống] | Đáp án đúng: {correct_ans} (⚠️ Bỏ trống - Trừ điểm)"
         else:
-            ans_str = f"Lựa chọn của học viên: {user_ans}. {user_opt_text}  -->  ❌ [SAI] (0đ)"
+            ans_str = f"Học viên chọn: {user_ans} | Đáp án đúng: {correct_ans} (❌ Sai)"
 
-        text_log_items.append(
-            f"Câu {idx} [{cat_label}]:\n"
-            f"  - Đề bài: {q_text}\n"
-            f"  - {ans_str}\n"
-            f"  - Đáp án đúng: {correct_ans}. {correct_opt_text}\n"
-            f"  - Giải thích: {explanation}"
-        )
+        text_log_items.append(f"Câu {idx:02d}: {ans_str}")
 
     score = round((correct_count / max(total_questions, 1)) * 40.0, 1)
     percentage = round((correct_count / max(total_questions, 1)) * 100)
@@ -1326,6 +1525,32 @@ def test_result(request):
 
     goal_placement = get_goal_placement_info(goal_type, total, mcq, writing, speaking)
 
+    examiner_info = None
+    teacher_writing_comment = ""
+    teacher_speaking_comment = ""
+    teacher_mcq_comment = ""
+    if selected_phien:
+        kq_obj = getattr(selected_phien, 'ket_qua_kiem_tra', None)
+        if kq_obj and kq_obj.nhan_vien_xac_nhan:
+            examiner_info = kq_obj.nhan_vien_xac_nhan.ho_ten_ma
+        else:
+            bl_gv = selected_phien.bai_lam_ky_nangs.filter(nhan_vien_duyet__isnull=False).first()
+            if bl_gv and bl_gv.nhan_vien_duyet:
+                examiner_info = bl_gv.nhan_vien_duyet.ho_ten_ma
+            elif is_teacher_approved:
+                from apps.users.models import NhanVien
+                df_teacher = NhanVien.objects.filter(vai_tro=NhanVien.VaiTro.GIAO_VIEN).first()
+                if df_teacher:
+                    examiner_info = df_teacher.ho_ten_ma
+
+        for b in selected_phien.bai_lam_ky_nangs.all():
+            if b.ky_nang == 'WRITING' and b.nhan_xet_gv:
+                teacher_writing_comment = b.nhan_xet_gv
+            elif b.ky_nang == 'SPEAKING' and b.nhan_xet_gv:
+                teacher_speaking_comment = b.nhan_xet_gv
+            elif b.ky_nang == 'TRAC_NGHIEM' and b.nhan_xet_gv:
+                teacher_mcq_comment = b.nhan_xet_gv
+
     scale_type = goal_score.get('scale_type')
     main_num = float(goal_score.get('main_score_number', 0) or 0)
     if scale_type == 'IELTS_BAND':
@@ -1344,7 +1569,11 @@ def test_result(request):
         'student_speaking_answer': student_speaking_answer,
         'audio_url': audio_url,
         'is_teacher_approved': is_teacher_approved,
+        'examiner_info': examiner_info,
         'teacher_note': teacher_note,
+        'teacher_writing_comment': teacher_writing_comment,
+        'teacher_speaking_comment': teacher_speaking_comment,
+        'teacher_mcq_comment': teacher_mcq_comment,
         'goal_score': goal_score,
         'ring_pct': ring_pct,
         'goal_type': goal_type,
@@ -1387,7 +1616,7 @@ def teacher_review(request):
     is_approved_now = (request.GET.get('approved') == '1')
 
     # 1. TRUY VẤN TẤT CẢ CÁC BÀI THI HỌC VIÊN ĐÃ LÀM TỪ CSDL (Loại bỏ các bài ở trạng thái Lưu trữ)
-    all_phiens = PhienLamBai.objects.exclude(
+    all_phiens_qs = PhienLamBai.objects.exclude(
         ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
     ).select_related(
         'ho_so_tu_van__khach_hang', 'bai_kiem_tra', 'ket_qua_kiem_tra'
@@ -1396,6 +1625,30 @@ def teacher_review(request):
         'cau_tra_lois__cham_diem_ais',
         'cau_tra_lois__cau_hoi'
     ).order_by('-hoan_thanh', '-bat_dau', '-id')
+
+    # LỌC DUYỆT BÀI THI: CHỈ HIỂN THỊ BÀI MỚI NHẤT CỦA MỖI MỤC TIÊU CHO TỪNG HỌC VIÊN
+    seen_student_goals = set()
+    all_phiens = []
+    for p in all_phiens_qs:
+        kh = p.ho_so_tu_van.khach_hang if p.ho_so_tu_van else None
+        student_key = kh.id if kh else f"HSTV_{p.ho_so_tu_van_id}"
+        bai_ten = p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else ''
+        if 'IELTS' in bai_ten:
+            g_key = 'IELTS'
+        elif 'DAU_RA' in bai_ten or 'DH' in bai_ten or 'VSTEP' in bai_ten:
+            g_key = 'DAU_RA_DH'
+        elif 'GIAO_TIEP' in bai_ten:
+            g_key = 'GIAO_TIEP'
+        elif 'MAT_GOC' in bai_ten:
+            g_key = 'MAT_GOC'
+        else:
+            g_key = 'IELTS'
+
+        pair_key = (student_key, g_key)
+        # Giữ lại bài mới nhất của mục tiêu đó, hoặc phiên thi đang được chọn trực tiếp ?session=X
+        if (session_param and str(p.id) == str(session_param)) or pair_key not in seen_student_goals:
+            seen_student_goals.add(pair_key)
+            all_phiens.append(p)
 
     formatted_tests = []
     for p in all_phiens:
@@ -1588,6 +1841,7 @@ def teacher_review(request):
         w_answer = "Chưa có bài nộp Writing của học viên."
         s_transcript = "Chưa có bản thu âm Speaking của học viên."
         mcq_summary = "Chưa có kết quả Trắc nghiệm."
+        raw_mcq_content = ""
         audio_url = ""
 
         for tl in phien_db.cau_tra_lois.all():
@@ -1597,7 +1851,10 @@ def teacher_review(request):
                 s_transcript = tl.noi_dung_tra_loi or s_transcript
                 if tl.audio_url: audio_url = tl.audio_url
             elif tl.cau_hoi and (tl.cau_hoi.ky_nang == CauHoi.KyNang.READING or tl.cau_hoi.loai == CauHoi.Loai.TRAC_NGHIEM):
-                mcq_summary = tl.noi_dung_tra_loi or mcq_summary
+                raw_mcq_content = tl.noi_dung_tra_loi or ""
+                mcq_summary = clean_mcq_summary_for_teacher(raw_mcq_content) if raw_mcq_content else mcq_summary
+
+        mcq_parsed = parse_mcq_summary_structured(raw_mcq_content or mcq_summary)
 
         # Lấy nhận xét & rubric AI từ CSDL
         ai_comment = "AI đã hoàn tất đánh giá sơ bộ theo chuẩn CEFR."
@@ -1712,6 +1969,7 @@ def teacher_review(request):
                 'transcript': s_transcript,
                 'writing_text': w_answer,
                 'mcq_summary': mcq_summary,
+                'mcq_parsed': mcq_parsed,
                 'audio_url': audio_url,
             },
             'cham_diem_ai': {
@@ -1724,7 +1982,7 @@ def teacher_review(request):
             'ai_criteria': ai_criteria,
             'bai_lam': {
                 'diem_dieu_chinh': round(current_teacher_score, 1),
-                'nhan_xet_gv': 'Học viên hoàn thành bài kiểm tra theo đúng chuẩn yêu cầu.',
+                'nhan_xet_gv': bl_cur.nhan_xet_gv if (bl_cur and bl_cur.nhan_xet_gv) else '',
                 'trang_thai_cham': bl_cur.trang_thai_cham if bl_cur else 'CHO_CHAM',
             },
         }
@@ -1751,7 +2009,7 @@ def teacher_review(request):
 
 
 def approve_skill(request):
-    """GV phê duyệt điểm cho 1 kỹ năng – Chốt điểm & tự động chuyển sang Tuyển sinh."""
+    """GV lưu điểm điều chỉnh & nhận xét riêng cho 1 kỹ năng cụ thể (Writing, Speaking, hoặc Trắc nghiệm)."""
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
@@ -1759,47 +2017,36 @@ def approve_skill(request):
     ky_nang = request.POST.get('ky_nang', 'SPEAKING').upper()
     diem_dieu_chinh = request.POST.get('diem_dieu_chinh')
     nhan_xet_gv = request.POST.get('nhan_xet_gv', '').strip()
-    trinh_do = request.POST.get('trinh_do', 'B1')
 
     if phien_id:
         phien_db = PhienLamBai.objects.filter(pk=phien_id).first()
         if phien_db:
-            # Cập nhật hoặc tạo BaiLamKyNang
-            bai_lam = BaiLamKyNang.objects.filter(phien_lam_bai=phien_db, ky_nang=ky_nang).first()
-            if not bai_lam:
-                bai_lam = BaiLamKyNang.objects.create(
-                    phien_lam_bai=phien_db,
-                    ky_nang=ky_nang,
-                    diem_tu_dong=float(diem_dieu_chinh or 0.0)
-                )
+            # Lấy thông tin Giáo viên đang duyệt từ session hoặc CSDL
+            current_teacher = None
+            u_email = request.session.get('user_email')
+            if u_email:
+                current_teacher = NhanVien.objects.filter(email=u_email).first()
+            if not current_teacher:
+                current_teacher = NhanVien.objects.filter(vai_tro=NhanVien.VaiTro.GIAO_VIEN).first()
+
+            # Cập nhật hoặc tạo BaiLamKyNang cho kỹ năng này
+            bai_lam, _ = BaiLamKyNang.objects.get_or_create(
+                phien_lam_bai=phien_db,
+                ky_nang=ky_nang,
+                defaults={'diem_tu_dong': float(diem_dieu_chinh or 0.0)}
+            )
 
             if diem_dieu_chinh is not None:
                 try:
                     bai_lam.diem_dieu_chinh = float(diem_dieu_chinh)
                 except ValueError:
                     pass
+            bai_lam.nhan_xet_gv = nhan_xet_gv
+            bai_lam.nhan_vien_duyet = current_teacher
             bai_lam.trang_thai_cham = BaiLamKyNang.TrangThaiCham.GV_DA_DUYET
             bai_lam.save()
 
-            # Nhận diện mục tiêu học tập của bài thi
-            bai_ten = phien_db.bai_kiem_tra.ten_bai if phien_db.bai_kiem_tra else ''
-            if 'IELTS' in bai_ten:
-                candidate_goal = 'IELTS'
-            elif 'DAU_RA' in bai_ten or 'DH' in bai_ten or 'VSTEP' in bai_ten:
-                candidate_goal = 'DAU_RA_DH'
-            elif 'GIAO_TIEP' in bai_ten:
-                candidate_goal = 'GIAO_TIEP'
-            elif 'MAT_GOC' in bai_ten:
-                candidate_goal = 'MAT_GOC'
-            elif phien_db.ho_so_tu_van and phien_db.ho_so_tu_van.khoa_de_xuat:
-                kd_name = phien_db.ho_so_tu_van.khoa_de_xuat.ten_khoa.upper()
-                if 'IELTS' in kd_name: candidate_goal = 'IELTS'
-                elif 'GIAO TIEP' in kd_name or 'COMMUNICATION' in kd_name: candidate_goal = 'GIAO_TIEP'
-                else: candidate_goal = 'IELTS'
-            else:
-                candidate_goal = 'IELTS'
-
-            # Tính chính xác tổng điểm 3 bài kiểm tra
+            # Tính lại tổng điểm 3 kỹ năng để cập nhật tức thời
             eff_mcq = 0.0
             eff_wri = 0.0
             eff_spk = 0.0
@@ -1813,49 +2060,127 @@ def approve_skill(request):
                     eff_spk = val
             total_3_skills = round(eff_mcq + eff_wri + eff_spk, 1)
 
-            # Lấy thông tin xếp loại & gợi ý xếp lớp chuẩn theo mục tiêu
-            placement_info = get_goal_placement_info(candidate_goal, total_3_skills, eff_mcq, eff_wri, eff_spk)
-
-            # Xác định nhãn trình độ chính xác (ví dụ IELTS Fighter Band 4.5-5.5)
-            final_level_label = placement_info['level_label']
-            for opt in placement_info['levels_list']:
-                if opt['value'] == trinh_do:
-                    final_level_label = opt['label']
-                    break
-
-            # Tạo / Cập nhật KetQuaKiemTra
-            kq, created = KetQuaKiemTra.objects.get_or_create(
-                phien_lam_bai=phien_db,
-                defaults={
-                    'tong_diem': total_3_skills,
-                    'trinh_do': final_level_label,
-                    'trang_thai': KetQuaKiemTra.TrangThai.DA_XAC_NHAN,
-                    'ngay_xac_nhan': timezone.now(),
-                }
-            )
-            if not created:
+            kq = KetQuaKiemTra.objects.filter(phien_lam_bai=phien_db).first()
+            if kq:
                 kq.tong_diem = total_3_skills
-                kq.trinh_do = final_level_label
-                kq.trang_thai = KetQuaKiemTra.TrangThai.DA_XAC_NHAN
-                kq.ngay_xac_nhan = timezone.now()
-                kq.save()
-
-            # Cập nhật trạng thái Hồ sơ tư vấn sang ĐÃ TEST và gán khóa học đề xuất chuẩn
-            if phien_db.ho_so_tu_van:
-                hstv = phien_db.ho_so_tu_van
-                hstv.trang_thai = HoSoTuVan.TrangThai.DA_TEST
-                khoa_obj = KhoaHoc.objects.filter(id=placement_info['khoa_id']).first()
-                if not khoa_obj:
-                    khoa_obj = KhoaHoc.objects.filter(trinh_do=placement_info['cefr']).first()
-                if khoa_obj:
-                    hstv.khoa_de_xuat = khoa_obj
-                hstv.save()
+                kq.nhan_vien_xac_nhan = current_teacher
+                kq.save(update_fields=['tong_diem', 'nhan_vien_xac_nhan'])
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
         return JsonResponse({
             'status': 'success',
-            'message': f'Đã phê duyệt kết quả kỹ năng {ky_nang}! Hồ sơ học viên đã được chuyển tiếp sang bộ phận Tư vấn Tuyển sinh.',
+            'message': f'Đã lưu điểm điều chỉnh ({diem_dieu_chinh}đ) và nhận xét riêng cho kỹ năng {ky_nang} thành công!',
         })
 
-    redirect_url = f"{reverse('placement_tests:teacher_review')}?session={phien_id}&skill={ky_nang}&approved=1"
+    redirect_url = f"{reverse('placement_tests:teacher_review')}?session={phien_id}&skill={ky_nang}&saved=1"
+    return redirect(redirect_url)
+
+
+def finalize_test_result(request):
+    """Phần riêng biệt ở dưới cùng: Chốt Khung năng lực CEFR & Hoàn tất phê duyệt chuyển Tuyển sinh."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    phien_id = request.POST.get('phien_id')
+    trinh_do = request.POST.get('trinh_do', 'B1')
+
+    if not phien_id:
+        return redirect('placement_tests:teacher_review')
+
+    phien_db = PhienLamBai.objects.filter(pk=phien_id).first()
+    if not phien_db:
+        return redirect('placement_tests:teacher_review')
+
+    current_teacher = None
+    u_email = request.session.get('user_email')
+    if u_email:
+        current_teacher = NhanVien.objects.filter(email=u_email).first()
+    if not current_teacher:
+        current_teacher = NhanVien.objects.filter(vai_tro=NhanVien.VaiTro.GIAO_VIEN).first()
+
+    # Nhận diện mục tiêu học tập của bài thi
+    bai_ten = phien_db.bai_kiem_tra.ten_bai if phien_db.bai_kiem_tra else ''
+    if 'IELTS' in bai_ten:
+        candidate_goal = 'IELTS'
+    elif 'DAU_RA' in bai_ten or 'DH' in bai_ten or 'VSTEP' in bai_ten:
+        candidate_goal = 'DAU_RA_DH'
+    elif 'GIAO_TIEP' in bai_ten:
+        candidate_goal = 'GIAO_TIEP'
+    elif 'MAT_GOC' in bai_ten:
+        candidate_goal = 'MAT_GOC'
+    elif phien_db.ho_so_tu_van and phien_db.ho_so_tu_van.khoa_de_xuat:
+        kd_name = phien_db.ho_so_tu_van.khoa_de_xuat.ten_khoa.upper()
+        if 'IELTS' in kd_name: candidate_goal = 'IELTS'
+        elif 'GIAO TIEP' in kd_name or 'COMMUNICATION' in kd_name: candidate_goal = 'GIAO_TIEP'
+        else: candidate_goal = 'IELTS'
+    else:
+        candidate_goal = 'IELTS'
+
+    eff_mcq = 0.0
+    eff_wri = 0.0
+    eff_spk = 0.0
+    for b in phien_db.bai_lam_ky_nangs.all():
+        val = float(b.diem_dieu_chinh if b.diem_dieu_chinh is not None else (b.diem_tu_dong or 0.0))
+        if b.ky_nang == 'TRAC_NGHIEM':
+            eff_mcq = val
+        elif b.ky_nang == 'WRITING':
+            eff_wri = val
+        elif b.ky_nang == 'SPEAKING':
+            eff_spk = val
+    total_3_skills = round(eff_mcq + eff_wri + eff_spk, 1)
+
+    placement_info = get_goal_placement_info(candidate_goal, total_3_skills, eff_mcq, eff_wri, eff_spk)
+
+    final_level_label = placement_info['level_label']
+    for opt in placement_info['levels_list']:
+        if opt['value'] == trinh_do:
+            final_level_label = opt['label']
+            break
+
+    # Cập nhật KetQuaKiemTra
+    kq, created = KetQuaKiemTra.objects.get_or_create(
+        phien_lam_bai=phien_db,
+        defaults={
+            'tong_diem': total_3_skills,
+            'trinh_do': final_level_label,
+            'trang_thai': KetQuaKiemTra.TrangThai.DA_XAC_NHAN,
+            'nhan_vien_xac_nhan': current_teacher,
+            'ngay_xac_nhan': timezone.now(),
+        }
+    )
+    if not created:
+        kq.tong_diem = total_3_skills
+        kq.trinh_do = final_level_label
+        kq.trang_thai = KetQuaKiemTra.TrangThai.DA_XAC_NHAN
+        kq.nhan_vien_xac_nhan = current_teacher
+        kq.ngay_xac_nhan = timezone.now()
+        kq.save()
+
+    # Cập nhật trạng thái Hồ sơ tư vấn sang ĐÃ TEST và gán khóa học đề xuất chuẩn
+    if phien_db.ho_so_tu_van:
+        hstv = phien_db.ho_so_tu_van
+        hstv.trang_thai = HoSoTuVan.TrangThai.DA_TEST
+        khoa_obj = KhoaHoc.objects.filter(id=placement_info['khoa_id']).first()
+        if not khoa_obj:
+            khoa_obj = KhoaHoc.objects.filter(trinh_do=placement_info['cefr']).first()
+        if khoa_obj:
+            hstv.khoa_de_xuat = khoa_obj
+        hstv.save()
+
+        # Bắn thông báo nội bộ tới Tư vấn Tuyển sinh
+        from apps.users.helpers import create_system_notification
+        create_system_notification(
+            vai_tro_nhan='STAFF',
+            tieu_de=f"Học viên {hstv.khach_hang.ho_ten} đã được duyệt điểm!",
+            noi_dung=f"Giáo viên {current_teacher.ho_ten_ma if current_teacher else ''} đã hoàn tất duyệt: {total_3_skills}đ, CEFR {final_level_label}. Khóa đề xuất: {placement_info['khoa_de_xuat']}.",
+            khach_hang=hstv.khach_hang
+        )
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Đã chốt Khung năng lực CEFR và phê duyệt chính thức toàn bài thi! Hồ sơ học viên đã được chuyển tiếp sang bộ phận Tuyển sinh.',
+        })
+
+    redirect_url = f"{reverse('placement_tests:teacher_review')}?session={phien_id}&approved=1"
     return redirect(redirect_url)

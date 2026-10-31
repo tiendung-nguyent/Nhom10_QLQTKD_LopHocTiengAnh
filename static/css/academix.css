@@ -1081,3 +1081,120 @@ tbody tr:hover td { background: #F8FAFC; }
   .mobile-overlay  { display: none !important; }
   .mobile-menu-btn { display: none !important; }
 }
+
+
+/* ✚ ┐┐ SLEEK PAGINATION COMPONENT (
+EXACT REFERENCE STYLE) 
+┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐┐ */
+.sleek-pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px 12px;
+  width: 100%;
+}
+
+.sleek-pagination-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 24px;
+  background: #18192A;
+  border-radius: 999px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+  user-select: none;
+}
+
+.page-nav-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: #7A859E;
+  font-size: 13px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.page-nav-arrow:hover:not(.disabled) {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.page-nav-arrow.disabled {
+  color: #3F4458;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.page-nav-numbers {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-nav-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #8C96AD;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-width: 20px;
+  text-align: center;
+}
+
+.page-nav-btn:hover:not(.active) {
+  color: #FFFFFF;
+}
+
+.page-nav-btn.active {
+  color: #FFFFFF;
+  font-weight: 700;
+  cursor: default;
+}
+
+/* Red / Coral underline matching reference screenshot */
+.page-nav-btn.active::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 15%;
+  right: 15%;
+  height: 2px;
+  background: #FF5A5F;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(255, 90, 95, 0.6);
+}
+
+.page-nav-ellipsis {
+  color: #7A859E;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  padding: 0 2px;
+  user-select: none;
+}
+
+ @media (max-width: 600px) {
+  .sleek-pagination-nav {
+    gap: 8px;
+    padding: 8px 14px;
+  }
+  .page-nav-numbers {
+    gap: 10px;
+  }
+  .page-nav-btn {
+    font-size: 13px;
+    padding: 2px 4px;
+  }
+}

@@ -280,6 +280,12 @@ class BaiLamKyNang(models.Model):
         verbose_name='Điểm điều chỉnh',
         help_text='Giáo viên sửa (nullable)',
     )
+    nhan_xet_gv = models.TextField(
+        blank=True,
+        default='',
+        verbose_name='Nhận xét của giáo viên',
+        help_text='Nhận xét riêng của giáo viên cho kỹ năng này',
+    )
     nhan_vien_duyet = models.ForeignKey(
         NhanVien,
         on_delete=models.SET_NULL,

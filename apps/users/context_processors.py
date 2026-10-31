@@ -114,6 +114,37 @@ def role_context(request):
     except Exception:
         pass
 
+    # Đếm số lượng bài thi học viên đã nộp trong CSDL (chỉ tính bài mới nhất của từng mục tiêu cho mỗi học viên)
+    submitted_tests_count = 0
+    try:
+        from apps.placement_tests.models import PhienLamBai, KetQuaKiemTra
+        from django.db.models import Q
+        active_phiens = PhienLamBai.objects.exclude(
+            ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
+        ).filter(
+            Q(trang_thai=PhienLamBai.TrangThai.HOAN_THANH) | Q(bai_lam_ky_nangs__isnull=False)
+        ).select_related('ho_so_tu_van__khach_hang', 'bai_kiem_tra').order_by('-hoan_thanh', '-bat_dau', '-id')
+
+        seen_goals = set()
+        dedup_count = 0
+        for p in active_phiens:
+            kh_id = p.ho_so_tu_van.khach_hang_id if p.ho_so_tu_van else f"HSTV_{p.ho_so_tu_van_id}"
+            b_name = p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else ''
+            g_key = 'IELTS'
+            if 'DAU_RA' in b_name or 'DH' in b_name or 'VSTEP' in b_name:
+                g_key = 'DAU_RA_DH'
+            elif 'GIAO_TIEP' in b_name:
+                g_key = 'GIAO_TIEP'
+            elif 'MAT_GOC' in b_name:
+                g_key = 'MAT_GOC'
+            pkey = (kh_id, g_key)
+            if pkey not in seen_goals:
+                seen_goals.add(pkey)
+                dedup_count += 1
+        submitted_tests_count = dedup_count
+    except Exception:
+        submitted_tests_count = 0
+
     return {
         'current_role': role,
         'user_role': role,
@@ -126,7 +157,7 @@ def role_context(request):
         'can_take_test': can_take_test,
         'is_new_student': is_new_student,
         'student_goal': request.session.get('student_goal', ''),
-        'pending_review_count': 7,
+        'pending_review_count': submitted_tests_count,
         'waiting_assign_count': 6,
         'active_leads_count': active_leads_count,
         'pending_payment_count': 4,

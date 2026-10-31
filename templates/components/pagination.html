@@ -1,0 +1,38 @@
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<div class="sleek-pagination-container">
+  <nav class="sleek-pagination-nav" aria-label="Pagination">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="page-nav-arrow" title="Trang trước" aria-label="Previous Page">
+        <i class="fa-solid fa-chevron-left"></i>
+      </a>
+    {% else %}
+      <span class="page-nav-arrow disabled" aria-disabled="true">
+        <i class="fa-solid fa-chevron-left"></i>
+      </span>
+    {% endif %}
+
+    <div class="page-nav-numbers">
+      {% for p in page_obj.elided_pages %}
+        {% if p == page_obj.paginator.ELLIPSIS or p == '…' or p == '...' %}
+          <span class="page-nav-ellipsis">…</span>
+        {% elif p == page_obj.number %}
+          <span class="page-nav-btn active" aria-current="page">{{ p }}</span>
+        {% else %}
+          <a href="?page={{ p }}{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="page-nav-btn">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% for k, v in request.GET.items %}{% if k != 'page' %}&{{ k }}={{ v }}{% endif %}{% endfor %}" class="page-nav-arrow" title="Trang kế tiếp" aria-label="Next Page">
+        <i class="fa-solid fa-chevron-right"></i>
+      </a>
+    {% else %}
+      <span class="page-nav-arrow disabled" aria-disabled="true">
+        <i class="fa-solid fa-chevron-right"></i>
+      </span>
+    {% endif %}
+  </nav>
+</div>
+{% endif %}
+
