@@ -11,7 +11,7 @@
   <!-- Google Fonts Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Lexend:wght@500;600;700&display=swap"
     rel="stylesheet">
 
   <!-- Font Awesome Icons -->
@@ -63,29 +63,29 @@
       <nav class="sidebar-nav">
         {% block sidebar_main %}
 
-        {# ── A. HỌC VIÊN (Student Portal) ── #}
+        {# ── A. HỌC VIÊN ── #}
         {% if request.user.role == 'STUDENT' or current_role == 'STUDENT' %}
-        <div class="sidebar-section-label">Học viên (Student Portal)</div>
+        <div class="sidebar-section-label">Học viên</div>
         <a href="{% url 'users:student_dashboard' %}" class="nav-item" data-href="{% url 'users:student_dashboard' %}">
           <span class="nav-icon"><i class="fa-solid fa-table-cells-large"></i></span>
-          <span>Dashboard Học viên</span>
+          <span>Tổng quan</span>
           <span class="nav-arrow">→</span>
         </a>
         <a href="{% url 'placement_tests:test_room' %}" class="nav-item"
           data-href="{% url 'placement_tests:test_room' %}">
           <span class="nav-icon"><i class="fa-solid fa-file-pen"></i></span>
-          <span>Phòng thi kiểm tra</span>
+          <span>Kiểm tra đầu vào</span>
           <span class="nav-arrow">→</span>
         </a>
         <a href="{% url 'placement_tests:test_result' %}" class="nav-item"
           data-href="{% url 'placement_tests:test_result' %}">
           <span class="nav-icon"><i class="fa-solid fa-chart-pie"></i></span>
-          <span>Kết quả & Điểm số</span>
+          <span>Kết quả</span>
           <span class="nav-arrow">→</span>
         </a>
         <a href="{% url 'billing:payment_detail' %}" class="nav-item" data-href="{% url 'billing:payment_detail' %}">
           <span class="nav-icon"><i class="fa-solid fa-wallet"></i></span>
-          <span>Học phí & Thanh toán</span>
+          <span>Học phí</span>
           <span class="nav-arrow">→</span>
         </a>
 
@@ -199,11 +199,12 @@
         </div>
 
         <!-- Pill Capsule Search Bar in Header -->
+        {% if request.user.role != 'STUDENT' and current_role != 'STUDENT' %}
         <div class="header-search">
           <i class="fa-solid fa-magnifying-glass search-icon"></i>
-          <input type="text" id="global-search" placeholder="Search anything (học viên, ca thi, lớp học)...">
-          <i class="fa-solid fa-microphone search-mic" title="Tìm bằng giọng nói"></i>
+          <input type="text" id="global-search" placeholder="Tìm kiếm...">
         </div>
+        {% endif %}
 
         <!-- Action Buttons bên phải Header -->
         <div class="header-actions">

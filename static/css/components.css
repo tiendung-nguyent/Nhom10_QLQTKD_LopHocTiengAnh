@@ -47,10 +47,33 @@
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-.payment-meta { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
-.payment-meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
-.payment-meta-row .label { color: var(--text-muted); }
-.payment-meta-row .value { font-weight: 600; color: var(--text-primary); }
+.payment-meta {
+  display: flex;
+  flex-direction: column;
+  margin: 10px 0;
+}
+.payment-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13.5px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.payment-meta-row:last-child {
+  border-bottom: none;
+}
+.payment-meta-row .label {
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.payment-meta-row .value {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  text-align: right;
+}
 
 /* ─── CLASS CARD ──────────────────────────────────────────── */
 .class-card {
