@@ -300,7 +300,9 @@ def test_room(request):
     ).strip().lower()
 
     # NGUYÊN TẮC: Nếu học viên ĐÃ CÓ họ tên, số điện thoại & ngày sinh -> Đủ điều kiện làm test
-    if student and student.ho_ten and student.so_dien_thoai and student.ngay_sinh:
+    sdt_digits = re.sub(r'\D', '', student.so_dien_thoai) if (student and student.so_dien_thoai) else ''
+    sdt_valid = (len(sdt_digits) == 10 and sdt_digits.startswith('0'))
+    if student and student.ho_ten and sdt_valid and student.ngay_sinh:
         can_take_test = True
         is_new_student = False
         student_data = {
@@ -1934,6 +1936,25 @@ def teacher_review(request):
         eff_mcq_curr = teacher_mcq_score if teacher_mcq_score is not None else (ai_mcq_score or 0.0)
         total_3_skills = round(eff_spk_curr + eff_wri_curr + eff_mcq_curr, 1)
 
+        spk_approved = (spk_status == BaiLamKyNang.TrangThaiCham.GV_DA_DUYET)
+        wri_approved = (wri_status == BaiLamKyNang.TrangThaiCham.GV_DA_DUYET)
+        mcq_approved = (mcq_status == BaiLamKyNang.TrangThaiCham.GV_DA_DUYET)
+        all_skills_approved = bool(spk_approved and wri_approved and mcq_approved)
+
+        unapproved_skills = []
+        if not spk_approved:
+            unapproved_skills.append({'key': 'SPEAKING', 'name': 'Speaking (Ghi âm)'})
+        if not wri_approved:
+            unapproved_skills.append({'key': 'WRITING', 'name': 'Writing (Tự luận)'})
+        if not mcq_approved:
+            unapproved_skills.append({'key': 'TRAC_NGHIEM', 'name': 'Trắc nghiệm (40đ)'})
+
+        is_test_finalized = bool(
+            hasattr(phien_db, 'ket_qua_kiem_tra') and
+            phien_db.ket_qua_kiem_tra and
+            phien_db.ket_qua_kiem_tra.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN
+        )
+
         placement_info = get_goal_placement_info(
             candidate_goal, total_3_skills, eff_mcq_curr, eff_wri_curr, eff_spk_curr
         )
@@ -1954,6 +1975,9 @@ def teacher_review(request):
             'speaking_status': spk_status,
             'writing_status': wri_status,
             'mcq_status': mcq_status,
+            'all_skills_approved': all_skills_approved,
+            'unapproved_skills': unapproved_skills,
+            'is_test_finalized': is_test_finalized,
             'scores': {
                 'mcq': round(eff_mcq_curr, 1),
                 'writing': round(eff_wri_curr, 1),
@@ -2090,6 +2114,21 @@ def finalize_test_result(request):
     phien_db = PhienLamBai.objects.filter(pk=phien_id).first()
     if not phien_db:
         return redirect('placement_tests:teacher_review')
+
+    # KIỂM TRA ĐIỀU KIỆN BẮT BUỘC: Chưa phê duyệt hết tất cả các phần thi của thẩm định thì KHÔNG ĐƯỢC phê duyệt kết quả
+    spk_approved = phien_db.bai_lam_ky_nangs.filter(ky_nang='SPEAKING', trang_thai_cham=BaiLamKyNang.TrangThaiCham.GV_DA_DUYET).exists()
+    wri_approved = phien_db.bai_lam_ky_nangs.filter(ky_nang='WRITING', trang_thai_cham=BaiLamKyNang.TrangThaiCham.GV_DA_DUYET).exists()
+    mcq_approved = phien_db.bai_lam_ky_nangs.filter(ky_nang='TRAC_NGHIEM', trang_thai_cham=BaiLamKyNang.TrangThaiCham.GV_DA_DUYET).exists()
+
+    if not (spk_approved and wri_approved and mcq_approved):
+        unapproved = []
+        if not spk_approved: unapproved.append('Speaking (Ghi âm)')
+        if not wri_approved: unapproved.append('Writing (Tự luận)')
+        if not mcq_approved: unapproved.append('Trắc nghiệm (40đ)')
+        msg = f"Chưa thể phê duyệt kết quả! Bạn cần thẩm định và lưu điểm cho toàn bộ các phần thi trước ({', '.join(unapproved)})."
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+            return JsonResponse({'status': 'error', 'message': msg}, status=400)
+        return redirect(f"{reverse('placement_tests:teacher_review')}?session={phien_id}&error=unapproved_skills")
 
     current_teacher = None
     u_email = request.session.get('user_email')

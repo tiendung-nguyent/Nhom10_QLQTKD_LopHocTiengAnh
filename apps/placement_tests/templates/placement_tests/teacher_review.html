@@ -49,8 +49,28 @@
 <div style="background: var(--emerald-light); border: 1.5px solid #A7F3D0; border-radius: var(--radius-xl); padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
   <i class="fa-solid fa-circle-check" style="font-size: 24px; color: var(--accent-emerald);"></i>
   <div>
-    <strong>Phê duyệt &amp; Điều chỉnh điểm thành công!</strong>
-    <div style="font-size: 13px; margin-top: 2px;">Điểm số chính thức của kỹ năng <strong>{{ detail.current_skill }}</strong> cho phiên thi #{{ detail.ma_phien }} đã được khóa và tự động đồng bộ sang bộ phận Tuyển sinh để phân lớp và thu học phí.</div>
+    <strong>Phê duyệt &amp; Chốt kết quả toàn bài thành công!</strong>
+    <div style="font-size: 13px; margin-top: 2px;">Điểm số chính thức của 3 kỹ năng và Khung năng lực CEFR cho phiên thi #{{ detail.ma_phien }} đã được khóa và tự động đồng bộ sang bộ phận Tuyển sinh để phân lớp và thu học phí.</div>
+  </div>
+</div>
+{% endif %}
+
+{% if request.GET.saved %}
+<div style="background: var(--emerald-light); border: 1.5px solid #A7F3D0; border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
+  <i class="fa-solid fa-circle-check" style="font-size: 20px; color: var(--accent-emerald);"></i>
+  <div>
+    <strong>Đã lưu kết quả thẩm định phần thi {{ detail.current_skill_label }} thành công!</strong>
+    <div style="font-size: 13px; margin-top: 2px;">Điểm số điều chỉnh và nhận xét chính thức của Giáo viên đã được lưu lại trong CSDL.</div>
+  </div>
+</div>
+{% endif %}
+
+{% if request.GET.error == 'unapproved_skills' %}
+<div style="background: #FEF2F2; border: 1.5px solid #FECACA; border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #991B1B;">
+  <i class="fa-solid fa-triangle-exclamation" style="font-size: 22px; color: #DC2626;"></i>
+  <div>
+    <strong>Chưa thể phê duyệt kết quả chung!</strong>
+    <div style="font-size: 13px; margin-top: 2px;">Quy định bắt buộc: Giáo viên phải thẩm định và bấm <em>"Lưu Điểm &amp; Nhận xét"</em> cho toàn bộ cả 3 phần thi (Speaking, Writing, Trắc nghiệm) trước khi chốt kết quả.</div>
   </div>
 </div>
 {% endif %}
@@ -468,7 +488,7 @@
     <!-- Bảng 3 kỹ năng & Tổng điểm -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 22px;">
       <!-- Trắc nghiệm -->
-      <div style="background: #FFFFFF; border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+      <div style="background: #FFFFFF; border: 1.5px solid {% if detail.mcq_status == 'GV_DA_DUYET' %}#A7F3D0{% else %}#FECACA{% endif %}; border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
         <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">📖 Trắc nghiệm &amp; Nghe</div>
         <div style="font-size: 24px; font-weight: 900; color: #10B981; margin: 6px 0;">{{ detail.scores.mcq }} / 40đ</div>
         <span class="badge {% if detail.mcq_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 10.5px;">
@@ -477,7 +497,7 @@
       </div>
 
       <!-- Writing -->
-      <div style="background: #FFFFFF; border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+      <div style="background: #FFFFFF; border: 1.5px solid {% if detail.writing_status == 'GV_DA_DUYET' %}#A7F3D0{% else %}#FECACA{% endif %}; border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
         <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">✍️ Writing (Tự luận)</div>
         <div style="font-size: 24px; font-weight: 900; color: #8B5CF6; margin: 6px 0;">{{ detail.scores.writing }} / 30đ</div>
         <span class="badge {% if detail.writing_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 10.5px;">
@@ -486,7 +506,7 @@
       </div>
 
       <!-- Speaking -->
-      <div style="background: #FFFFFF; border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+      <div style="background: #FFFFFF; border: 1.5px solid {% if detail.speaking_status == 'GV_DA_DUYET' %}#A7F3D0{% else %}#FECACA{% endif %}; border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
         <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">🎙️ Speaking (Ghi âm)</div>
         <div style="font-size: 24px; font-weight: 900; color: #FF7E5F; margin: 6px 0;">{{ detail.scores.speaking }} / 30đ</div>
         <span class="badge {% if detail.speaking_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 10.5px;">
@@ -501,6 +521,46 @@
         <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">Trình độ: {{ detail.level_label }}</div>
       </div>
     </div>
+
+    <!-- KHỐI THÔNG BÁO TIẾN ĐỘ THẨM ĐỊNH -->
+    {% if not detail.all_skills_approved and not detail.is_test_finalized %}
+    <div style="background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 14px;">
+      <div style="width: 38px; height: 38px; border-radius: 50%; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <div style="flex: 1;">
+        <div style="font-weight: 800; font-size: 13.5px; color: #92400E;">
+          Chưa đủ điều kiện phê duyệt kết quả chung
+        </div>
+        <div style="font-size: 12.5px; color: #78350F; margin-top: 3px; line-height: 1.5;">
+          Quy định bắt buộc: Bạn cần thẩm định và bấm <strong>"Lưu Điểm &amp; Nhận xét"</strong> cho tất cả các phần thi trước khi phê duyệt chốt kết quả và chuyển Tuyển sinh.
+        </div>
+        <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+          <span style="font-size: 12px; font-weight: 700; color: #92400E;">Phần thi còn thiếu:</span>
+          {% for us in detail.unapproved_skills %}
+          <a href="?session={{ detail.phien_id }}&skill={{ us.key }}{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+             class="btn btn-sm btn-coral" style="padding: 4px 12px; font-size: 11.5px; font-weight: 700; text-decoration: none;">
+            {{ us.name }} → Thẩm định ngay
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% elif detail.all_skills_approved and not detail.is_test_finalized %}
+    <div style="background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
+      <i class="fa-solid fa-circle-check" style="font-size: 22px; color: #059669; flex-shrink: 0;"></i>
+      <div style="font-size: 13px; line-height: 1.5;">
+        <strong>✔ Đã hoàn tất thẩm định cả 3 phần thi:</strong> Cả 3 kỹ năng (Speaking, Writing, Trắc nghiệm) đã được Giảng viên xác nhận điểm. Bạn có thể chọn Khung năng lực CEFR và bấm nút bên dưới để chuyển tiếp sang Tuyển sinh.
+      </div>
+    </div>
+    {% elif detail.is_test_finalized %}
+    <div style="background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
+      <i class="fa-solid fa-circle-check" style="font-size: 22px; color: #059669; flex-shrink: 0;"></i>
+      <div style="font-size: 13px; line-height: 1.5;">
+        <strong>Bài thi này đã được phê duyệt chính thức hoàn tất</strong> và chuyển giao kết quả sang bộ phận Tuyển sinh để xếp lớp.
+      </div>
+    </div>
+    {% endif %}
 
     <!-- Form xác nhận CEFR và phê duyệt chính thức -->
     <form method="POST" action="{% url 'placement_tests:finalize_test_result' %}">
@@ -545,9 +605,15 @@
           <a href="{% url 'placement_tests:teacher_review' %}?filter={{ current_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-outline">
             ← Quay lại Danh sách bài thi
           </a>
+          {% if detail.all_skills_approved %}
           <button type="submit" class="btn btn-emerald btn-lg" style="font-weight: 800; padding: 10px 22px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
             ✔ Phê duyệt kết quả &amp; Chuyển tuyển sinh
           </button>
+          {% else %}
+          <button type="button" class="btn btn-lg" disabled style="font-weight: 800; padding: 10px 22px; background: #94A3B8; border-color: #94A3B8; color: #FFFFFF; opacity: 0.65; cursor: not-allowed;" title="Vui lòng thẩm định và lưu điểm cho toàn bộ các phần thi (Speaking, Writing, Trắc nghiệm) trước khi phê duyệt kết quả">
+            🔒 Cần thẩm định đủ 3 phần thi để phê duyệt
+          </button>
+          {% endif %}
         </div>
       </div>
     </form>

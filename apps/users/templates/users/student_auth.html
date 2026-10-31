@@ -249,10 +249,10 @@
               </label>
               <div class="input-with-icon">
                 <input type="tel" id="reg-sdt" name="so_dien_thoai" class="form-control auth-input" 
-                  placeholder="0912 345 678" value="{{ so_dien_thoai }}" required>
+                  placeholder="0912345678 (10 số)" value="{{ so_dien_thoai }}" maxlength="15" required>
                 <i class="fa-solid fa-mobile-screen input-icon"></i>
               </div>
-              <div class="field-hint">Dùng nhận thông báo kết quả duyệt điểm và mã phòng học.</div>
+              <div class="field-hint">Số điện thoại bắt buộc gồm đúng 10 chữ số để nhận thông báo kết quả duyệt điểm và mã phòng học.</div>
             </div>
 
             <!-- Ngày sinh -->
@@ -854,8 +854,9 @@
       document.getElementById('reg-hoten')?.focus();
       return false;
     }
-    if (!sdt || sdt.length < 8) {
-      Toast.show('Vui lòng nhập số điện thoại liên hệ hợp lệ!', 'warning');
+    const sdtDigits = sdt.replace(/\D/g, '');
+    if (sdtDigits.length !== 10 || !sdtDigits.startsWith('0')) {
+      Toast.show('Số điện thoại không hợp lệ! Vui lòng nhập đúng 10 chữ số (bắt đầu bằng số 0, ví dụ: 0912345678)!', 'warning');
       document.getElementById('reg-sdt')?.focus();
       return false;
     }

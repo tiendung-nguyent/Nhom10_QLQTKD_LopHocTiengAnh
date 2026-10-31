@@ -1,3 +1,4 @@
+import re
 from django.utils import timezone
 from apps.users.models import KhachHang, NhanVien
 from apps.users.helpers import get_account_email, get_user_role
@@ -45,7 +46,9 @@ def role_context(request):
     if not student_name:
         student_name = 'Học viên'
 
-    can_take_test = bool(current_student and current_student.ho_ten and current_student.so_dien_thoai)
+    sdt_digits = re.sub(r'\D', '', current_student.so_dien_thoai) if (current_student and current_student.so_dien_thoai) else ''
+    sdt_valid = (len(sdt_digits) == 10 and sdt_digits.startswith('0'))
+    can_take_test = bool(current_student and current_student.ho_ten and sdt_valid and current_student.ngay_sinh)
     if request.session.get('can_take_test') is not None:
         can_take_test = request.session.get('can_take_test')
 

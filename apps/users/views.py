@@ -1,3 +1,4 @@
+import re, json
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.utils import timezone
@@ -192,6 +193,11 @@ def student_auth(request, default_tab='login'):
         elif action == 'register':
             # RIÊNG ĐĂNG KÝ: CHỈ ĐƯỢC GÁN ROLE LÀ HỌC VIÊN
             email = request.POST.get('email', '').strip().lower()
+            ho_ten = request.POST.get('ho_ten', '').strip()
+            so_dien_thoai = request.POST.get('so_dien_thoai', '').strip()
+            ngay_sinh_str = request.POST.get('ngay_sinh', '').strip()
+            muc_tieu = request.POST.get('muc_tieu', 'IELTS Foundation')
+
             if not email:
                 return render(request, 'users/login_standalone.html', {
                     'error': 'Vui lòng nhập địa chỉ email để đăng ký.',
@@ -210,11 +216,35 @@ def student_auth(request, default_tab='login'):
                     'sample_accounts': get_sample_accounts(),
                 })
 
-            # Tạo khách hàng học viên mới (chưa có họ tên/sđt - sẽ điền khi lần đầu làm test)
+            if so_dien_thoai:
+                sdt_digits = re.sub(r'\D', '', so_dien_thoai)
+                if len(sdt_digits) != 10 or not sdt_digits.startswith('0'):
+                    return render(request, 'users/login_standalone.html', {
+                        'error': 'Số điện thoại không hợp lệ! Số điện thoại bắt buộc phải bao gồm đúng 10 chữ số (bắt đầu bằng số 0, ví dụ: 0912345678).',
+                        'tab': 'register',
+                        'email': email,
+                        'ho_ten': ho_ten,
+                        'so_dien_thoai': so_dien_thoai,
+                        'next': next_target,
+                        'sample_accounts': get_sample_accounts(),
+                    })
+                so_dien_thoai = sdt_digits
+
+            ngay_sinh = None
+            if ngay_sinh_str:
+                for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y'):
+                    try:
+                        ngay_sinh = datetime.strptime(ngay_sinh_str, fmt).date()
+                        break
+                    except ValueError:
+                        pass
+
+            # Tạo khách hàng học viên mới
             kh = KhachHang.objects.create(
                 email=email,
-                ho_ten='',
-                so_dien_thoai='',
+                ho_ten=ho_ten,
+                so_dien_thoai=so_dien_thoai,
+                ngay_sinh=ngay_sinh,
                 trang_thai=KhachHang.TrangThai.TIEM_NANG
             )
 
@@ -226,13 +256,14 @@ def student_auth(request, default_tab='login'):
             # Gán cố định vai trò là HỌC VIÊN (STUDENT)
             request.session['role'] = 'STUDENT'
             request.session['user_email'] = kh.email
-            request.session['user_name'] = 'Học viên mới'
+            request.session['user_name'] = kh.ho_ten or 'Học viên mới'
             request.session['student_email'] = kh.email
-            request.session['student_name'] = 'Học viên mới'
+            request.session['student_name'] = kh.ho_ten or 'Học viên mới'
             request.session['student_id'] = kh.id
-            request.session['can_take_test'] = False
-            request.session['first_time_test'] = True
-            request.session['profile_completed'] = False
+            has_complete_profile = bool(kh.ho_ten and len(re.sub(r'\D', '', kh.so_dien_thoai)) == 10 and kh.ngay_sinh)
+            request.session['can_take_test'] = has_complete_profile
+            request.session['first_time_test'] = not has_complete_profile
+            request.session['profile_completed'] = has_complete_profile
 
             # Đăng ký xong chuyển thẳng vào phòng test để học viên điền thông tin và kích hoạt bài thi
             return redirect('placement_tests:test_room')
@@ -343,6 +374,15 @@ def quick_profile_api(request):
             'status': 'error',
             'message': 'Vui lòng cung cấp Số điện thoại liên hệ!'
         }, status=400)
+
+    sdt_digits = re.sub(r'\D', '', so_dien_thoai)
+    if len(sdt_digits) != 10 or not sdt_digits.startswith('0'):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Số điện thoại không hợp lệ! Số điện thoại bắt buộc phải bao gồm đúng 10 chữ số (bắt đầu bằng số 0, ví dụ: 0912345678).'
+        }, status=400)
+
+    so_dien_thoai = sdt_digits
 
     # Kiểm tra xem học viên đã từng có hồ sơ và đã nộp học phí chưa
     from apps.users.helpers import check_student_tuition_paid
