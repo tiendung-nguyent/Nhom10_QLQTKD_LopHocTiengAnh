@@ -156,20 +156,8 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
 ACCOUNT_UNIQUE_EMAIL = True
 SOCIALACCOUNT_QUERY_EMAIL = True
-SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        'SCOPE': [
-            'profile',
-            'email',
-        ],
-        'AUTH_PARAMS': {
-            'access_type': 'online',
-            'prompt': 'select_account',
-        },
-        'OAUTH_PKCE_ENABLED': True,
-        'FETCH_USERINFO': True,
-    }
-}
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 
 # Đường dẫn trang đăng nhập mặc định khi chưa xác thực
 LOGIN_URL = '/login/'
@@ -218,5 +206,6 @@ SOCIALACCOUNT_PROVIDERS = {
         },
         'OAUTH_PKCE_ENABLED': True,
         'FETCH_USERINFO': True,
+        'EMAIL_AUTHENTICATION': True,
     }
 }

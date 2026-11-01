@@ -43,13 +43,7 @@ def student_auth(request, default_tab='login'):
             elif role == 'STUDENT':
                 cur_email = get_account_email(request)
                 kh = KhachHang.objects.filter(email=cur_email).first() if cur_email else None
-                has_completed = False
-                if kh:
-                    has_completed = PhienLamBai.objects.filter(
-                        ho_so_tu_van__khach_hang=kh,
-                        trang_thai=PhienLamBai.TrangThai.HOAN_THANH
-                    ).exists()
-                if kh and not has_completed and (not kh.ho_ten or not kh.so_dien_thoai or not kh.ngay_sinh):
+                if kh and (not kh.ho_ten or not kh.so_dien_thoai or not kh.ngay_sinh):
                     return redirect(next_url or 'placement_tests:test_room')
                 return redirect(next_url or 'users:student_dashboard')
 
@@ -174,8 +168,8 @@ def student_auth(request, default_tab='login'):
                         trang_thai=PhienLamBai.TrangThai.HOAN_THANH
                     ).exists()
 
-                # Nếu học viên đã hoàn thành test hoặc đã điền đầy đủ thông tin cá nhân
-                if has_test_completed or (kh.ho_ten and kh.so_dien_thoai and kh.ngay_sinh):
+                # Nếu học viên đã điền họ tên, số điện thoại & ngày sinh -> Đủ điều kiện làm test
+                if kh.ho_ten and kh.so_dien_thoai and kh.ngay_sinh:
                     request.session['can_take_test'] = True
                     request.session['first_time_test'] = False
                     request.session['profile_completed'] = True
@@ -567,11 +561,11 @@ def student_dashboard(request):
 
     advisor_name = 'Chưa có nhân viên tư vấn tiếp nhận'
     lan_lien_hes = []
+    appointment_time = None
     hstv_obj = None
 
     if student_obj:
         hstv_obj = HoSoTuVan.objects.filter(khach_hang=student_obj).select_related('nhan_vien_tu_van').first()
-        appointment_time = None
         if hstv_obj:
             if hstv_obj.nhan_vien_tu_van and hstv_obj.nhan_vien_tu_van.ho_ten:
                 advisor_name = hstv_obj.nhan_vien_tu_van.ho_ten
