@@ -24,7 +24,7 @@ from apps.placement_tests.services import (
     calculate_goal_based_score,
     get_goal_placement_info,
 )
-
+import re
 logger = logging.getLogger(__name__)
 
 
