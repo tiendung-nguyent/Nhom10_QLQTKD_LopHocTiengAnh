@@ -1494,7 +1494,7 @@ def calculate_goal_based_score(mcq_score: float, writing_result: dict, speaking_
             'main_score_number': overall_band,
             'max_score_display': "Band 9.0",
             'level_label': f"IELTS Overall Band {overall_band}",
-            'target_comparison': f"Mục tiêu [{target_str}]: {'✓ ĐẠT MỤC TIÊU' if overall_band >= 5.5 else 'CẦN BỒI DƯỠNG THÊM'}",
+            'target_comparison': f"Mục tiêu [{target_str}]: {'Đạt mục tiêu' if overall_band >= 5.5 else 'Chưa đạt mục tiêu'}",
             'reading_score_display': f"Band {reading_band}",
             'writing_score_display': f"Band {writing_band}",
             'speaking_score_display': f"Band {speaking_band}",

@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Phòng thi Kiểm tra Trình độ{% endblock %}
-{% block page_heading %}Phòng thi Trình độ{% endblock %}
+{% block title %}Kiểm tra đầu vào{% endblock %}
+{% block page_heading %}Kiểm tra đầu vào{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -332,7 +332,7 @@
 </div>
 
 <!-- ─── THANH THÔNG TIN THÍ SINH DỰ THI (1 DÒNG GỌN) ─── -->
-<div class="candidate-bar-compact" id="candidate-bar">
+<div class="candidate-bar-compact" id="candidate-bar" style="margin-bottom: 24px;">
   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
     <span style="font-weight: 600; color: var(--text-primary);" id="display-student-name">
       {{ student.ho_ten|default:"Học viên mới" }}
@@ -346,13 +346,13 @@
   <div class="candidate-status-right" style="display: flex; align-items: center; gap: 10px;">
     {% if can_take_test %}
       {% if has_paid_tuition %}
-      <a href="javascript:void(0)" onclick="openEditProfileModal(true)" style="font-size: 12px; color: var(--text-muted); text-decoration: underline;">Đổi số điện thoại</a>
+      <a href="javascript:void(0)" onclick="openEditProfileModal(true)" style="font-size: 12.5px; color: var(--text-secondary); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Đổi số điện thoại</a>
       {% else %}
-      <a href="javascript:void(0)" onclick="openEditProfileModal(false)" style="font-size: 12px; color: var(--text-muted); text-decoration: underline;">Đổi thông tin &amp; mục tiêu</a>
+      <a href="javascript:void(0)" onclick="openEditProfileModal(false)" style="font-size: 12.5px; color: var(--text-secondary); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Đổi thông tin &amp; mục tiêu</a>
       {% endif %}
     {% else %}
       <span class="badge badge-coral" id="student-status-badge">Cần điền thông tin</span>
-      <a href="javascript:void(0)" onclick="openEditProfileModal(false)" style="font-size: 12px; color: var(--accent-orange); font-weight: 600; text-decoration: underline;">Điền thông tin ngay</a>
+      <a href="javascript:void(0)" onclick="openEditProfileModal(false)" style="font-size: 12.5px; color: var(--accent-orange); font-weight: 600; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Điền thông tin ngay</a>
     {% endif %}
   </div>
 </div>
@@ -381,41 +381,106 @@
   <div data-tab-group="test-sections" class="test-sections-wrapper {% if not can_take_test and not test_already_completed %}blur-locked{% endif %}" id="test-sections-wrapper">
 
   {% if test_already_completed %}
-  <!-- ─── THÔNG BÁO HOÀN THÀNH TOÀN BỘ BÀI TEST (ĐÃ LƯU TIẾN TRÌNH) ─── -->
-  <div id="full-test-completed-banner" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.08)); border: 2px solid #A7F3D0; border-radius: var(--radius-xl); padding: 22px 26px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; box-shadow: var(--shadow-sm);">
-    <div style="display: flex; align-items: center; gap: 16px;">
-      <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--emerald-light); display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--accent-emerald); flex-shrink: 0;">
-        <i class="fa-solid fa-circle-check"></i>
+  <!-- ─── BANNER KẾT QUẢ BÀI KIỂM TRA (TINH GỌN, SỐ LIỆU RÕ RÀNG) ─── -->
+  <div id="full-test-completed-banner" class="card" style="padding: 20px 24px; margin-bottom: 24px; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+    
+    <!-- Hàng tiêu đề & Trạng thái & Nút xem chi tiết -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 36px; height: 36px; border-radius: 50%; background: #ECFDF5; border: 1px solid #A7F3D0; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #10B981; flex-shrink: 0;">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <div>
+          <div style="font-size: 16px; font-weight: 700; color: var(--text-primary);">
+            Bài kiểm tra đã nộp thành công
+          </div>
+          <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 1px;">
+            Phiên thi: #{{ completed_summary.phien_id }} · Nộp lúc: {{ completed_summary.completed_at }}
+          </div>
+        </div>
       </div>
+
+      <!-- Nút xem chi tiết (Màu cam, bỏ icon đồ thị rườm rà) -->
       <div>
-        <div style="font-weight: 800; font-size: 17px; color: #065F46;">
-          Tiến trình đã lưu: Bạn đã hoàn thành toàn bộ bài kiểm tra đầu vào!
+        <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary" style="font-size: 13.5px; font-weight: 600; padding: 9px 18px;">
+          <i class="fa-solid fa-chart-column"></i> Xem chi tiết bảng điểm
+        </a>
+      </div>
+    </div>
+
+    <!-- Dải 4 ô điểm số riêng biệt: 3 ô con + 1 ô Tổng điểm -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)) 180px; gap: 12px; margin-bottom: 14px;">
+      <!-- Trắc nghiệm -->
+      <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px;">
+        <div style="font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 3px;">Phần 1 · Trắc nghiệm</div>
+        <div style="font-size: 20px; font-weight: 700; color: var(--text-primary); font-family: 'Lexend', sans-serif;">
+          {{ completed_summary.mcq_score|default:0 }}<span style="font-size: 13px; font-weight: 400; color: var(--text-muted);">/40đ</span>
         </div>
-        <div style="font-size: 13.5px; color: #047857; margin-top: 4px;">
-          Kết quả phiên vừa làm: <strong>Trắc nghiệm: {{ completed_summary.mcq_score|default:0 }} / 40đ</strong> · 
-          <strong>Writing: {{ completed_summary.writing_score|default:0 }} / 30đ</strong> · 
-          <strong>Speaking: {{ completed_summary.speaking_score|default:0 }} / 30đ</strong> 
-          → <span style="background: #065F46; color: #fff; padding: 2px 10px; border-radius: 6px; font-weight: 800; margin-left: 4px;">Tổng điểm: {{ completed_summary.total_score|default:0 }} / 100đ</span>
+        <div style="font-size: 11.5px; color: #15803D; margin-top: 3px; font-weight: 500;">
+          <i class="fa-solid fa-check" style="font-size: 10px;"></i> Đã chấm
         </div>
-        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-          <i class="fa-solid fa-shield-halved"></i> Điểm số phiên này đã được lưu an toàn trong hồ sơ. Nếu bạn không bấm kiểm tra lại, điểm này sẽ được bảo lưu và chuyển sang cho Giảng viên.
+      </div>
+
+      <!-- Writing -->
+      <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px;">
+        <div style="font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 3px;">Phần 2 · Viết (Writing)</div>
+        <div style="font-size: 20px; font-weight: 700; color: var(--text-primary); font-family: 'Lexend', sans-serif;">
+          {{ completed_summary.writing_score|default:0 }}<span style="font-size: 13px; font-weight: 400; color: var(--text-muted);">/30đ</span>
+        </div>
+        <div style="font-size: 11.5px; margin-top: 3px; font-weight: 500; color: {% if completed_summary.writing_status == 'CHUA_LAM' %}var(--text-muted){% else %}#15803D{% endif %};">
+          {% if completed_summary.writing_status == 'CHUA_LAM' %}
+            Chưa làm
+          {% else %}
+            <i class="fa-solid fa-check" style="font-size: 10px;"></i> Đã chấm
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Speaking -->
+      <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px;">
+        <div style="font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 3px;">Phần 2 · Nói (Speaking)</div>
+        <div style="font-size: 20px; font-weight: 700; color: {% if completed_summary.speaking_status == 'CHUA_LAM' %}var(--text-muted){% else %}var(--text-primary){% endif %}; font-family: 'Lexend', sans-serif;">
+          {{ completed_summary.speaking_score|default:0 }}<span style="font-size: 13px; font-weight: 400; color: var(--text-muted);">/30đ</span>
+        </div>
+        <div style="font-size: 11.5px; margin-top: 3px; font-weight: 500; color: {% if completed_summary.speaking_status == 'CHUA_LAM' %}var(--text-muted){% else %}#15803D{% endif %};">
+          {% if completed_summary.speaking_status == 'CHUA_LAM' %}
+            Chưa làm
+          {% else %}
+            <i class="fa-solid fa-check" style="font-size: 10px;"></i> Đã chấm
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Tổng điểm (Nổi bật nhất) -->
+      <div style="background: #FFF7ED; border: 1.5px solid #FFEDD5; border-radius: var(--radius-md); padding: 12px 16px; display: flex; flex-direction: column; justify-content: center;">
+        <div style="font-size: 12px; color: #9A3412; font-weight: 600; margin-bottom: 2px;">Tổng điểm bài thi</div>
+        <div style="font-size: 22px; font-weight: 800; color: var(--accent-orange); font-family: 'Lexend', sans-serif; line-height: 1.2;">
+          {{ completed_summary.total_score|default:0 }}<span style="font-size: 14px; font-weight: 500; color: #9A3412;">/100đ</span>
+        </div>
+        <div style="font-size: 12px; color: #C2410C; margin-top: 2px; font-weight: 500;">
+          Xếp loại sơ bộ: <strong>{{ completed_summary.cefr_level|default:"A2" }}</strong>
         </div>
       </div>
     </div>
-    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-      <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary" style="font-weight: 700; padding: 10px 20px;">
-        <i class="fa-solid fa-chart-column"></i> Xem chi tiết Bảng điểm & AI chấm 📊
-      </a>
+
+    <!-- Chân banner: Câu ghi chú ngắn & Link làm lại từ đầu an toàn -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 12.5px;">
+      <div style="color: var(--text-secondary);">
+        <i class="fa-solid fa-shield-halved" style="color: #10B981; margin-right: 4px;"></i>
+        Điểm số đã được bảo lưu an toàn trong hồ sơ và chuyển đến Giảng viên thẩm định.
+      </div>
+
       {% if not is_goal_approved %}
-      <a href="{% url 'placement_tests:reset_full_test' %}" class="btn btn-outline" onclick="return handleResetAllClick(event);" title="Làm lại bài kiểm tra từ đầu">
+      <button type="button" onclick="openResetConfirmModal()" style="font-size: 12px; color: var(--text-muted); text-decoration: underline; background: none; border: none; padding: 0; cursor: pointer;">
         <i class="fa-solid fa-rotate-left"></i> Làm lại bài kiểm tra từ đầu
-      </a>
+      </button>
       {% else %}
-      <span class="badge badge-emerald" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; font-size: 12.5px; font-weight: 700; border-radius: 10px;">
-        <i class="fa-solid fa-lock"></i> Điểm mục tiêu này đã được GV duyệt chính thức (Đã khóa)
+      <span style="font-size: 12px; color: #059669; font-weight: 600;">
+        <i class="fa-solid fa-lock"></i> Điểm đã được GV duyệt chính thức
       </span>
       {% endif %}
     </div>
+
   </div>
   {% endif %}
 
@@ -433,7 +498,7 @@
       </div>
     </div>
     <div style="display: flex; gap: 8px;">
-      <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary btn-sm">Xem bảng điểm 📊</a>
+      <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary btn-sm">Xem bảng điểm</a>
       <button type="button" class="btn btn-outline btn-sm" onclick="openEditProfileModal(false)" style="font-weight: 700;">
         <i class="fa-solid fa-arrows-rotate"></i> Đổi mục tiêu kiểm tra
       </button>
@@ -441,28 +506,134 @@
   </div>
   {% endif %}
 
-  <!-- ─── THANH TIẾN TRÌNH PHẦN THI (GỘP GỌN, KHÔNG TRÙNG LẶP) ─── -->
-  <div class="test-progress-strip">
+  <!-- ─── THANH TIẾN TRÌNH PHẦN THI (GỘP GỌN, NỐI BƯỚC RÕ RÀNG) ─── -->
+  <div class="test-progress-strip" style="margin-bottom: 24px;">
+    <!-- Phần 1 -->
     <div class="test-progress-phase active" data-tab="test-sections" data-tab-target="mcq" id="card-sec-mcq" role="button" tabindex="0">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
-        <span style="font-weight: 600; font-size: 14px; color: var(--text-primary);">Phần 1 · Trắc nghiệm</span>
-        <span class="badge {% if mcq_submitted %}badge-emerald{% else %}badge-coral{% endif %}" id="pill-mcq-status">40 điểm</span>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+        <span style="font-weight: 600; font-size: 14px; color: var(--text-primary);">Bước 1 · Trắc nghiệm</span>
+        <span class="badge {% if test_already_completed or mcq_submitted %}badge-emerald{% else %}badge-coral{% endif %}" id="pill-mcq-status">40 điểm</span>
       </div>
-      <div style="font-size: 12px; color: var(--text-secondary);">45 phút · {{ cau_hoi_mcq|length|default:25 }} câu</div>
+      <div style="font-size: 12.5px; color: var(--text-secondary);">
+        {% if test_already_completed %}
+          45 phút · <span style="color: #15803D; font-weight: 600;">Đã nộp ({{ completed_summary.mcq_score|default:0 }}/40đ)</span>
+        {% elif mcq_submitted %}
+          45 phút · <span style="color: #15803D; font-weight: 600;">Đã nộp bài</span>
+        {% else %}
+          45 phút · {{ cau_hoi_mcq|length|default:25 }} câu
+        {% endif %}
+      </div>
     </div>
 
-    <div class="test-progress-divider"></div>
+    <!-- Mũi tên nối bước 1 -> bước 2 -->
+    <div class="test-progress-divider" style="display: flex; align-items: center; justify-content: center; width: auto; height: auto; background: none;">
+      <i class="fa-solid fa-arrow-right" style="color: var(--text-muted); font-size: 13px;"></i>
+    </div>
 
+    <!-- Phần 2 -->
     <div class="test-progress-phase {% if not mcq_submitted and not test_already_completed %}tab-locked{% endif %}" data-tab="test-sections" data-tab-target="writing-speaking" id="card-sec-ws" role="button" tabindex="0">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
-        <span style="font-weight: 600; font-size: 14px; color: {% if mcq_submitted or test_already_completed %}var(--text-primary){% else %}var(--text-secondary){% endif %};">Phần 2 · Viết và Nói</span>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+        <span style="font-weight: 600; font-size: 14px; color: {% if mcq_submitted or test_already_completed %}var(--text-primary){% else %}var(--text-secondary){% endif %};">Bước 2 · Viết và Nói</span>
         <span class="badge {% if test_already_completed %}badge-emerald{% elif mcq_submitted %}badge-purple{% else %}badge-gray{% endif %}" id="pill-ws-lock">
-          60 điểm
+          60 điểm · {% if test_already_completed %}Đã nộp{% elif mcq_submitted %}Đã mở{% else %}Khóa{% endif %}
         </span>
       </div>
-      <div style="font-size: 12px; color: var(--text-secondary);">60 phút · {% if test_already_completed %}Đã hoàn thành{% elif mcq_submitted %}Đã mở{% else %}Mở sau Phần 1{% endif %}</div>
+      <div style="font-size: 12.5px; color: var(--text-secondary);">
+        {% if test_already_completed %}
+          60 phút · Writing: {{ completed_summary.writing_score|default:0 }}/30đ ({{ completed_summary.writing_status_label|default:"Đã chấm" }}) · Speaking: {{ completed_summary.speaking_score|default:0 }}/30đ ({{ completed_summary.speaking_status_label|default:"Chưa làm" }})
+        {% elif mcq_submitted %}
+          60 phút · Đã mở (Viết 30đ + Nói 30đ)
+        {% else %}
+          60 phút · Mở sau Bước 1 (Viết 30đ + Nói 30đ)
+        {% endif %}
+      </div>
     </div>
   </div>
+
+  {% if test_already_completed %}
+  <!-- ═══════════════════════════════════════════════════════
+       NỘI DUNG KHI ĐÃ HOÀN THÀNH: NHẬN XÉT AI & CÁC BƯỚC TIẾP THEO
+       ═══════════════════════════════════════════════════════ -->
+  <div class="test-completed-insights" style="margin-bottom: 24px; display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 20px;">
+    <!-- Khối 1: Đánh giá sơ bộ & Nhận xét của hệ thống AI -->
+    <div class="card" style="padding: 22px 24px; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+        <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-chart-line" style="color: var(--accent-orange);"></i>
+          Đánh giá năng lực sơ bộ
+        </div>
+        <span class="badge badge-emerald" style="font-size: 11.5px; font-weight: 600;">
+          Ước lượng: CEFR {{ completed_summary.cefr_level|default:"A2" }}
+        </span>
+      </div>
+
+      <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 14px; font-size: 13.5px; color: var(--text-secondary); line-height: 1.6;">
+        {% if completed_summary.ai_feedback %}
+          {{ completed_summary.ai_feedback }}
+        {% else %}
+          Hệ thống đã tự động đối soát trắc nghiệm và chấm điểm bài viết. Phần Speaking học viên chưa thực hiện thu âm nên chưa có dữ liệu đánh giá phát âm. Kết quả chi tiết đã được gửi sang Giảng viên chuyên môn để thẩm định toàn diện.
+        {% endif %}
+      </div>
+
+      <div style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-circle-info" style="color: var(--accent-orange);"></i>
+        <span>Điểm chính thức và xếp lớp sẽ do Giảng viên bộ môn thẩm định và công bố.</span>
+      </div>
+    </div>
+
+    <!-- Khối 2: Lộ trình các bước tiếp theo -->
+    <div class="card" style="padding: 22px 24px; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
+      <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-list-check" style="color: var(--accent-orange);"></i>
+        Lộ trình các bước tiếp theo
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 26px; height: 26px; border-radius: 50%; background: #FFF7ED; border: 1.5px solid #FFD4C5; color: var(--accent-orange); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
+            1
+          </div>
+          <div>
+            <div style="font-size: 13.5px; font-weight: 600; color: var(--text-primary);">Giảng viên thẩm định bài thi</div>
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+              Thầy/Cô chấm chi tiết bài viết và duyệt điểm chính thức cho hồ sơ của bạn.
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 26px; height: 26px; border-radius: 50%; background: #FFF7ED; border: 1.5px solid #FFD4C5; color: var(--accent-orange); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
+            2
+          </div>
+          <div>
+            <div style="font-size: 13.5px; font-weight: 600; color: var(--text-primary);">Tư vấn viên liên hệ xếp lớp</div>
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+              Chuyên viên tư vấn liên hệ trao đổi lộ trình và đề xuất lớp học phù hợp với năng lực.
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 26px; height: 26px; border-radius: 50%; background: var(--bg-app); border: 1.5px solid var(--border-color); color: var(--text-muted); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
+            3
+          </div>
+          <div>
+            <div style="font-size: 13.5px; font-weight: 600; color: var(--text-primary);">Nhận lịch học &amp; Nhập học</div>
+            <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+              Hoàn tất học phí và nhận tài liệu chuẩn bị cho buổi học đầu tiên.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color); text-align: right;">
+        <a href="{% url 'users:student_dashboard' %}" style="font-size: 12.5px; font-weight: 600; color: var(--accent-orange); text-decoration: none;">
+          Quay lại trang tổng quan hồ sơ →
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- ═══════════════════════════════════════════════════════
        PHẦN 1: THI TRẮC NGHIỆM (45 PHÚT)
@@ -1014,7 +1185,7 @@
             <!-- Hình ảnh biểu đồ đề thi IELTS Writing Task 1 -->
             <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 16px; text-align: center; box-shadow: var(--shadow-sm);">
               <div style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px;">
-                📊 Biểu đồ số liệu bài thi IELTS Academic Writing Task 1:
+                <i class="fa-solid fa-chart-simple"></i> Biểu đồ số liệu bài thi IELTS Academic Writing Task 1:
               </div>
               <img src="{% static 'images/ielts_task1_films_chart.png' %}" alt="The number of films produced by five countries in three years" style="max-width: 100%; height: auto; max-height: 400px; border-radius: 8px; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
               <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 10px;">
@@ -1091,6 +1262,31 @@
 
 </div><!-- data-tab-group -->
 </div><!-- .test-room-relative-container -->
+
+<!-- Modal xác nhận làm lại bài thi từ đầu -->
+<div class="modal-overlay" id="reset-confirm-modal">
+  <div class="modal-box" style="max-width: 440px; padding: 24px;">
+    <div style="text-align: center; margin-bottom: 16px;">
+      <div style="width: 48px; height: 48px; border-radius: 50%; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto 12px;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 6px; color: var(--text-primary);">
+        Xác nhận làm lại bài kiểm tra?
+      </h3>
+      <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+        Kết quả phiên vừa làm (<strong>{{ completed_summary.total_score|default:0 }}/100đ</strong>) vẫn được lưu trong hồ sơ của bạn. Bạn sẽ bắt đầu một phiên làm bài mới từ đầu.
+      </p>
+    </div>
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button type="button" class="btn btn-outline" onclick="closeModal('reset-confirm-modal')" style="font-size: 13px;">
+        Hủy bỏ
+      </button>
+      <a href="{% url 'placement_tests:reset_full_test' %}" class="btn btn-primary" style="font-size: 13px; font-weight: 600;">
+        Xác nhận làm lại
+      </a>
+    </div>
+  </div>
+</div>
 
 <!-- ─── MODAL YÊU CẦU ĐIỀN THÔNG TIN HỌC VIÊN MỚI (CHỈ HIỂN THỊ 1 LẦN DUY NHẤT) ─── -->
 <div class="modal-overlay {% if not can_take_test and not test_already_completed %}show{% endif %}" id="student-gate-modal">
@@ -1268,10 +1464,7 @@
     if (!cdEl) return;
     if (testAlreadyCompleted) {
       if (cdLabelEl) cdLabelEl.textContent = 'Trạng thái';
-      cdEl.textContent = 'Đã nộp bài';
-      cdEl.style.color = 'var(--accent-emerald)';
-      cdEl.style.fontSize = '15px';
-      cdEl.style.fontWeight = '600';
+      cdEl.innerHTML = '<span class="badge badge-emerald" style="font-size: 12px; font-weight: 600; padding: 2px 8px;"><i class="fa-solid fa-check" style="font-size:10px;"></i> Đã nộp</span>';
       return;
     }
     if (currentActiveTab === 'mcq') {
@@ -1338,6 +1531,10 @@
     sessionStorage.removeItem('placement_timer_mcq');
     sessionStorage.removeItem('mcq_submitted');
     return true;
+  }
+
+    function openResetConfirmModal() {
+    openModal('reset-confirm-modal');
   }
 
   function startMCQTest() {

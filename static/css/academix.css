@@ -1351,16 +1351,18 @@ EXACT REFERENCE STYLE)
 }
 
 .test-progress-phase {
-  padding: 8px 12px;
+  padding: 12px 16px;
   border-radius: var(--radius-md);
-  border: 1px solid transparent;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
   transition: all var(--transition);
   cursor: pointer;
 }
 
 .test-progress-phase.active {
-  border-color: var(--border-color);
-  background: #FFF7ED;
+  border-color: var(--accent-orange);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 1px var(--accent-orange);
 }
 
 .test-progress-phase.tab-locked {
@@ -1370,9 +1372,9 @@ EXACT REFERENCE STYLE)
 }
 
 .test-progress-divider {
-  width: 40px;
-  height: 1px;
-  background: var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .test-intro-layout {
@@ -1391,6 +1393,9 @@ EXACT REFERENCE STYLE)
     display: none;
   }
   .test-intro-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .test-completed-insights {
     grid-template-columns: 1fr !important;
   }
 }

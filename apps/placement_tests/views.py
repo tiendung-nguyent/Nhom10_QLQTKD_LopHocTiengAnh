@@ -329,6 +329,59 @@ def parse_mcq_summary_structured(raw, goal_type='IELTS', adjustments=None):
     return res
 
 
+def _extract_phien_summary(phien):
+    """Trích xuất kết quả chi tiết của phiên thi, phân biệt rõ Đã chấm vs Chưa làm cho từng kỹ năng."""
+    p_mcq = 0.0
+    p_w = 0.0
+    p_s = 0.0
+    for bl in phien.bai_lam_ky_nangs.all():
+        val = float(bl.diem_dieu_chinh if bl.diem_dieu_chinh is not None else (bl.diem_tu_dong or 0.0))
+        if bl.ky_nang == 'TRAC_NGHIEM': p_mcq = val
+        elif bl.ky_nang == 'WRITING': p_w = val
+        elif bl.ky_nang == 'SPEAKING': p_s = val
+    p_total = round(p_mcq + p_w + p_s, 1)
+    comp_date = phien.hoan_thanh or phien.bat_dau
+
+    cau_tralois = phien.cau_tra_lois.all().select_related('cau_hoi')
+    w_ans = next((tl for tl in cau_tralois if tl.cau_hoi and tl.cau_hoi.ky_nang == 'WRITING'), None)
+    s_ans = next((tl for tl in cau_tralois if tl.cau_hoi and tl.cau_hoi.ky_nang == 'SPEAKING'), None)
+
+    has_w_text = bool(w_ans and w_ans.noi_dung_tra_loi and w_ans.noi_dung_tra_loi.replace('[TASK 1]', '').replace('[TASK 2]', '').strip())
+    has_s_voice = bool(s_ans and s_ans.noi_dung_tra_loi and s_ans.noi_dung_tra_loi.strip() and 'Chưa thực hiện' not in s_ans.noi_dung_tra_loi)
+
+    ai_feedback = ''
+    try:
+        from apps.placement_tests.models import ChamDiemAI
+        if w_ans:
+            cd_w = ChamDiemAI.objects.filter(cau_tra_loi=w_ans).first()
+            if cd_w and cd_w.nhan_xet:
+                ai_feedback = cd_w.nhan_xet
+        if not ai_feedback and s_ans and has_s_voice:
+            cd_s = ChamDiemAI.objects.filter(cau_tra_loi=s_ans).first()
+            if cd_s and cd_s.nhan_xet:
+                ai_feedback = cd_s.nhan_xet
+    except Exception:
+        pass
+
+    kq_obj = getattr(phien, 'ket_qua_kiem_tra', None)
+    cefr_level = kq_obj.trinh_do if (kq_obj and kq_obj.trinh_do) else ('B2' if p_total >= 75 else ('B1' if p_total >= 55 else 'A2'))
+
+    return {
+        'phien_id': phien.id,
+        'mcq_score': p_mcq,
+        'writing_score': p_w,
+        'speaking_score': p_s,
+        'total_score': p_total,
+        'writing_status': 'DA_CHAM' if has_w_text else 'CHUA_LAM',
+        'speaking_status': 'DA_CHAM' if has_s_voice else 'CHUA_LAM',
+        'writing_status_label': 'Đã chấm' if has_w_text else 'Chưa làm',
+        'speaking_status_label': 'Đã chấm' if has_s_voice else 'Chưa làm',
+        'cefr_level': cefr_level,
+        'ai_feedback': ai_feedback,
+        'completed_at': comp_date.strftime('%d/%m/%Y %H:%M') if comp_date else '',
+    }
+
+
 def test_room(request):
     """Phòng thi thích ứng linh hoạt theo mục tiêu học tập (IELTS, ĐH, Giao tiếp, Mất gốc)."""
     if request.method == 'POST':
@@ -513,24 +566,7 @@ def test_room(request):
         test_already_completed = True
         is_retaking = False
         request.session['placement_retake_in_progress'] = False
-        p_mcq = 0.0
-        p_w = 0.0
-        p_s = 0.0
-        for bl in approved_phien.bai_lam_ky_nangs.all():
-            val = float(bl.diem_dieu_chinh if bl.diem_dieu_chinh is not None else (bl.diem_tu_dong or 0.0))
-            if bl.ky_nang == 'TRAC_NGHIEM': p_mcq = val
-            elif bl.ky_nang == 'WRITING': p_w = val
-            elif bl.ky_nang == 'SPEAKING': p_s = val
-        p_total = round(p_mcq + p_w + p_s, 1)
-        comp_date = approved_phien.hoan_thanh or approved_phien.bat_dau
-        completed_summary = {
-            'phien_id': approved_phien.id,
-            'mcq_score': p_mcq,
-            'writing_score': p_w,
-            'speaking_score': p_s,
-            'total_score': p_total,
-            'completed_at': comp_date.strftime('%d/%m/%Y %H:%M') if comp_date else '',
-        }
+        completed_summary = _extract_phien_summary(approved_phien)
     elif test_result and not is_retaking:
         test_already_completed = True
         completed_summary = test_result
@@ -547,24 +583,7 @@ def test_room(request):
                     goal_type = p_goal
                 if p_goal == goal_type or not request.session.get('student_goal_type') or not p_goal:
                     test_already_completed = True
-                    p_mcq = 0.0
-                    p_w = 0.0
-                    p_s = 0.0
-                    for bl in latest_phien.bai_lam_ky_nangs.all():
-                        val = float(bl.diem_dieu_chinh if bl.diem_dieu_chinh is not None else (bl.diem_tu_dong or 0.0))
-                        if bl.ky_nang == 'TRAC_NGHIEM': p_mcq = val
-                        elif bl.ky_nang == 'WRITING': p_w = val
-                        elif bl.ky_nang == 'SPEAKING': p_s = val
-                    p_total = round(p_mcq + p_w + p_s, 1)
-                    comp_date = latest_phien.hoan_thanh or latest_phien.bat_dau
-                    completed_summary = {
-                        'phien_id': latest_phien.id,
-                        'mcq_score': p_mcq,
-                        'writing_score': p_w,
-                        'speaking_score': p_s,
-                        'total_score': p_total,
-                        'completed_at': comp_date.strftime('%d/%m/%Y %H:%M') if comp_date else '',
-                    }
+                    completed_summary = _extract_phien_summary(latest_phien)
 
     # ĐẢM BẢO QUAN TRỌNG: Học viên đã hoàn thành bài test thì KHÔNG BAO GIỜ bị chặn bởi modal thông tin
     if test_already_completed or (student and PhienLamBai.objects.filter(ho_so_tu_van__khach_hang=student, trang_thai=PhienLamBai.TrangThai.HOAN_THANH).exists()):
@@ -582,10 +601,10 @@ def test_room(request):
 
     # Nhãn mục tiêu học tập hiển thị tiếng Việt
     goal_labels = {
-        'IELTS': f"🎯 Luyện thi IELTS ({target_detail})",
-        'DAU_RA_DH': f"🎓 Chuẩn đầu ra Đại học ({target_detail})",
-        'GIAO_TIEP': "💼 Tiếng Anh Giao tiếp Công sở & Đi làm",
-        'MAT_GOC': "🌱 Phục hồi Gốc Tiếng Anh Căn bản",
+        'IELTS': f"Luyện thi IELTS ({target_detail})",
+        'DAU_RA_DH': f"Chuẩn đầu ra Đại học ({target_detail})",
+        'GIAO_TIEP': "Tiếng Anh Giao tiếp Công sở & Đi làm",
+        'MAT_GOC': "Phục hồi Gốc Tiếng Anh Căn bản",
     }
     goal_display_text = goal_labels.get(goal_type, raw_goal)
 
@@ -1613,7 +1632,38 @@ def test_result(request):
     ]
 
     writing_comment = w_eval.get('detailed_feedback') or 'Bài viết đáp ứng tốt yêu cầu đề tài. Cấu trúc câu mạch lạc và có sử dụng từ vựng liên kết.'
-    speaking_comment = s_eval.get('detailed_feedback') or 'Phản xạ giao tiếp tự tin, phát âm rõ ràng, duy trì nhịp điệu tương đối tự nhiên.'
+    has_speaking_voice = bool(speaking > 0 or (student_speaking_answer and len(student_speaking_answer.strip()) > 0) or audio_url)
+    speaking_status = 'DA_CHAM' if has_speaking_voice else 'CHUA_LAM'
+    if has_speaking_voice:
+        speaking_comment = s_eval.get('detailed_feedback') or 'Phản xạ giao tiếp tự tin, phát âm rõ ràng, duy trì nhịp điệu tương đối tự nhiên.'
+    else:
+        speaking_comment = 'Chưa có bài nói (Học viên chưa thực hiện thu âm phần thi Speaking).'
+
+    ai_feedback_points = []
+    if mcq >= 30:
+        ai_feedback_points.append('Đọc hiểu & Nghe tốt, nắm vững ngữ pháp và từ vựng học thuật.')
+    elif mcq >= 15:
+        ai_feedback_points.append('Đọc hiểu & Nghe ở mức cơ bản, cần rèn luyện thêm kỹ năng phân tích và từ vựng chuyên sâu.')
+    else:
+        ai_feedback_points.append('Đọc hiểu & Nghe: Cần củng cố ngữ pháp nền tảng và mở rộng vốn từ vựng căn bản.')
+
+    if writing > 0:
+        if w_eval.get('detailed_feedback'):
+            ai_feedback_points.append(f"Kỹ năng Viết: {w_eval.get('detailed_feedback')}")
+        else:
+            ai_feedback_points.append('Kỹ năng Viết: Cần hoàn thiện bố cục và đa dạng hóa cấu trúc câu.')
+    else:
+        ai_feedback_points.append('Kỹ năng Viết: Chưa có dữ liệu bài làm.')
+
+    if has_speaking_voice:
+        if s_eval.get('detailed_feedback'):
+            ai_feedback_points.append(f"Kỹ năng Nói: {s_eval.get('detailed_feedback')}")
+        else:
+            ai_feedback_points.append('Kỹ năng Nói: Cần nâng cao phản xạ giao tiếp tự nhiên.')
+    else:
+        ai_feedback_points.append('Kỹ năng Nói: Chưa thực hiện ghi âm.')
+
+    ai_overall_comment = ' '.join(ai_feedback_points)
 
     goal_placement = get_goal_placement_info(goal_type, total, mcq, writing, speaking)
 
@@ -1676,10 +1726,13 @@ def test_result(request):
             'trang_thai': 'GV_DA_DUYET' if is_teacher_approved else 'CHO_DUYET',
         },
         'khoa_de_xuat': goal_placement['khoa_de_xuat'],
+        'has_speaking_voice': has_speaking_voice,
+        'speaking_status': speaking_status,
+        'ai_overall_comment': ai_overall_comment,
         'skill_scores': [
-            {'label': '📖 Trắc nghiệm & Nghe', 'score': int(mcq), 'max': 40, 'pct': int((mcq / 40) * 100), 'color': '#10B981', 'is_ai': False},
-            {'label': '✍️ Writing (AI)', 'score': int(writing), 'max': 30, 'pct': int((writing / 30) * 100), 'color': '#8B5CF6', 'is_ai': True},
-            {'label': '🎙️ Speaking (AI)', 'score': int(speaking), 'max': 30, 'pct': int((speaking / 30) * 100), 'color': '#FF7E5F', 'is_ai': True},
+            {'key': 'mcq', 'label': 'Trắc nghiệm & Nghe', 'score': int(mcq), 'max': 40, 'pct': int((mcq / 40) * 100), 'color': '#2563EB', 'is_ai': False, 'status': 'DA_CHAM'},
+            {'key': 'writing', 'label': 'Writing', 'score': int(writing), 'max': 30, 'pct': int((writing / 30) * 100), 'color': '#D97706', 'is_ai': True, 'status': 'DA_CHAM' if writing > 0 else 'CHUA_LAM'},
+            {'key': 'speaking', 'label': 'Speaking', 'score': int(speaking), 'max': 30, 'pct': int((speaking / 30) * 100), 'color': '#EA580C', 'is_ai': True, 'status': speaking_status},
         ],
         'writing_criteria': writing_crit,
         'writing_comment': writing_comment,
