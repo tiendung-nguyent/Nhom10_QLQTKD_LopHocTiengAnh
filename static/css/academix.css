@@ -73,6 +73,11 @@
 /* ─── BASE ───────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg-app);
@@ -92,7 +97,7 @@ a { text-decoration: none; color: inherit; }
 img { max-width: 100%; }
 
 /* ─── LAYOUT ─────────────────────────────────────────────── */
-.app-wrapper { display: flex; width: 100%; overflow: hidden; }
+.app-wrapper { display: flex; width: 100%; max-width: 100%; min-height: 100vh; overflow-x: hidden; min-width: 0; }
 
 /* ─── SIDEBAR (ACADEMIX CLEAN WHITE DESIGN) ──────────────── */
 .sidebar {
@@ -322,10 +327,16 @@ body.sidebar-collapsed .sidebar-footer {
 /* ─── MAIN AREA ──────────────────────────────────────────── */
 .main-area {
   margin-left: var(--sidebar-w);
-  flex: 1;
+  width: calc(100% - var(--sidebar-w));
+  max-width: calc(100% - var(--sidebar-w));
+  min-width: 0;
+  flex: 0 0 calc(100% - var(--sidebar-w));
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  overflow-x: hidden;
+  transition: margin-left var(--transition), width var(--transition), max-width var(--transition), flex-basis var(--transition);
 }
 
 /* ─── HEADER (ACADEMIX CLEAN TOPBAR) ─────────────────────── */
@@ -333,11 +344,15 @@ body.sidebar-collapsed .sidebar-footer {
   height: var(--header-h);
   background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
-  display: flex; align-items: center;
-  padding: 0 28px; gap: 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; gap: 16px;
   position: sticky; top: 0; z-index: 50;
   box-shadow: 0 1px 4px rgba(0,0,0,.02);
   transition: background var(--transition);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* Header Left Title & Date */
@@ -472,7 +487,7 @@ body.sidebar-collapsed .sidebar-footer {
 }
 
 /* ─── PAGE CONTENT ───────────────────────────────────────── */
-.page-content { padding: 28px; flex: 1; }
+.page-content { padding: 24px; flex: 1; min-width: 0; max-width: 100%; box-sizing: border-box; overflow-x: hidden; }
 
 .page-header { margin-bottom: 24px; }
 .page-title { font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.3px; }
@@ -991,7 +1006,7 @@ tbody tr:hover td { background: #F8FAFC; }
   }
 
   /* === MAIN AREA === */
-  .main-area { margin-left: 0; }
+  .main-area { margin-left: 0; width: 100%; max-width: 100%; flex: 0 0 100%; }
 
   /* === TOP HEADER === */
   .top-header {

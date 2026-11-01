@@ -1,4 +1,3 @@
-import re
 import json
 import logging
 from datetime import timedelta
@@ -92,10 +91,11 @@ def clean_mcq_summary_for_teacher(raw_summary):
     return "\n".join(clean_lines) if clean_lines else raw_summary
 
 
-def parse_mcq_summary_structured(raw):
+def parse_mcq_summary_structured(raw, goal_type='IELTS', adjustments=None):
     """
-    Phân tích kết quả trắc nghiệm thành dữ liệu cấu trúc (KPIs + Danh sách câu hỏi)
+    Phân tích kết quả trắc nghiệm thành dữ liệu cấu trúc (KPIs + Danh sách 25 câu hỏi)
     để hiển thị giao diện đối soát trực quan, hiện đại, thẩm mỹ chuẩn Academix cho Giảng viên.
+    Bao gồm đề thi, các lựa chọn, đáp án học viên chọn, đáp án đúng và cột điểm điều chỉnh.
     """
     res = {
         'total_score': 0.0,
@@ -152,6 +152,7 @@ def parse_mcq_summary_structured(raw):
     cur_cat = ''
     cur_user = ''
     cur_correct = ''
+    cur_de_bai = ''
 
     for line in lines:
         s = line.strip()
@@ -180,6 +181,7 @@ def parse_mcq_summary_structured(raw):
                 'num': num,
                 'num_str': f"{num:02d}",
                 'category': cat,
+                'question_text': '',
                 'user_ans': '[Chưa làm]' if is_blank else u_ans,
                 'correct_ans': c_ans,
                 'status': status,
@@ -189,7 +191,7 @@ def parse_mcq_summary_structured(raw):
             })
             continue
 
-        # Định dạng nhiều dòng: Câu 1 [Category]: / Lựa chọn: ... / Đáp án đúng: ...
+        # Định dạng nhiều dòng: Câu 1 [Category]: / - Đề bài: ... / Lựa chọn: ... / Đáp án đúng: ...
         m_qhead = re.match(r'Câu\s+(\d+)(?:\s*\[([^\]]+)\])?:', s)
         if m_qhead:
             if cur_q is not None:
@@ -200,6 +202,7 @@ def parse_mcq_summary_structured(raw):
                     'num': cur_q,
                     'num_str': f"{cur_q:02d}",
                     'category': cur_cat,
+                    'question_text': cur_de_bai,
                     'user_ans': '[Chưa làm]' if is_blank else cur_user,
                     'correct_ans': cur_correct,
                     'status': status,
@@ -211,9 +214,12 @@ def parse_mcq_summary_structured(raw):
             cur_cat = m_qhead.group(2) or ''
             cur_user = ''
             cur_correct = ''
+            cur_de_bai = ''
             continue
 
-        if 'Lựa chọn của học viên:' in s or 'Học viên chọn:' in s:
+        if 'Đề bài:' in s or 'Đề thi:' in s:
+            cur_de_bai = s.split(':', 1)[-1].strip()
+        elif 'Lựa chọn của học viên:' in s or 'Học viên chọn:' in s:
             part = s.split(':', 1)[-1].strip()
             if '-->' in part: part = part.split('-->')[0].strip()
             if '.' in part: part = part.split('.')[0].strip()
@@ -231,6 +237,7 @@ def parse_mcq_summary_structured(raw):
             'num': cur_q,
             'num_str': f"{cur_q:02d}",
             'category': cur_cat,
+            'question_text': cur_de_bai,
             'user_ans': '[Chưa làm]' if is_blank else cur_user,
             'correct_ans': cur_correct,
             'status': status,
@@ -239,14 +246,85 @@ def parse_mcq_summary_structured(raw):
             'points': 1.6 if is_correct else 0.0
         })
 
-    # Nếu chưa có wrong_count/blank_count mà đã parse ra questions: tự động tính lại
-    if not res['wrong_count'] and not res['blank_count'] and res['questions']:
-        res['correct_count'] = sum(1 for q in res['questions'] if q['status'] == 'CORRECT')
-        res['wrong_count'] = sum(1 for q in res['questions'] if q['status'] == 'WRONG')
+    # Lấy ngân hàng câu hỏi gốc để bổ sung đề thi và options nếu chưa có
+    fb_questions = []
+    try:
+        from apps.placement_tests.services import get_fallback_mcq_test
+        fb_questions = get_fallback_mcq_test(goal_type, '', 25).get('questions', [])
+    except Exception:
+        pass
+
+    category_labels = {
+        'LISTENING': 'Nghe hiểu (Listening)',
+        'GRAMMAR': 'Ngữ pháp (Grammar)',
+        'VOCAB': 'Từ vựng (Vocabulary)',
+        'VOCABULARY': 'Từ vựng (Vocabulary)',
+        'READING': 'Đọc hiểu (Reading)'
+    }
+
+    adjustments = adjustments or {}
+
+    if not res['questions'] and fb_questions:
+        for idx, fb_item in enumerate(fb_questions, start=1):
+            q_num_str = str(idx)
+            cat_raw = fb_item.get('category', 'GRAMMAR')
+            adj_p = float(adjustments.get(q_num_str, 0.0)) if q_num_str in adjustments else 0.0
+            res['questions'].append({
+                'num': idx,
+                'num_str': f"{idx:02d}",
+                'category': category_labels.get(cat_raw, cat_raw),
+                'question_text': fb_item.get('question_text', ''),
+                'options_list': [{'key': k, 'text': v} for k, v in fb_item.get('options', {}).items()],
+                'explanation': fb_item.get('explanation', ''),
+                'user_ans': '[Chưa làm]',
+                'correct_ans': fb_item.get('correct_option', 'A'),
+                'status': 'BLANK',
+                'is_correct': False,
+                'is_blank': True,
+                'points': adj_p,
+                'is_adjusted': q_num_str in adjustments,
+            })
+
+    for q in res['questions']:
+        idx = q['num']
+        fb_item = None
+        for fb_q in fb_questions:
+            if fb_q.get('id') == idx or str(fb_q.get('id')) == str(idx):
+                fb_item = fb_q
+                break
+        if not fb_item and 1 <= idx <= len(fb_questions):
+            fb_item = fb_questions[idx - 1]
+
+        if fb_item:
+            if not q.get('question_text'):
+                q['question_text'] = fb_item.get('question_text', '')
+            if not q.get('category'):
+                cat_raw = fb_item.get('category', '')
+                q['category'] = category_labels.get(cat_raw, cat_raw)
+            q['options_list'] = [{'key': k, 'text': v} for k, v in fb_item.get('options', {}).items()]
+            q['explanation'] = fb_item.get('explanation', '')
+            if not q.get('correct_ans'):
+                q['correct_ans'] = fb_item.get('correct_option', 'A')
+
+        # Áp dụng điểm điều chỉnh từ Giáo viên nếu có
+        q_num_str = str(idx)
+        if q_num_str in adjustments:
+            try:
+                q['points'] = float(adjustments[q_num_str])
+                q['is_adjusted'] = True
+            except (ValueError, TypeError):
+                q['is_adjusted'] = False
+        else:
+            q['is_adjusted'] = False
+
+    # Tính lại tổng điểm sau điều chỉnh
+    if res['questions']:
+        res['correct_count'] = sum(1 for q in res['questions'] if q['points'] > 0 or q['status'] == 'CORRECT')
+        res['wrong_count'] = sum(1 for q in res['questions'] if q['points'] == 0 and q['status'] == 'WRONG')
         res['blank_count'] = sum(1 for q in res['questions'] if q['status'] == 'BLANK')
         res['total_questions'] = len(res['questions'])
-        res['total_score'] = round(res['correct_count'] * 1.6, 1)
-        res['percentage'] = round((res['correct_count'] / max(res['total_questions'], 1)) * 100)
+        res['total_score'] = round(sum(q['points'] for q in res['questions']), 1)
+        res['percentage'] = round((res['total_score'] / 40.0) * 100)
 
     return res
 
@@ -300,7 +378,7 @@ def test_room(request):
         or (request.user.email if (hasattr(request, 'user') and request.user.is_authenticated) else '')
     ).strip().lower()
 
-    # NGUYÊN TẮC: Nếu học viên ĐÃ CÓ họ tên, số điện thoại & ngày sinh -> Đủ điều kiện làm test
+    # NGUYÊN TẮC: Nếu học viên ĐÃ CÓ họ tên, số điện thoại (10 số) & ngày sinh -> Đủ điều kiện làm test
     sdt_digits = re.sub(r'\D', '', student.so_dien_thoai) if (student and student.so_dien_thoai) else ''
     sdt_valid = (len(sdt_digits) == 10 and sdt_digits.startswith('0'))
     if student and student.ho_ten and sdt_valid and student.ngay_sinh:
@@ -1847,6 +1925,24 @@ def teacher_review(request):
         raw_mcq_content = ""
         audio_url = ""
 
+        # Nhận diện mục tiêu học tập của bài thi
+        bai_ten = phien_db.bai_kiem_tra.ten_bai if phien_db.bai_kiem_tra else ''
+        if 'IELTS' in bai_ten:
+            candidate_goal = 'IELTS'
+        elif 'DAU_RA' in bai_ten or 'DH' in bai_ten or 'VSTEP' in bai_ten:
+            candidate_goal = 'DAU_RA_DH'
+        elif 'GIAO_TIEP' in bai_ten:
+            candidate_goal = 'GIAO_TIEP'
+        elif 'MAT_GOC' in bai_ten:
+            candidate_goal = 'MAT_GOC'
+        elif phien_db.ho_so_tu_van and phien_db.ho_so_tu_van.khoa_de_xuat:
+            kd_name = phien_db.ho_so_tu_van.khoa_de_xuat.ten_khoa.upper()
+            if 'IELTS' in kd_name: candidate_goal = 'IELTS'
+            elif 'GIAO TIEP' in kd_name or 'COMMUNICATION' in kd_name: candidate_goal = 'GIAO_TIEP'
+            else: candidate_goal = 'IELTS'
+        else:
+            candidate_goal = 'IELTS'
+
         for tl in phien_db.cau_tra_lois.all():
             if tl.cau_hoi and tl.cau_hoi.ky_nang == CauHoi.KyNang.WRITING:
                 w_answer = tl.noi_dung_tra_loi or w_answer
@@ -1857,7 +1953,27 @@ def teacher_review(request):
                 raw_mcq_content = tl.noi_dung_tra_loi or ""
                 mcq_summary = clean_mcq_summary_for_teacher(raw_mcq_content) if raw_mcq_content else mcq_summary
 
-        mcq_parsed = parse_mcq_summary_structured(raw_mcq_content or mcq_summary)
+        # Lấy saved adjustments từ BaiLamKyNang TRAC_NGHIEM nếu có
+        saved_adjustments = {}
+        bl_mcq = phien_db.bai_lam_ky_nangs.filter(ky_nang='TRAC_NGHIEM').first()
+        if bl_mcq and bl_mcq.nhan_xet_gv:
+            try:
+                pj = json.loads(bl_mcq.nhan_xet_gv)
+                if isinstance(pj, dict) and 'adjustments' in pj:
+                    saved_adjustments = pj['adjustments']
+            except Exception:
+                pass
+
+        mcq_parsed = parse_mcq_summary_structured(
+            raw_mcq_content or mcq_summary,
+            goal_type=candidate_goal,
+            adjustments=saved_adjustments
+        )
+        if bl_mcq and bl_mcq.diem_dieu_chinh is not None:
+            ai_mcq_score = float(bl_mcq.diem_tu_dong or 0.0)
+            teacher_mcq_score = float(bl_mcq.diem_dieu_chinh)
+        elif mcq_parsed.get('total_score') is not None:
+            teacher_mcq_score = mcq_parsed['total_score']
 
         # Lấy nhận xét & rubric AI từ CSDL
         ai_comment = "AI đã hoàn tất đánh giá sơ bộ theo chuẩn CEFR."
@@ -1913,24 +2029,6 @@ def teacher_review(request):
                     {'name': 'Grammatical Range & Accuracy', 'score': '7.0', 'pct': 70},
                     {'name': 'Pronunciation & Intonation', 'score': '7.2', 'pct': 72},
                 ]
-
-        # Nhận diện mục tiêu học tập của bài thi
-        bai_ten = phien_db.bai_kiem_tra.ten_bai if phien_db.bai_kiem_tra else ''
-        if 'IELTS' in bai_ten:
-            candidate_goal = 'IELTS'
-        elif 'DAU_RA' in bai_ten or 'DH' in bai_ten or 'VSTEP' in bai_ten:
-            candidate_goal = 'DAU_RA_DH'
-        elif 'GIAO_TIEP' in bai_ten:
-            candidate_goal = 'GIAO_TIEP'
-        elif 'MAT_GOC' in bai_ten:
-            candidate_goal = 'MAT_GOC'
-        elif phien_db.ho_so_tu_van and phien_db.ho_so_tu_van.khoa_de_xuat:
-            kd_name = phien_db.ho_so_tu_van.khoa_de_xuat.ten_khoa.upper()
-            if 'IELTS' in kd_name: candidate_goal = 'IELTS'
-            elif 'GIAO TIEP' in kd_name or 'COMMUNICATION' in kd_name: candidate_goal = 'GIAO_TIEP'
-            else: candidate_goal = 'IELTS'
-        else:
-            candidate_goal = 'IELTS'
 
         eff_spk_curr = teacher_spk_score if teacher_spk_score is not None else (ai_spk_score or 0.0)
         eff_wri_curr = teacher_wri_score if teacher_wri_score is not None else (ai_wri_score or 0.0)
@@ -2033,6 +2131,128 @@ def teacher_review(request):
     return render(request, 'placement_tests/teacher_review.html', context)
 
 
+def update_mcq_score(request):
+    """
+    Giáo viên điều chỉnh điểm từng câu trắc nghiệm (AJAX).
+    Hệ thống tự động cộng dồn lại toàn bộ 25 câu, cập nhật BaiLamKyNang,
+    tính lại tổng điểm 3 kỹ năng và trả về kết quả JSON tức thời.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    data = {}
+    if request.content_type == 'application/json':
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            pass
+    if not data:
+        data = request.POST
+
+    phien_id = data.get('phien_id')
+    question_num = str(data.get('question_num', '')).strip()
+    try:
+        points = float(data.get('points', 0.0))
+    except (ValueError, TypeError):
+        points = 0.0
+
+    if not phien_id or not question_num:
+        return JsonResponse({'status': 'error', 'message': 'Thiếu phien_id hoặc question_num'}, status=400)
+
+    phien_db = PhienLamBai.objects.filter(pk=phien_id).first()
+    if not phien_db:
+        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy phiên làm bài'}, status=404)
+
+    # Nếu bài đã phê duyệt chính thức -> Khóa không cho sửa
+    if hasattr(phien_db, 'ket_qua_kiem_tra') and phien_db.ket_qua_kiem_tra and phien_db.ket_qua_kiem_tra.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
+        return JsonResponse({'status': 'error', 'message': 'Bài thi đã được phê duyệt chính thức (Đã khóa). Không thể chỉnh sửa.'}, status=400)
+
+    # Lấy thông tin Giáo viên
+    current_teacher = None
+    u_email = request.session.get('user_email')
+    if u_email:
+        current_teacher = NhanVien.objects.filter(email=u_email).first()
+    if not current_teacher:
+        current_teacher = NhanVien.objects.filter(vai_tro=NhanVien.VaiTro.GIAO_VIEN).first()
+
+    # Lấy BaiLamKyNang TRAC_NGHIEM
+    bai_lam, _ = BaiLamKyNang.objects.get_or_create(
+        phien_lam_bai=phien_db,
+        ky_nang='TRAC_NGHIEM',
+        defaults={'diem_tu_dong': 0.0}
+    )
+
+    adjustments = {}
+    note_text = ""
+    if bai_lam.nhan_xet_gv:
+        try:
+            parsed_json = json.loads(bai_lam.nhan_xet_gv)
+            if isinstance(parsed_json, dict):
+                adjustments = parsed_json.get('adjustments', {})
+                note_text = parsed_json.get('note', '')
+            else:
+                note_text = str(bai_lam.nhan_xet_gv)
+        except Exception:
+            note_text = str(bai_lam.nhan_xet_gv)
+
+    adjustments[question_num] = points
+
+    # Tính lại tổng điểm trắc nghiệm từ 25 câu
+    raw_mcq_content = ""
+    for tl in phien_db.cau_tra_lois.all():
+        if tl.cau_hoi and (tl.cau_hoi.ky_nang == CauHoi.KyNang.READING or tl.cau_hoi.loai == CauHoi.Loai.TRAC_NGHIEM):
+            raw_mcq_content = tl.noi_dung_tra_loi or ""
+            break
+
+    bai_ten = phien_db.bai_kiem_tra.ten_bai if phien_db.bai_kiem_tra else ''
+    candidate_goal = 'IELTS'
+    if 'DAU_RA' in bai_ten or 'DH' in bai_ten or 'VSTEP' in bai_ten:
+        candidate_goal = 'DAU_RA_DH'
+    elif 'GIAO_TIEP' in bai_ten:
+        candidate_goal = 'GIAO_TIEP'
+    elif 'MAT_GOC' in bai_ten:
+        candidate_goal = 'MAT_GOC'
+
+    mcq_parsed = parse_mcq_summary_structured(raw_mcq_content, goal_type=candidate_goal, adjustments=adjustments)
+    total_mcq = mcq_parsed.get('total_score', 0.0)
+
+    # Cập nhật BaiLamKyNang
+    bai_lam.diem_dieu_chinh = total_mcq
+    bai_lam.nhan_xet_gv = json.dumps({'adjustments': adjustments, 'note': note_text}, ensure_ascii=False)
+    bai_lam.nhan_vien_duyet = current_teacher
+    bai_lam.trang_thai_cham = BaiLamKyNang.TrangThaiCham.GV_DA_DUYET
+    bai_lam.save()
+
+    # Tính lại tổng 3 kỹ năng
+    eff_spk = 0.0
+    eff_wri = 0.0
+    for b in phien_db.bai_lam_ky_nangs.all():
+        val = float(b.diem_dieu_chinh if b.diem_dieu_chinh is not None else (b.diem_tu_dong or 0.0))
+        if b.ky_nang == 'SPEAKING':
+            eff_spk = val
+        elif b.ky_nang == 'WRITING':
+            eff_wri = val
+
+    sum_3_skills = round(eff_spk + eff_wri + total_mcq, 1)
+
+    # Cập nhật KetQuaKiemTra
+    kq = getattr(phien_db, 'ket_qua_kiem_tra', None)
+    if kq:
+        kq.tong_diem = sum_3_skills
+        if current_teacher:
+            kq.nhan_vien_xac_nhan = current_teacher
+        kq.save(update_fields=['tong_diem', 'nhan_vien_xac_nhan'])
+
+    return JsonResponse({
+        'status': 'success',
+        'question_num': question_num,
+        'points': points,
+        'mcq_total': total_mcq,
+        'sum_3_skills': sum_3_skills,
+        'message': f'Đã cập nhật câu #{question_num}: {points}đ. Tổng điểm Trắc nghiệm: {total_mcq}/40đ.'
+    })
+
+
 def approve_skill(request):
     """GV lưu điểm điều chỉnh & nhận xét riêng cho 1 kỹ năng cụ thể (Writing, Speaking, hoặc Trắc nghiệm)."""
     if request.method != 'POST':
@@ -2046,6 +2266,11 @@ def approve_skill(request):
     if phien_id:
         phien_db = PhienLamBai.objects.filter(pk=phien_id).first()
         if phien_db:
+            # Bài đã phê duyệt chính thức -> Khóa không cho duyệt lại
+            if hasattr(phien_db, 'ket_qua_kiem_tra') and phien_db.ket_qua_kiem_tra and phien_db.ket_qua_kiem_tra.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+                    return JsonResponse({'status': 'error', 'message': 'Bài thi này đã được phê duyệt chính thức (Đã khóa). Không thể điều chỉnh lại.'}, status=400)
+                return redirect(f"{reverse('placement_tests:teacher_review')}?session={phien_id}&error=already_finalized")
             # Lấy thông tin Giáo viên đang duyệt từ session hoặc CSDL
             current_teacher = None
             u_email = request.session.get('user_email')
@@ -2115,6 +2340,12 @@ def finalize_test_result(request):
     phien_db = PhienLamBai.objects.filter(pk=phien_id).first()
     if not phien_db:
         return redirect('placement_tests:teacher_review')
+
+    # Bài nào đã duyệt thì không được duyệt lại nữa
+    if hasattr(phien_db, 'ket_qua_kiem_tra') and phien_db.ket_qua_kiem_tra and phien_db.ket_qua_kiem_tra.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+            return JsonResponse({'status': 'error', 'message': 'Bài thi này đã được phê duyệt chính thức trước đó rồi (Đã khóa).'}, status=400)
+        return redirect(f"{reverse('placement_tests:teacher_review')}?session={phien_id}&error=already_finalized")
 
     # KIỂM TRA ĐIỀU KIỆN BẮT BUỘC: Chưa phê duyệt hết tất cả các phần thi của thẩm định thì KHÔNG ĐƯỢC phê duyệt kết quả
     spk_approved = phien_db.bai_lam_ky_nangs.filter(ky_nang='SPEAKING', trang_thai_cham=BaiLamKyNang.TrangThaiCham.GV_DA_DUYET).exists()

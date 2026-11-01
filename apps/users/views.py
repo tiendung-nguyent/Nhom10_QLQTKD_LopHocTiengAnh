@@ -739,20 +739,24 @@ def teacher_dashboard(request):
         'bai_lam_ky_nangs'
     ).order_by('-hoan_thanh', '-bat_dau', '-id')
 
-    # Đếm bài thi chờ duyệt
+    # Đếm bài thi chờ duyệt (loại trừ các bài đã được phê duyệt)
     pending_today_count = PhienLamBai.objects.filter(
         ho_so_tu_van__isnull=False,
         bai_lam_ky_nangs__trang_thai_cham=BaiLamKyNang.TrangThaiCham.AI_DA_CHAM,
         hoan_thanh__gte=today_start
+    ).exclude(
+        ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN
     ).distinct().count()
 
     total_pending = PhienLamBai.objects.filter(
         ho_so_tu_van__isnull=False,
         bai_lam_ky_nangs__trang_thai_cham=BaiLamKyNang.TrangThaiCham.AI_DA_CHAM
+    ).exclude(
+        ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN
     ).distinct().count()
 
     if pending_today_count == 0:
-        pending_today_count = total_pending if total_pending > 0 else 10
+        pending_today_count = total_pending if total_pending > 0 else 0
 
     recent_count = PhienLamBai.objects.filter(
         ho_so_tu_van__isnull=False,
@@ -808,7 +812,15 @@ def teacher_dashboard(request):
         if kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
             is_approved = True
 
-        for b in p.bai_lam_ky_nangs.all():
+        b_list = list(p.bai_lam_ky_nangs.all())
+        if b_list and all(b.trang_thai_cham == BaiLamKyNang.TrangThaiCham.GV_DA_DUYET for b in b_list):
+            is_approved = True
+
+        # Bài đã duyệt -> Không hiển thị ở danh sách "Chờ Giáo viên duyệt" này nữa
+        if is_approved:
+            continue
+
+        for b in b_list:
             val = float(b.diem_dieu_chinh if b.diem_dieu_chinh is not None else (b.diem_tu_dong or 0.0))
             if b.ky_nang == 'SPEAKING':
                 spk_sc = val
@@ -827,7 +839,7 @@ def teacher_dashboard(request):
             'speaking_score': round(spk_sc, 1),
             'writing_score': round(wri_sc, 1),
             'mcq_score': round(mcq_sc, 1),
-            'trang_thai': 'DA_DUYET' if is_approved else 'CHO_DUYET',
+            'trang_thai': 'CHO_DUYET',
         })
 
     context = {

@@ -14,6 +14,7 @@ urlpatterns = [
     path('reset/mcq/', views.reset_mcq, name='reset_mcq'),
     path('reset/all/', views.reset_full_test, name='reset_full_test'),
     path('approve/', views.approve_skill, name='approve_skill'),
+    path('update-mcq-score/', views.update_mcq_score, name='update_mcq_score'),
     path('finalize/', views.finalize_test_result, name='finalize_test_result'),
     path('request-review/<int:phien_id>/', views.request_test_review, name='request_test_review'),
 ]

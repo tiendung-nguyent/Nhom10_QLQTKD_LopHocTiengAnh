@@ -57,6 +57,7 @@ class RequireLoginMiddleware:
             r'^/users/teacher/?$',
             r'^/tests/review/?$',
             r'^/tests/approve/?$',
+            r'^/tests/update-mcq-score/?$',
             r'^/tests/finalize/?$',
             r'^/tests/result/?$',
             r'^/placement/review/?$',
