@@ -224,6 +224,13 @@
               <i class="fa-solid fa-user-check"></i> GV: {{ lead.giao_vien_cham }}
             </div>
             {% endif %}
+            {% elif lead.da_test %}
+            <div style="font-weight: 700; color: var(--text-primary); font-size: 13px;">
+              {{ lead.target_goal|default:"🎯 Luyện thi IELTS" }}
+            </div>
+            <span class="badge badge-purple" style="font-size: 11px; margin-top: 3px;">
+              ✦ Đã làm bài test
+            </span>
             {% else %}
             <div style="font-weight: 700; color: var(--text-primary); font-size: 13px;">
               {{ lead.target_goal|default:"🎯 Luyện thi IELTS" }}

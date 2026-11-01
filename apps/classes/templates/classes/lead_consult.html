@@ -232,6 +232,12 @@
       <i class="fa-solid fa-user-check"></i> GV chấm: {{ giao_vien_cham }}
     </div>
     {% endif %}
+    {% elif da_test %}
+    <div style="margin-top: 4px;">
+      <span class="badge badge-purple" style="font-size: 11.5px; font-weight: 700;">
+        ✦ Đã làm bài test (Đang chờ GV duyệt điểm)
+      </span>
+    </div>
     {% else %}
     <div style="margin-top: 4px;">
       <span class="badge badge-coral" style="font-size: 11.5px; font-weight: 700;">
@@ -296,10 +302,22 @@
 
           <!-- Lịch hẹn test -->
           <div style="margin-bottom: 12px;">
-            <label class="form-label" style="font-size: 12px; color: var(--accent-coral); font-weight: 700;">
-              📅 Lịch hẹn làm bài test đầu vào (nếu có)
+            <label class="form-label" style="font-size: 12px; color: var(--accent-coral); font-weight: 700; display: flex; justify-content: space-between; align-items: center;">
+              <span>📅 Lịch làm bài test đầu vào</span>
+              {% if da_test %}
+              <span style="font-size: 11px; color: var(--accent-emerald); font-weight: 700;">
+                <i class="fa-solid fa-circle-check"></i> Đã hoàn thành kiểm tra
+              </span>
+              {% endif %}
             </label>
-            <input type="datetime-local" name="thoi_gian_hen_test" class="form-control" style="font-size: 12.5px;">
+            <input type="datetime-local" name="thoi_gian_hen_test" class="form-control"
+                   value="{{ thoi_gian_test_str|default:'' }}"
+                   {% if da_test %}disabled style="font-size: 12.5px; background: #F1F5F9; cursor: not-allowed; color: #64748B;" title="Học viên đã hoàn thành bài thi, hệ thống tự động lưu lịch sử."{% else %}style="font-size: 12.5px;"{% endif %}>
+            {% if da_test %}
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+              <i class="fa-solid fa-lock"></i> Đã ghi nhận lịch sử kiểm tra. Tư vấn viên không cần đặt lịch.
+            </div>
+            {% endif %}
           </div>
 
           <!-- Input lý do từ chối -->
