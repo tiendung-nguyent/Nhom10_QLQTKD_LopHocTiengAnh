@@ -326,6 +326,8 @@ body.sidebar-collapsed .sidebar-footer {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* ─── HEADER (ACADEMIX CLEAN TOPBAR) ─────────────────────── */
@@ -472,7 +474,7 @@ body.sidebar-collapsed .sidebar-footer {
 }
 
 /* ─── PAGE CONTENT ───────────────────────────────────────── */
-.page-content { padding: 28px; flex: 1; }
+.page-content { padding: 28px; flex: 1; min-width: 0; max-width: 100%; box-sizing: border-box; }
 
 .page-header { margin-bottom: 24px; }
 .page-title { font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.3px; }
@@ -1389,6 +1391,6 @@ EXACT REFERENCE STYLE)
     display: none;
   }
   .test-intro-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 }
