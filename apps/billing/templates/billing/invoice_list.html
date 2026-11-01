@@ -1,31 +1,29 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Quản lý & Xác nhận Học phí{% endblock %}
+{% block title %}Quản lý & Duyệt Học phí (Kế toán){% endblock %}
 
 {% block content %}
-<div class="page-header">
+<!-- ─── PAGE HEADER ────────────────────────────────────────── -->
+<div class="page-header" style="margin-bottom: 20px;">
   <div class="page-breadcrumb">💰 <span>Kế toán</span> / Quản lý & Xác nhận Học phí</div>
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
       <h1 class="page-title">Quản lý & Duyệt Học phí (Kế toán) 💰</h1>
       <p class="page-subtitle">Kế toán đối soát giao dịch chuyển khoản VietQR – Duyệt thanh toán đủ, gửi Gmail hóa đơn cho học viên & báo Tuyển sinh xếp lớp</p>
     </div>
-    <span class="badge badge-emerald" style="font-size: 13px; padding: 6px 14px;">
-      Tỷ lệ thu: {{ tyle_thu|default:"66.7" }}% tháng {{ today|date:"m/Y" }}
-    </span>
   </div>
 </div>
 
-<!-- ─── THẺ KPI TÀI CHÍNH & THU PHÍ ───────────────────────── -->
-<div class="stat-grid">
+<!-- ─── 5 THẺ KPI TÀI CHÍNH & THU PHÍ THEO THÁNG ─────────────── -->
+<div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 22px;">
   <!-- 1. Phiếu phát hành -->
   <div class="stat-card">
     <div class="stat-icon coral">📥</div>
     <div class="stat-info">
-      <div class="stat-value">{{ total_invoices|default:12 }}</div>
+      <div class="stat-value">{{ stat_total_invoices|default:15 }}</div>
       <div class="stat-label">Phiếu học phí phát hành</div>
-      <div class="stat-delta up">● Toàn bộ kỳ T11/2026</div>
+      <div class="stat-delta up">● Toàn bộ kỳ T{{ selected_month_label }}</div>
     </div>
   </div>
 
@@ -33,7 +31,7 @@
   <div class="stat-card">
     <div class="stat-icon purple">⏳</div>
     <div class="stat-info">
-      <div class="stat-value" id="stat-pending-count">{{ pending_payments|default:4 }}</div>
+      <div class="stat-value" id="stat-pending-count">{{ stat_pending_count|default:4 }}</div>
       <div class="stat-label">Giao dịch chờ xác nhận</div>
       <div class="stat-delta down">↑ Cần đối soát kích hoạt lớp</div>
     </div>
@@ -43,7 +41,7 @@
   <div class="stat-card">
     <div class="stat-icon emerald">✅</div>
     <div class="stat-info">
-      <div class="stat-value" id="stat-confirmed-count">{{ confirmed_payments|default:8 }}</div>
+      <div class="stat-value" id="stat-confirmed-count">{{ stat_confirmed_count|default:11 }}</div>
       <div class="stat-label">Hồ sơ đã thu đủ & vào lớp</div>
       <div class="stat-delta up">↑ +3 ca so với tuần trước</div>
     </div>
@@ -53,126 +51,183 @@
   <div class="stat-card">
     <div class="stat-icon blue">💰</div>
     <div class="stat-info">
-      <div class="stat-value">{{ total_revenue|default:"36.0" }}<span style="font-size:14px">tr</span></div>
-      <div class="stat-label">Tổng thu học phí tháng {{ today|date:"m/Y" }}</div>
+      <div class="stat-value">{{ stat_revenue|default:"49.5" }}<span style="font-size:14px">tr</span></div>
+      <div class="stat-label">Tổng thu học phí tháng {{ selected_month_label }}</div>
       <div class="stat-delta up">↑ 15% so với cùng kỳ</div>
     </div>
   </div>
+
+  <!-- 5. Tỷ lệ thu theo tháng (Đưa vào nhóm 5 thẻ thay vì badge header) -->
+  <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.12); color: #10B981; font-size: 22px; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px;">📊</div>
+    <div class="stat-info">
+      <div class="stat-value" id="stat-rate-value">{{ stat_rate|default:"73.3" }}%</div>
+      <div class="stat-label">Tỷ lệ thu theo tháng</div>
+      <div class="stat-delta up">● Đã thu {{ stat_confirmed_count }}/{{ stat_total_invoices }} phiếu</div>
+    </div>
+  </div>
 </div>
 
-<!-- ─── TÌM KIẾM & BỘ LỌC GIAO DỊCH ───────────────────────── -->
+<!-- ─── TÌM KIẾM & BỘ LỌC ĐỒNG THỜI (THÁNG + TRẠNG THÁI + TỪ KHÓA) ─── -->
 <div class="card rounded-2xl shadow-sm" style="margin-bottom: 20px;">
-  <div class="card-body" style="padding: 14px 20px;">
-    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+  <div class="card-body" style="padding: 12px 18px;">
+    <form method="GET" action="{% url 'billing:invoice_list' %}" id="billing-filter-form" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
       <!-- Search Input -->
-      <div class="header-search" style="max-width: 340px; flex: 1;">
+      <div class="header-search" style="max-width: 320px; flex: 1; min-width: 220px;">
         <span class="search-icon">🔍</span>
-        <input type="text" id="invoice-search-input" placeholder="Tìm mã phiếu, mã GD ngân hàng, học viên…">
+        <input type="text" name="q" id="invoice-search-input" value="{{ search_query }}" placeholder="Tìm mã phiếu, học viên, SĐT, lớp…">
       </div>
 
       <!-- Filter trạng thái -->
-      <select class="form-control" style="max-width: 200px;" id="status-filter-select" onchange="filterInvoices()">
-        <option value="">-- Tất cả trạng thái --</option>
-        <option value="CHO_DUYET">Chờ Kế toán duyệt</option>
-        <option value="DU">Đã thanh toán đủ</option>
-        <option value="CHUA_TT">Chưa thanh toán</option>
+      <select class="form-control" style="max-width: 190px;" name="status" id="status-filter-select" onchange="this.form.submit()">
+        <option value="" {% if not selected_status %}selected{% endif %}>-- Tất cả trạng thái --</option>
+        <option value="CHO_DUYET" {% if selected_status == 'CHO_DUYET' %}selected{% endif %}>Chờ Kế toán duyệt</option>
+        <option value="DU" {% if selected_status == 'DU' or selected_status == 'DA_TT' %}selected{% endif %}>Đã thanh toán đủ</option>
+        <option value="CHUA_TT" {% if selected_status == 'CHUA_TT' %}selected{% endif %}>Chưa thanh toán</option>
       </select>
 
       <!-- Filter tháng -->
-      <select class="form-control" style="max-width: 180px;">
-        <option value="11">Tháng 11/2026</option>
-        <option value="10" selected>Tháng 10/2026</option>
-        <option value="09">Tháng 09/2026</option>
+      <select class="form-control" style="max-width: 175px;" name="month" id="month-filter-select" onchange="this.form.submit()">
+        {% for m in available_months %}
+          <option value="{{ m.value }}" {% if selected_month == m.value %}selected{% endif %}>{{ m.label }}</option>
+        {% endfor %}
       </select>
-    </div>
+
+      <button type="submit" class="btn btn-secondary btn-sm" style="padding: 7px 14px; font-weight: 600;">Lọc</button>
+
+      {% if search_query or selected_status or selected_month != '11' %}
+      <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline btn-sm" style="padding: 7px 12px; font-size: 12px; text-decoration: none;" title="Xóa toàn bộ bộ lọc về mặc định">Đặt lại</a>
+      {% endif %}
+    </form>
   </div>
 </div>
 
-<!-- ─── BẢNG DANH SÁCH GIAO DỊCH THANH TOÁN ───────────────── -->
+<!-- ─── BẢNG DANH SÁCH GIAO DỊCH THANH TOÁN (GỌN GÀNG TRÊN 1 MÀN HÌNH) ─── -->
 <div class="card rounded-2xl shadow-sm" style="margin-bottom: 24px;">
-  <div class="card-header">
+  <div class="card-header" style="padding: 14px 20px;">
     <div>
-      <div class="card-title">📋 Danh sách Giao dịch Chuyển khoản từ Học viên</div>
-      <div class="card-subtitle">Nhấn "Xác nhận đã thu tiền" để hoàn tất quy trình và tự động kích hoạt tài khoản lớp học</div>
+      <div class="card-title" style="font-size: 16px;">📋 Danh sách Giao dịch Chuyển khoản từ Học viên</div>
+      <div class="card-subtitle" style="font-size: 12.5px;">Kế toán có thể bấm "Xác nhận thu đủ" trực tiếp bất kỳ lúc nào để hoàn tất quy trình và tự động kích hoạt tài khoản lớp học</div>
     </div>
-    <span class="badge badge-coral">{{ pending_payments|default:4 }} ca chờ duyệt</span>
+    <span class="badge badge-coral">{{ stat_pending_count }} ca chờ duyệt</span>
   </div>
-  <div class="table-wrapper">
-    <table id="invoices-table">
+  <div class="table-wrapper" style="overflow-x: auto;">
+    <table id="invoices-table" style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
       <thead>
-        <tr>
-          <th>Mã phiếu</th>
-          <th>Học viên</th>
-          <th>Lớp học</th>
-          <th>Số tiền phải thu</th>
-          <th>Đã chuyển</th>
-          <th>Mã GD Ngân hàng</th>
-          <th>Thời gian</th>
-          <th>HV xác nhận CK</th>
-          <th>Trạng thái</th>
-          <th>Thao tác</th>
+        <tr style="border-bottom: 1.5px solid var(--border-color); background: var(--bg-app); color: var(--text-secondary); text-transform: uppercase; font-size: 11px; letter-spacing: 0.3px;">
+          <th style="padding: 10px 8px; text-align: center; width: 42px;">STT</th>
+          <th style="padding: 10px 10px; width: 90px;">Mã phiếu</th>
+          <th style="padding: 10px 10px; width: 175px;">Học viên</th>
+          <th style="padding: 10px 10px; width: 135px;">Lớp học</th>
+          <th style="padding: 10px 10px; text-align: right; width: 95px;">Phải thu</th>
+          <th style="padding: 10px 10px; text-align: right; width: 95px;">Đã chuyển</th>
+          <th style="padding: 10px 8px; text-align: center; width: 90px;">Mã GD NH</th>
+          <th style="padding: 10px 8px; text-align: center; width: 85px;">Thời gian</th>
+          <th style="padding: 10px 8px; text-align: center; width: 95px;">HV báo CK</th>
+          <th style="padding: 10px 8px; text-align: center; width: 115px;">Trạng thái</th>
+          <th style="padding: 10px 10px; text-align: center; width: 145px;">Thao tác</th>
         </tr>
       </thead>
       <tbody>
         {% for item in invoice_list %}
-        <tr data-status="{{ item.trang_thai }}" id="row-invoice-{{ item.ma_phieu_id }}">
-          <td style="font-weight: 700; color: var(--text-muted);">{{ item.ma_phieu }}</td>
-          <td>
-            <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">{{ item.ho_ten }}</div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">{{ item.email }}</div>
+        <tr data-status="{{ item.trang_thai }}" id="row-invoice-{{ item.ma_phieu_id }}" style="border-bottom: 1px solid var(--border-color); transition: background 0.15s;">
+          <!-- 1. STT -->
+          <td style="text-align: center; font-weight: 700; color: var(--text-muted); padding: 9px 8px;">
+            {{ forloop.counter0|add:page_obj.start_index }}
+          </td>
+
+          <!-- 2. Mã phiếu -->
+          <td style="font-weight: 700; font-family: monospace; color: var(--accent-purple); padding: 9px 10px; white-space: nowrap;">
+            {{ item.ma_phieu }}
+          </td>
+
+          <!-- 3. Học viên -->
+          <td style="padding: 9px 10px;">
+            <div style="font-weight: 700; color: var(--text-primary); line-height: 1.25;">{{ item.ho_ten }}</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">{{ item.email }}</div>
             {% if item.so_dien_thoai %}
             <div style="font-size: 11px; color: var(--text-muted);">📞 {{ item.so_dien_thoai }}</div>
             {% endif %}
           </td>
-          <td style="font-size: 13px;">{{ item.ten_lop }}</td>
-          <td style="font-weight: 700; font-size: 13.5px;">
+
+          <!-- 4. Lớp học -->
+          <td style="padding: 9px 10px; font-weight: 500; color: var(--text-secondary);">
+            {{ item.ten_lop }}
+          </td>
+
+          <!-- 5. Phải thu -->
+          <td style="padding: 9px 10px; text-align: right; font-weight: 700; white-space: nowrap;">
             <div>{{ item.so_tien_phai_thu|floatformat:0 }} đ</div>
             {% if item.so_tien_giam > 0 %}
-            <div style="font-size: 11px; color: var(--accent-coral); font-weight: normal; margin-top: 2px;">
-              🎟️ {{ item.ma_giam_gia }}: -{{ item.so_tien_giam|floatformat:0 }}đ
+            <div style="font-size: 10px; color: var(--accent-coral); font-weight: normal; margin-top: 1px;">
+              -{{ item.so_tien_giam|floatformat:0 }}đ
             </div>
             {% endif %}
           </td>
-          <td class="{% if item.so_tien_da_chuyen >= item.so_tien_phai_thu %}invoice-amount-positive{% elif item.so_tien_da_chuyen > 0 %}invoice-amount-warning{% else %}invoice-amount-danger{% endif %}" style="font-size: 13.5px;">
-            {{ item.so_tien_da_chuyen|floatformat:0 }} đ
+
+          <!-- 6. Đã chuyển -->
+          <td style="padding: 9px 10px; text-align: right; font-weight: 700; white-space: nowrap;" class="{% if item.so_tien_da_chuyen >= item.so_tien_phai_thu %}invoice-amount-positive{% elif item.so_tien_da_chuyen > 0 %}invoice-amount-warning{% else %}invoice-amount-danger{% endif %}">
+            <span id="amount-paid-{{ item.ma_phieu_id }}">{{ item.so_tien_da_chuyen|floatformat:0 }}</span> đ
           </td>
-          <td style="font-size: 12px; font-family: monospace;">{{ item.ma_gd_ngan_hang|default:"—" }}</td>
-          <td style="font-size: 12px; color: var(--text-muted);">{{ item.thoi_gian|date:"d/m/Y"|default:"—" }}</td>
-          <td>
+
+          <!-- 7. Mã GD NH -->
+          <td style="padding: 9px 8px; text-align: center; font-size: 11.5px; font-family: monospace; color: var(--text-muted);">
+            <span id="bank-ref-{{ item.ma_phieu_id }}">{{ item.ma_gd_ngan_hang|default:"—" }}</span>
+          </td>
+
+          <!-- 8. Thời gian -->
+          <td style="padding: 9px 8px; text-align: center; font-size: 11.5px; color: var(--text-muted); white-space: nowrap;">
+            {{ item.thoi_gian|date:"d/m/Y"|default:"—" }}
+          </td>
+
+          <!-- 9. HV báo CK -->
+          <td style="padding: 9px 8px; text-align: center;" id="hv-report-{{ item.ma_phieu_id }}">
             {% if item.hoc_vien_da_xac_nhan %}
-              <span class="badge badge-emerald" title="Xác nhận lúc {{ item.thoi_gian_hv_xac_nhan|date:'H:i d/m/Y' }}" style="font-size: 11px; white-space: nowrap;">
-                ✔ Đã bấm CK <span style="font-size: 10px; opacity: 0.85;">({{ item.thoi_gian_hv_xac_nhan|date:"H:i d/m" }})</span>
+              <span class="badge badge-emerald" title="Xác nhận lúc {{ item.thoi_gian_hv_xac_nhan|date:'H:i d/m/Y' }}" style="font-size: 10.5px; padding: 2px 7px; white-space: nowrap;">
+                ✔ Đã báo
               </span>
             {% else %}
-              <span class="badge badge-gray" style="font-size: 11px; white-space: nowrap;">⏳ Chưa bấm</span>
+              <span class="badge badge-gray" style="font-size: 10.5px; padding: 2px 7px; white-space: nowrap;">⏳ Chưa báo</span>
             {% endif %}
           </td>
-          <td id="status-badge-{{ item.ma_phieu_id }}">
+
+          <!-- 10. Trạng thái -->
+          <td style="padding: 9px 8px; text-align: center;" id="status-badge-{{ item.ma_phieu_id }}">
             {% if item.trang_thai == 'DU' or item.trang_thai == 'DA_TT' %}
-              <span class="badge badge-emerald">✔ Đã thanh toán đủ</span>
+              <span class="badge badge-emerald" style="font-size: 11px;">✔ Thu đủ</span>
             {% elif item.trang_thai == 'CHO_DUYET' or item.trang_thai == 'CHO_XAC_NHAN' %}
-              <span class="badge badge-coral">⏳ Chờ Kế toán duyệt</span>
+              <span class="badge badge-coral" style="font-size: 11px;">⏳ Chờ duyệt</span>
             {% else %}
-              <span class="badge badge-gray">Chưa thanh toán</span>
+              <span class="badge badge-gray" style="font-size: 11px;">Chưa nộp</span>
             {% endif %}
           </td>
-          <td id="action-cell-{{ item.ma_phieu_id }}">
+
+          <!-- 11. Thao tác: Kế toán bấm xác nhận thu đủ trực tiếp không cần học viên bấm trước -->
+          <td style="padding: 9px 10px; text-align: center;" id="action-cell-{{ item.ma_phieu_id }}">
             {% if item.trang_thai == 'DU' or item.trang_thai == 'DA_TT' %}
-              <span class="badge badge-purple" style="font-size: 11px;">📧 Đã gửi Gmail & báo Tuyển sinh</span>
+              <span class="badge badge-purple" style="font-size: 10.5px; padding: 4px 8px; white-space: nowrap;">📧 Đã gửi Gmail & báo Tuyển sinh</span>
             {% else %}
-            <!-- FORM POST KẾ TOÁN XÁC NHẬN THU ĐỦ -->
-            <form method="post" action="{% url 'billing:confirm_invoice' %}" class="invoice-confirm-form" style="display:inline;" data-id="{{ item.ma_phieu_id }}" data-name="{{ item.ho_ten }}">
+            <!-- FORM POST KẾ TOÁN XÁC NHẬN THU ĐỦ TRỰC TIẾP -->
+            <form method="post" action="{% url 'billing:confirm_invoice' %}" class="invoice-confirm-form" style="display:inline;" data-id="{{ item.ma_phieu_id }}" data-name="{{ item.ho_ten }}" data-amount="{{ item.so_tien_phai_thu|floatformat:0 }}">
               {% csrf_token %}
               <input type="hidden" name="ma_phieu" value="{{ item.ma_phieu }}">
               <input type="hidden" name="ma_phieu_id" value="{{ item.ma_phieu_id }}">
               <input type="hidden" name="ho_ten" value="{{ item.ho_ten }}">
               <input type="hidden" name="email" value="{{ item.email }}">
               <input type="hidden" name="so_tien" value="{{ item.so_tien_phai_thu|floatformat:0 }}đ">
-              <button type="submit" class="btn btn-emerald btn-sm" title="Kế toán xác nhận đã thu đủ học phí" style="white-space: nowrap;">
-                ✅ Kế toán xác nhận thu đủ
+              <button type="submit" class="btn btn-emerald btn-sm" title="Kế toán xác nhận đã thu đủ học phí cho học viên này" style="white-space: nowrap; font-size: 11.5px; padding: 4px 10px;">
+                ✅ Xác nhận thu đủ
               </button>
             </form>
             {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="11" style="text-align: center; padding: 36px 16px; color: var(--text-muted);">
+            <div style="font-size: 28px; margin-bottom: 6px;">📂</div>
+            <div style="font-size: 14px; font-weight: 600;">Không tìm thấy giao dịch nào phù hợp với bộ lọc</div>
+            <div style="font-size: 12px; margin-top: 4px;">Vui lòng thử đổi tháng hoặc trạng thái khác.</div>
           </td>
         </tr>
         {% endfor %}
@@ -182,53 +237,19 @@
   <!-- ─── PHÂN TRANG (TỐI ĐA 20 PHIẾU / TRANG) ────────────────── -->
   {% include 'components/pagination.html' %}
 </div>
-
-<!-- ─── BẢNG TỔNG KẾT & TIỆN ÍCH ──────────────────────────── -->
-<div class="three-col">
-  <div class="card rounded-2xl shadow-sm" style="padding: 22px; text-align: center;">
-    <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
-    <div style="font-size: 24px; font-weight: 800; color: var(--accent-emerald);">{{ tyle_thu|default:"66.7" }}%</div>
-    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Tỷ lệ thu tiền tháng {{ today|date:"m/Y" }}</div>
-  </div>
-
-  <div class="card rounded-2xl shadow-sm" style="padding: 22px; text-align: center;">
-    <div style="font-size: 32px; margin-bottom: 8px;">📬</div>
-    <div style="font-size: 24px; font-weight: 800; color: var(--accent-coral);">{{ so_chua_thu|default:4 }} phiếu</div>
-    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Phiếu chưa hoàn tất / cần thu thêm</div>
-  </div>
-
-  <div class="card rounded-2xl shadow-sm" style="padding: 22px; text-align: center; cursor: pointer;" onclick="Toast.show('Đã tạo file Excel Báo cáo Thu học phí tháng {{ today|date:'m/Y' }}!', 'success')">
-    <div style="font-size: 32px; margin-bottom: 8px;">📥</div>
-    <div style="font-size: 16px; font-weight: 700; color: var(--text-primary);">Xuất File Excel</div>
-    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Báo cáo thu tiền & đối soát ngân hàng</div>
-  </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  // ─── LỌC VÀ TÌM KIẾM HÓA ĐƠN ──────────────────────────────
-  function filterInvoices() {
-    const q = document.getElementById('invoice-search-input').value.toLowerCase().trim();
-    const status = document.getElementById('status-filter-select').value;
-
-    document.querySelectorAll('#invoices-table tbody tr').forEach(row => {
-      const matchText = !q || row.textContent.toLowerCase().includes(q);
-      const matchStatus = !status || row.dataset.status === status;
-      row.style.display = (matchText && matchStatus) ? '' : 'none';
-    });
-  }
-
-  document.getElementById('invoice-search-input')?.addEventListener('input', filterInvoices);
-
-  // ─── NÚT POST [XÁC NHẬN ĐÃ THU TIỀN] QUA FETCH API ────────
+  // ─── NÚT POST [XÁC NHẬN ĐÃ THU TIỀN TRỰC TIẾP] QUA FETCH API ────────
   document.querySelectorAll('.invoice-confirm-form').forEach(form => {
     form.addEventListener('submit', async e => {
       e.preventDefault();
       const id = form.dataset.id;
+      const amount = form.dataset.amount || '';
       const btn = form.querySelector('button[type="submit"]');
       btn.disabled = true;
-      btn.textContent = '⏳ Đang kích hoạt…';
+      btn.textContent = '⏳ Đang duyệt…';
 
       try {
         const fd = new FormData(form);
@@ -239,24 +260,54 @@
         });
         const data = await res.json();
 
-        // Cập nhật trạng thái dòng
+        // 1. Cập nhật trạng thái dòng
         const badge = document.getElementById('status-badge-' + id);
         if (badge) {
-          badge.innerHTML = '<span class="badge badge-emerald">✔ Đã thanh toán đủ</span>';
+          badge.innerHTML = '<span class="badge badge-emerald" style="font-size: 11px;">✔ Thu đủ</span>';
         }
+
+        // 2. Cập nhật HV báo CK
+        const hvReport = document.getElementById('hv-report-' + id);
+        if (hvReport) {
+          hvReport.innerHTML = '<span class="badge badge-emerald" style="font-size: 10.5px; padding: 2px 7px;">✔ Kế toán duyệt</span>';
+        }
+
+        // 3. Cập nhật Số tiền đã chuyển
+        const amountPaid = document.getElementById('amount-paid-' + id);
+        if (amountPaid && amount) {
+          amountPaid.textContent = amount;
+          if (amountPaid.parentElement) {
+            amountPaid.parentElement.className = 'invoice-amount-positive';
+          }
+        }
+
+        // 4. Cập nhật nút Thao tác
         const actionCell = document.getElementById('action-cell-' + id);
         if (actionCell) {
-          actionCell.innerHTML = '<span class="badge badge-purple" style="font-size: 11px;">📧 Đã gửi Gmail & báo Tuyển sinh</span>';
+          actionCell.innerHTML = '<span class="badge badge-purple" style="font-size: 10.5px; padding: 4px 8px; white-space: nowrap;">📧 Đã gửi Gmail & báo Tuyển sinh</span>';
         }
         const row = document.getElementById('row-invoice-' + id);
         if (row) {
           row.dataset.status = 'DU';
         }
 
-        Toast.show(data.message || 'Kế toán đã xác nhận thu đủ học phí! Đã gửi Gmail biên nhận và báo Tuyển sinh xếp lớp.', 'success', 7000);
+        // 5. Cập nhật số lượng chờ duyệt trên thẻ KPI
+        const pendingBadge = document.getElementById('stat-pending-count');
+        if (pendingBadge) {
+          let cur = parseInt(pendingBadge.textContent) || 0;
+          if (cur > 0) pendingBadge.textContent = cur - 1;
+        }
+
+        const confirmedBadge = document.getElementById('stat-confirmed-count');
+        if (confirmedBadge) {
+          let cur = parseInt(confirmedBadge.textContent) || 0;
+          confirmedBadge.textContent = cur + 1;
+        }
+
+        Toast.show(data.message || 'Kế toán đã duyệt thu đủ học phí! Đã gửi Gmail biên nhận và báo Tuyển sinh xếp lớp.', 'success', 7000);
       } catch (err) {
         btn.disabled = false;
-        btn.textContent = '✅ Kế toán xác nhận thu đủ';
+        btn.textContent = '✅ Xác nhận thu đủ';
         Toast.show('Đã xác nhận thu đủ học phí!', 'success');
       }
     });

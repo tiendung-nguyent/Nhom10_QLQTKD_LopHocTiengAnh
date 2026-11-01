@@ -7,7 +7,7 @@ from apps.users.models import KhachHang, ThongBaoEmail, ThongBaoNoiBo
 from apps.placement_tests.models import PhienLamBai, LanLienHe
 from apps.classes.models import GhiDanh, LopHoc, HoSoTuVan
 from apps.billing.models import PhieuHocPhi, GiaoDichThanhToan
-from apps.users.helpers import get_account_email, check_student_tuition_paid, create_system_notification
+from apps.users.helpers import get_account_email, check_student_tuition_paid, create_system_notification, paginate_items
 from apps.billing.vietqr_helpers import generate_vietcombank_qr, send_payment_success_email
 
 
@@ -286,14 +286,8 @@ def invoice_list(request):
             'so_tien_giam': float(p.so_tien_giam or 0),
         })
 
-    # 6. PHÂN TRANG: 20 GIAO DỊCH / TRANG
-    paginator = Paginator(items, 20)
-    try:
-        page_obj = paginator.page(page_num)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
+    # 6. PHÂN TRANG: 20 GIAO DỊCH / TRANG (chuẩn hệ thống có elided_pages)
+    page_obj = paginate_items(request, items, per_page=20)
 
     context = {
         'today': now,
@@ -351,16 +345,16 @@ def confirm_invoice(request):
         php.save(update_fields=['trang_thai', 'hoc_vien_da_xac_nhan', 'thoi_gian_hv_xac_nhan'])
 
         # Tạo giao dịch đối soát ngân hàng nếu chưa có
-        GiaoDichThanhToan.objects.get_or_create(
-            phieu_hoc_phi=php,
-            defaults={
-                'so_tien': php.so_tien,
-                'phuong_thuc': GiaoDichThanhToan.PhuongThuc.CHUYEN_KHOAN,
-                'ma_giao_dich': f"VCB{php.id:06d}",
-                'trang_thai': GiaoDichThanhToan.TrangThai.THANH_CONG,
-                'thoi_gian': timezone.now(),
-            }
-        )
+        if not GiaoDichThanhToan.objects.filter(phieu_hoc_phi=php).exists():
+            GiaoDichThanhToan.objects.create(
+                phieu_hoc_phi=php,
+                so_tien=php.so_tien,
+                ma_gd_ngan_hang=f"VCB{php.id:06d}",
+                noi_dung_ck=f"ACADEMIX HP {php.ma_tham_chieu}",
+                nguon=GiaoDichThanhToan.Nguon.THU_CONG,
+                trang_thai=GiaoDichThanhToan.TrangThai.THANH_CONG,
+                thoi_gian=timezone.now(),
+            )
 
         if php.ghi_danh:
             php.ghi_danh.trang_thai = GhiDanh.TrangThai.DA_XEP_LOP
