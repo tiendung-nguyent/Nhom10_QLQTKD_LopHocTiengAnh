@@ -359,7 +359,7 @@
 
 <div class="test-room-relative-container">
   <!-- Lock Overlay khi học viên mới chưa điền thông tin -->
-  <div id="test-lock-overlay" class="test-lock-overlay" style="{% if can_take_test %}display:none;{% endif %}">
+  <div id="test-lock-overlay" class="test-lock-overlay" style="{% if can_take_test or test_already_completed %}display:none;{% endif %}">
     <div class="lock-overlay-content">
       <div class="lock-icon-box">🔒</div>
       <h3 style="font-size: 20px; font-weight: 800; margin-bottom: 8px;">Đề thi đang tạm khóa</h3>
@@ -378,7 +378,7 @@
   </div>
 
   <!-- ─── BỘ CHỌN PHẦN THI (HERO 2-CARD GRID & CAPSULE BAR) ─── -->
-  <div data-tab-group="test-sections" class="test-sections-wrapper {% if not can_take_test %}blur-locked{% endif %}" id="test-sections-wrapper">
+  <div data-tab-group="test-sections" class="test-sections-wrapper {% if not can_take_test and not test_already_completed %}blur-locked{% endif %}" id="test-sections-wrapper">
 
   {% if test_already_completed %}
   <!-- ─── THÔNG BÁO HOÀN THÀNH TOÀN BỘ BÀI TEST (ĐÃ LƯU TIẾN TRÌNH) ─── -->
@@ -470,7 +470,7 @@
   <div data-tab-panel="test-sections" data-panel="mcq" id="panel-mcq">
 
     <!-- Trước khi bắt đầu: Chia 2 cột (Trái: Quy tắc & Nút bắt đầu; Phải: Thẻ tóm tắt) -->
-    <div class="test-intro-layout" id="mcq-start-banner" style="{% if test_already_completed or mcq_submitted %}display:none;{% else %}display:grid; grid-template-columns: 1fr 300px; gap: 20px; margin-bottom: 20px;{% endif %}">
+    <div class="test-intro-layout" id="mcq-start-banner" style="{% if test_already_completed or mcq_submitted %}display:none;{% endif %}">
       <!-- Cột trái (rộng): Trước khi bắt đầu -->
       <div class="card" style="padding: 24px;">
         <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 14px; color: var(--text-primary);">
@@ -717,7 +717,7 @@
   <div data-tab-panel="test-sections" data-panel="writing-speaking" id="panel-ws" style="display:none;">
 
     <!-- Banner bắt đầu thi Writing & Speaking (Chia 2 cột) -->
-    <div class="test-intro-layout" id="ws-start-banner" style="display:grid; grid-template-columns: 1fr 300px; gap: 20px; margin-bottom: 20px;">
+    <div class="test-intro-layout" id="ws-start-banner">
       <!-- Cột trái (rộng): Hướng dẫn & Quy tắc -->
       <div class="card" style="padding: 24px;">
         <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 14px; color: var(--text-primary);">
@@ -1093,7 +1093,7 @@
 </div><!-- .test-room-relative-container -->
 
 <!-- ─── MODAL YÊU CẦU ĐIỀN THÔNG TIN HỌC VIÊN MỚI (CHỈ HIỂN THỊ 1 LẦN DUY NHẤT) ─── -->
-<div class="modal-overlay {% if not can_take_test %}show{% endif %}" id="student-gate-modal">
+<div class="modal-overlay {% if not can_take_test and not test_already_completed %}show{% endif %}" id="student-gate-modal">
   <div class="modal-box" style="max-width: 580px;">
     <div style="text-align: center; margin-bottom: 18px;">
       <div style="width: 56px; height: 56px; background: var(--coral-light); border: 2px solid #FFD4C5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 24px; color: var(--accent-coral);">
