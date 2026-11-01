@@ -81,7 +81,7 @@
     </span>
   </div>
 
-  <div class="history-sessions-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px;">
+  <div class="history-sessions-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 14px;">
     {% for ps in danh_sach_phien %}
     <a href="?session={{ ps.id }}" style="text-decoration: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: 16px; border: 2px solid {% if ps.is_selected %}var(--accent-purple){% else %}#E2E8F0{% endif %}; background: {% if ps.is_selected %}#FAF5FF{% else %}#FFFFFF{% endif %}; color: inherit; transition: all 0.2s ease; box-shadow: {% if ps.is_selected %}0 6px 18px rgba(139, 92, 246, 0.18){% else %}0 2px 6px rgba(0,0,0,0.03){% endif %}; cursor: pointer; box-sizing: border-box; min-width: 0; overflow: hidden; position: relative;" onmouseover="if(!{{ ps.is_selected|yesno:'true,false' }}){this.style.borderColor='var(--accent-purple)'; this.style.transform='translateY(-2px)';}" onmouseout="if(!{{ ps.is_selected|yesno:'true,false' }}){this.style.borderColor='#E2E8F0'; this.style.transform='none';}">
       <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; overflow: hidden;">

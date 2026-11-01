@@ -302,8 +302,9 @@ def test_room(request):
 
     # NGUYÊN TẮC: Nếu học viên ĐÃ CÓ họ tên, số điện thoại & ngày sinh -> Đủ điều kiện làm test
     sdt_digits = re.sub(r'\D', '', student.so_dien_thoai) if (student and student.so_dien_thoai) else ''
-    sdt_valid = (len(sdt_digits) == 10 and sdt_digits.startswith('0'))
-    if student and student.ho_ten and sdt_valid and student.ngay_sinh:
+    sdt_valid = (len(sdt_digits) >= 10 and sdt_digits.startswith('0'))
+    has_prior_phien = bool(student and PhienLamBai.objects.filter(ho_so_tu_van__khach_hang=student).exists())
+    if student and student.ho_ten and (sdt_valid or has_prior_phien) and (student.ngay_sinh or has_prior_phien):
         can_take_test = True
         is_new_student = False
         student_data = {
@@ -464,7 +465,9 @@ def test_room(request):
             ).order_by('-bat_dau', '-id').first()
             if latest_phien:
                 p_goal = _normalize_goal(latest_phien.bai_kiem_tra.ten_bai if latest_phien.bai_kiem_tra else '')
-                if p_goal == goal_type:
+                if not request.session.get('student_goal_type') and p_goal:
+                    goal_type = p_goal
+                if p_goal == goal_type or not request.session.get('student_goal_type') or not p_goal:
                     test_already_completed = True
                     p_mcq = 0.0
                     p_w = 0.0
@@ -484,6 +487,14 @@ def test_room(request):
                         'total_score': p_total,
                         'completed_at': comp_date.strftime('%d/%m/%Y %H:%M') if comp_date else '',
                     }
+
+    # ĐẢM BẢO QUAN TRỌNG: Học viên đã hoàn thành bài test thì KHÔNG BAO GIỜ bị chặn bởi modal thông tin
+    if test_already_completed or (student and PhienLamBai.objects.filter(ho_so_tu_van__khach_hang=student, trang_thai=PhienLamBai.TrangThai.HOAN_THANH).exists()):
+        can_take_test = True
+        is_new_student = False
+        request.session['can_take_test'] = True
+        request.session['first_time_test'] = False
+        request.session['profile_completed'] = True
 
     # Tiến độ bài thi: mcq_submitted chỉ True khi đang làm dở dang (đã nộp trắc nghiệm nhưng chưa nộp Writing & Speaking)
     mcq_submitted = False
