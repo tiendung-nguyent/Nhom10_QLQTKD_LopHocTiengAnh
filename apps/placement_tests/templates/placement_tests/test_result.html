@@ -1,39 +1,56 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Kết quả Kiểm tra Trình độ{% endblock %}
-{% block page_heading %}Kết quả Kiểm tra{% endblock %}
+{% block title %}Kết quả kiểm tra đầu vào{% endblock %}
+{% block page_heading %}Kết quả kiểm tra đầu vào{% endblock %}
 
 {% block extra_css %}
 <style>
-  @media (max-width: 768px) {
-    .page-header {
-      margin-bottom: 16px !important;
-    }
-    .page-title {
-      font-size: 19px !important;
-    }
-    .two-col {
+  .result-grid-top {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 20px;
+    align-items: stretch;
+    margin-bottom: 20px;
+  }
+  .rubric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+    padding: 20px;
+  }
+  .skill-row {
+    padding: 12px 0;
+    border-bottom: 1px solid #F1F5F9;
+  }
+  .skill-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .skill-track {
+    height: 6px;
+    background: #F1F5F9;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .skill-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+  details[open] summary .accordion-chevron {
+    transform: rotate(180deg);
+  }
+  .accordion-chevron {
+    transition: transform 0.2s ease;
+  }
+  @media (max-width: 860px) {
+    .result-grid-top,
+    .rubric-grid {
       grid-template-columns: 1fr !important;
-      gap: 14px !important;
-    }
-    .card-body {
-      padding: 16px 14px !important;
-    }
-    .score-ring {
-      width: 100px !important;
-      height: 100px !important;
-    }
-    .score-ring::before {
-      width: 74px !important;
-      height: 74px !important;
-    }
-    .score-ring .score-val {
-      font-size: 22px !important;
-    }
-    .history-sessions-grid,
-    div[style*="display: grid"][style*="grid-template-columns: repeat(auto-fill"] {
-      grid-template-columns: 1fr !important;
+      gap: 16px !important;
     }
   }
 </style>
@@ -41,391 +58,367 @@
 
 {% block content %}
 {% if has_test_results %}
-<div class="page-header">
-  <div class="page-breadcrumb">📊 <span>Học viên</span> / Kết quả kiểm tra đầu vào</div>
-  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+<!-- ─── HEADER TRANG ──────────────────────────────────────── -->
+<div class="page-header" style="margin-bottom: 20px;">
+  <div class="page-breadcrumb">
+    <a href="{% url 'users:student_dashboard' %}" style="color: inherit; text-decoration: none;">Học viên</a>
+    <span> / </span>Kết quả kiểm tra đầu vào
+  </div>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-top: 6px;">
     <div>
-      <h1 class="page-title">Kết quả Kiểm tra Trình độ 📊</h1>
-      <p class="page-subtitle">Phiên thi #{{ phien.ma_phien|default:"001" }} · Hoàn thành ngày: {{ phien.hoan_thanh|date:"d/m/Y H:i" }}</p>
+      <h1 class="page-title" style="margin: 0; font-size: 22px; font-weight: 700; color: #0F172A;">Kết quả kiểm tra đầu vào</h1>
+      <p class="page-subtitle" style="margin: 4px 0 0; font-size: 13.5px; color: #64748B;">
+        Phiên thi #{{ phien.ma_phien|default:"001" }} · Hoàn thành: {{ phien.hoan_thanh|date:"d/m/Y H:i" }}
+      </p>
     </div>
     {% if is_teacher_approved %}
-    <span class="badge badge-emerald" style="font-size: 13px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 6px;">
-      <i class="fa-solid fa-circle-check"></i> GV thẩm định: {{ examiner_info|default:"Ms. Trần Thanh Thảo - GV002" }}
+    <span class="badge badge-emerald" style="font-size: 13px; font-weight: 600; padding: 7px 14px; display: inline-flex; align-items: center; gap: 6px;">
+      <i class="fa-solid fa-circle-check"></i> Giáo viên đã duyệt: {{ examiner_info|default:"Ban chuyên môn" }}
     </span>
     {% else %}
-    <span class="badge badge-coral" style="font-size: 13px; padding: 8px 14px;">
+    <span class="badge" style="background: #FFF7ED; color: #C2410C; border: 1px solid #FFEDD5; font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;">
       <i class="fa-regular fa-clock"></i> Chờ Giáo viên duyệt
     </span>
     {% endif %}
   </div>
 </div>
 
-<!-- ─── BỘ CHỌN LỊCH SỬ CÁC LẦN LÀM BÀI TEST ĐẦU VÀO ──────── -->
-<div class="card rounded-2xl shadow-sm" style="margin-bottom: 24px; padding: 22px 24px; border: 1.5px solid #E2E8F0; background: linear-gradient(180deg, #FFFFFF, #FAF8FF);">
-  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid #EDF2F7;">
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <div style="width: 40px; height: 40px; border-radius: 12px; background: var(--purple-light); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--accent-purple); flex-shrink: 0;">
-        <i class="fa-solid fa-clock-rotate-left"></i>
-      </div>
-      <div>
-        <div style="font-size: 16px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-          Lịch sử các lần làm bài kiểm tra đầu vào
-        </div>
-        <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 3px;">
-          Bấm vào từng phiên thi bên dưới để xem lại chi tiết điểm số rubric và nhận xét AI / Giáo viên đã chấm:
-        </div>
-      </div>
+<!-- ─── THÔNG BÁO CHẤM SƠ BỘ (NGẮN GỌN, TRANG NHÃ) ────────── -->
+<div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
+  <i class="fa-solid fa-circle-info" style="color: #64748B; font-size: 16px; flex-shrink: 0;"></i>
+  <div style="font-size: 13.5px; color: #334155; line-height: 1.5;">
+    Điểm số do hệ thống chấm sơ bộ. Giáo viên chuyên môn sẽ thẩm định và phê duyệt kết quả chính thức trong vòng 24 giờ làm việc.
+  </div>
+</div>
+
+<!-- ─── LỊCH SỬ CÁC LẦN LÀM BÀI (CHỈ HIỂN THỊ KHI CÓ >= 2 PHIÊN) ── -->
+{% if danh_sach_phien|length > 1 %}
+<div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 18px 20px; margin-bottom: 20px;">
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #F1F5F9;">
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #0F172A;">
+      <i class="fa-solid fa-clock-rotate-left" style="color: #64748B;"></i>
+      <span>Lịch sử các lần làm bài ({{ danh_sach_phien|length }} phiên)</span>
     </div>
-    <span class="badge badge-purple" style="font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 999px;">
-      <i class="fa-solid fa-chart-simple"></i> {{ danh_sach_phien|length|default:1 }} lần làm bài
-    </span>
+    <span style="font-size: 12.5px; color: #64748B;">Bấm vào từng phiên để xem chi tiết</span>
   </div>
 
-  <div class="history-sessions-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 14px;">
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px;">
     {% for ps in danh_sach_phien %}
-    <a href="?session={{ ps.id }}" style="text-decoration: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: 16px; border: 2px solid {% if ps.is_selected %}var(--accent-purple){% else %}#E2E8F0{% endif %}; background: {% if ps.is_selected %}#FAF5FF{% else %}#FFFFFF{% endif %}; color: inherit; transition: all 0.2s ease; box-shadow: {% if ps.is_selected %}0 6px 18px rgba(139, 92, 246, 0.18){% else %}0 2px 6px rgba(0,0,0,0.03){% endif %}; cursor: pointer; box-sizing: border-box; min-width: 0; overflow: hidden; position: relative;" onmouseover="if(!{{ ps.is_selected|yesno:'true,false' }}){this.style.borderColor='var(--accent-purple)'; this.style.transform='translateY(-2px)';}" onmouseout="if(!{{ ps.is_selected|yesno:'true,false' }}){this.style.borderColor='#E2E8F0'; this.style.transform='none';}">
-      <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; overflow: hidden;">
-        <div style="width: 36px; height: 36px; border-radius: 50%; background: {% if ps.is_selected %}var(--accent-purple){% else %}var(--bg-app){% endif %}; color: {% if ps.is_selected %}#fff{% else %}var(--text-secondary){% endif %}; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex-shrink: 0;">
-          {% if ps.is_selected %}<i class="fa-solid fa-check"></i>{% else %}#{{ ps.id }}{% endif %}
+    <a href="?session={{ ps.id }}" style="text-decoration: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 6px; border: 1px solid {% if ps.is_selected %}#EA580C{% else %}#E2E8F0{% endif %}; background: {% if ps.is_selected %}#FFF7ED{% else %}#FFFFFF{% endif %}; color: inherit; transition: all 0.15s ease;">
+      <div style="min-width: 0;">
+        <div style="font-size: 13.5px; font-weight: 700; color: {% if ps.is_selected %}#EA580C{% else %}#0F172A{% endif %}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          Phiên thi #{{ ps.ma_phien }}
+          {% if ps.is_selected %}<span style="font-size: 11px; font-weight: 600; color: #EA580C; margin-left: 4px;">(Đang xem)</span>{% endif %}
         </div>
-        <div style="min-width: 0; overflow: hidden;">
-          <div style="font-size: 13px; font-weight: 800; color: {% if ps.is_selected %}var(--accent-purple){% else %}var(--text-primary){% endif %}; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            <span style="overflow: hidden; text-overflow: ellipsis;">Phiên thi #{{ ps.ma_phien }}</span>
-            {% if ps.is_selected %}<span class="badge badge-purple" style="font-size: 9.5px; padding: 1px 6px; flex-shrink: 0;">Đang xem</span>{% endif %}
-          </div>
-          <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-            <i class="fa-regular fa-calendar"></i> {{ ps.ngay_hoan_thanh|date:"d/m/Y H:i" }}
-          </div>
+        <div style="font-size: 12px; color: #64748B; margin-top: 2px;">
+          {{ ps.ngay_hoan_thanh|date:"d/m/Y H:i" }}
         </div>
       </div>
-
-      <div style="text-align: right; flex-shrink: 0; min-width: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: center;">
-        <div style="font-size: 15px; font-weight: 800; color: {% if ps.is_selected %}var(--accent-purple){% else %}var(--text-primary){% endif %}; white-space: nowrap;">
-          {{ ps.tong_diem }}đ
-        </div>
-        <div style="margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 5px; flex-wrap: nowrap;">
-          <span class="badge {% if ps.trang_thai_duyet == 'GV_DA_DUYET' %}badge-emerald{% elif ps.is_archived %}badge-gray{% else %}badge-coral{% endif %}" style="font-size: 10px; padding: 2px 7px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;">
-            {{ ps.status_label }}
-          </span>
-          {% if ps.can_request_review %}
-          <button type="button" class="btn btn-outline btn-sm" style="font-size: 10px; padding: 2px 6px; font-weight: 700; color: var(--accent-purple); border-color: var(--accent-purple); background: #FAF5FF; white-space: nowrap; flex-shrink: 0;" onclick="event.preventDefault(); event.stopPropagation(); requestTeacherReview('{{ ps.id }}');" title="Gửi phiên thi này sang danh sách chờ Giảng viên phê duyệt điểm">
-            📤 Gửi GV duyệt
-          </button>
-          {% endif %}
-        </div>
+      <div style="text-align: right; flex-shrink: 0;">
+        <div style="font-size: 14px; font-weight: 700; color: #0F172A;">{{ ps.tong_diem }}đ</div>
+        <span style="font-size: 11px; font-weight: 500; color: #64748B;">{{ ps.status_label }}</span>
       </div>
     </a>
-    {% empty %}
-    <div style="font-size: 13px; color: var(--text-muted); font-style: italic; padding: 12px;">
-      Phiên thi hiện tại: #{{ phien.ma_phien|default:"001" }} ({{ phien.hoan_thanh|date:"d/m/Y H:i" }})
-    </div>
     {% endfor %}
   </div>
 </div>
+{% endif %}
 
-<!-- ─── AI PRE-GRADING SCORE NOTICE (YÊU CẦU ĐẶC BIỆT) ────── -->
-<div
-  style="background: linear-gradient(135deg, var(--purple-light), #EDE9FE); border: 1.5px solid #DDD6FE; border-radius: var(--radius-lg); padding: 18px 22px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-  <div style="display: flex; align-items: flex-start; gap: 14px; flex: 1;">
-    <span style="font-size: 28px; line-height: 1;">✦</span>
+<!-- ─── KHỐI ĐIỂM TỔNG & ĐIỂM THEO KỸ NĂNG (ĐẶT LÊN ĐẦU, TO NHẤT) ── -->
+<div class="result-grid-top">
+
+  <!-- CỘT TRÁI: ĐIỂM TỔNG HỢP -->
+  <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between;">
     <div>
-      <div style="font-size: 14px; font-weight: 700; color: var(--accent-purple);">
-        Điểm số & Nhận xét do AI chấm sơ bộ (AI Pre-grading Score)
+      <div style="font-size: 14px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">
+        Điểm tổng hợp
       </div>
-      <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px; line-height: 1.6;">
-        Hệ thống AI Agent (Gemini Flash) đã tự động chấm điểm bài Trắc nghiệm và hoàn thành phân tích tiêu chí chuẩn cho bài Writing & Speaking theo mục tiêu <strong>{{ goal_score.goal_title|default:goal_type }}</strong>.
-        <br>Điểm số chính thức sẽ được <strong>Giáo viên chuyên môn thẩm định và phê duyệt</strong> trong vòng
-        <strong>24h</strong> làm việc trước khi chuyển sang xếp lớp.
-      </div>
-    </div>
-  </div>
-  <div style="text-align: right; flex-shrink: 0;">
-    <span class="badge badge-purple" style="font-size: 12px; padding: 6px 12px;">
-      ✦ Độ tin cậy AI: 92%
-    </span>
-    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Model: Gemini 3.5 Flash · v2.5</div>
-  </div>
-</div>
 
-<!-- ─── TỔNG ĐIỂM & ĐIỂM THEO KỸ NĂNG ─────────────────────── -->
-<div class="two-col" style="margin-bottom: 24px;">
-
-  <!-- TỔNG ĐIỂM VÀ TRÌNH ĐỘ XẾP LOẠI -->
-  <div class="card rounded-2xl shadow-sm" style="text-align: center;">
-    <div class="card-header">
-      <div class="card-title">🏆 Điểm tổng hợp {% if is_teacher_approved %}chính thức{% else %}sơ bộ{% endif %}</div>
-      {% if is_teacher_approved %}
-      <span class="badge badge-emerald" style="display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 4px 10px;">
-        <i class="fa-solid fa-user-check"></i> GV: {{ examiner_info|default:"Ms. Trần Thanh Thảo - GV002" }}
-      </span>
-      {% else %}
-      <span class="badge badge-coral">Chờ GV duyệt</span>
-      {% endif %}
-    </div>
-    <div class="card-body">
-      <!-- Vòng tròn hiển thị điểm số (Score Ring đồng bộ theo thang mục tiêu) -->
-      {% if goal_score.scale_type == 'IELTS_BAND' %}
-      <div class="score-ring" data-pct="{{ ring_pct|default:33 }}" style="--pct: {{ ring_pct|default:33 }}; margin-bottom: 16px;">
-        <span class="score-val" style="font-size: 26px;">{{ goal_score.main_score_display }}</span>
-      </div>
-      <div style="font-size: 13px; color: var(--text-muted); font-weight: 500;">trên thang điểm <strong>Band 9.0 IELTS</strong></div>
-      {% elif goal_score.scale_type == 'VSTEP_10' %}
-      <div class="score-ring" data-pct="{{ ring_pct|default:70 }}" style="--pct: {{ ring_pct|default:70 }}; margin-bottom: 16px;">
-        <span class="score-val" style="font-size: 24px;">{{ goal_score.main_score_display }}</span>
-      </div>
-      <div style="font-size: 13px; color: var(--text-muted); font-weight: 500;">trên thang điểm <strong>10.0 VSTEP</strong></div>
-      {% else %}
-      <div class="score-ring" data-pct="{{ ring_pct|default:ket_qua.tong_diem|default:72 }}" style="--pct: {{ ring_pct|default:ket_qua.tong_diem|default:72 }}; margin-bottom: 16px;">
-        <span class="score-val">{{ ket_qua.tong_diem|default:72 }}</span>
-      </div>
-      <div style="font-size: 13px; color: var(--text-muted); font-weight: 500;">trên thang điểm 100 ({{ goal_score.goal_title|default:"Năng lực tiếng Anh" }})</div>
-      {% endif %}
-
-      <div style="margin-top: 20px;">
-        <div class="badge badge-purple" style="font-size: 14.5px; padding: 8px 18px; border-radius: var(--radius-md);">
-          Trình độ: <strong>{{ goal_score.level_label|default:ket_qua.trinh_do }}</strong>
+      <div style="margin: 18px 0 10px;">
+        {% if goal_score.scale_type == 'IELTS_BAND' %}
+        <div style="font-size: 44px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.5px;">
+          {{ goal_score.main_score_display }}
         </div>
-        {% if goal_score.target_comparison %}
-        <div style="margin-top: 8px; font-size: 12.5px; font-weight: 700; color: var(--accent-emerald);">
-          {{ goal_score.target_comparison }}
+        <div style="font-size: 13px; color: #64748B; margin-top: 6px;">
+          Thang điểm Band 9.0 IELTS · Tổng quy đổi: <strong>{{ ket_qua.tong_diem }}đ</strong>
+        </div>
+        {% elif goal_score.scale_type == 'VSTEP_10' %}
+        <div style="font-size: 44px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.5px;">
+          {{ goal_score.main_score_display }}
+        </div>
+        <div style="font-size: 13px; color: #64748B; margin-top: 6px;">
+          Thang điểm 10.0 VSTEP · Tổng quy đổi: <strong>{{ ket_qua.tong_diem }}đ</strong>
+        </div>
+        {% else %}
+        <div style="font-size: 44px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.5px;">
+          {{ ket_qua.tong_diem }} <span style="font-size: 18px; font-weight: 600; color: #94A3B8;">/ 100đ</span>
+        </div>
+        <div style="font-size: 13px; color: #64748B; margin-top: 6px;">
+          {{ goal_score.goal_title|default:"Năng lực tiếng Anh" }}
         </div>
         {% endif %}
       </div>
+    </div>
 
-      <div style="margin-top: 14px; background: var(--bg-app); border-radius: var(--radius-md); padding: 12px 16px;">
-        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">KHÓA HỌC
-          PHÙ HỢP ĐỀ XUẤT</div>
-        <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-top: 2px;">
-          {{ khoa_de_xuat|default:"B1 IELTS Foundation – 30 buổi" }}
-        </div>
+    <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid #F1F5F9;">
+      <div style="font-size: 14px; color: #334155;">
+        Trình độ: <strong style="color: #0F172A;">{{ goal_score.level_label|default:ket_qua.trinh_do }}</strong>
       </div>
+      {% if goal_score.target_comparison %}
+      <div style="margin-top: 6px; font-size: 13px; font-weight: 600; color: #C2410C;">
+        {{ goal_score.target_comparison }}
+      </div>
+      {% endif %}
     </div>
   </div>
 
-  <!-- PHÂN BỐ ĐIỂM 4 KỸ NĂNG -->
-  <div class="card rounded-2xl shadow-sm">
-    <div class="card-header">
-      <div class="card-title">📈 Phân tích điểm theo kỹ năng (Mục tiêu: {{ goal_score.goal_title|default:goal_type }})</div>
-      <span class="badge badge-emerald">4/4 Kỹ năng</span>
-    </div>
-    <div class="card-body">
-      {% for skill in skill_scores %}
-      <div class="ai-score-bar" style="margin-bottom: 14px;">
-        <div class="bar-label" style="margin-bottom: 6px;">
-          <span>
-            {{ skill.label }}
-            {% if skill.is_ai %}<span class="badge badge-ai" style="font-size: 10px; margin-left: 4px;">AI sơ
-              bộ</span>{% else %}<span class="badge badge-emerald"
-              style="font-size: 10px; margin-left: 4px;">Auto-graded</span>{% endif %}
-          </span>
-          <span
-            style="font-weight: 700; color: {% if skill.is_ai %}var(--accent-purple){% else %}var(--accent-emerald){% endif %}; font-size: 14px;">
+  <!-- CỘT PHẢI: PHÂN TÍCH 3 KỸ NĂNG -->
+  <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div style="font-size: 14px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">
+          Điểm theo kỹ năng
+        </div>
+        <div style="font-size: 12.5px; color: #64748B;">
+          Mục tiêu: {{ goal_score.goal_title|default:goal_type }}
+        </div>
+      </div>
+
+      <!-- Kỹ năng 1: Trắc nghiệm & Nghe -->
+      <div class="skill-row">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px;">
+          <span style="font-weight: 600; color: #1E293B;">Trắc nghiệm & Nghe</span>
+          <span style="font-weight: 700; color: #0F172A;">
             {% if goal_score.scale_type == 'IELTS_BAND' %}
-              {% if forloop.counter == 1 %}{{ goal_score.reading_score_display }} ({{ skill.score }}/{{ skill.max }}đ)
-              {% elif forloop.counter == 2 %}{{ goal_score.writing_score_display }} ({{ skill.score }}/{{ skill.max }}đ)
-              {% else %}{{ goal_score.speaking_score_display }} ({{ skill.score }}/{{ skill.max }}đ){% endif %}
+              {{ goal_score.reading_score_display }} ({{ skill_scores.0.score }}/40đ)
             {% elif goal_score.scale_type == 'VSTEP_10' %}
-              {% if forloop.counter == 1 %}{{ goal_score.reading_score_display }} VSTEP
-              {% elif forloop.counter == 2 %}{{ goal_score.writing_score_display }} VSTEP
-              {% else %}{{ goal_score.speaking_score_display }} VSTEP{% endif %}
+              {{ goal_score.reading_score_display }} VSTEP
             {% else %}
-              {{ skill.score }}/{{ skill.max }} ({{ skill.pct }}%)
+              {{ skill_scores.0.score }}/40đ
             {% endif %}
           </span>
         </div>
-        <div class="bar-track" style="height: 8px;">
-          <div class="bar-fill" data-width="{{ skill.pct }}%"
-            style="width: {{ skill.pct }}%; background: {{ skill.color }};"></div>
+        <div class="skill-track">
+          <div class="skill-fill" style="width: {{ skill_scores.0.pct }}%; background: #2563EB;"></div>
         </div>
       </div>
-      {% endfor %}
 
-      <!-- Nhận xét tổng quát của AI -->
-      <div
-        style="margin-top: 18px; padding: 12px 16px; background: var(--purple-light); border-radius: var(--radius-md); border-left: 3px solid var(--accent-purple);">
-        <div style="font-size: 12px; font-weight: 700; color: var(--accent-purple); margin-bottom: 4px;">
-          ✦ Đánh giá tổng quan từ AI:
+      <!-- Kỹ năng 2: Writing -->
+      <div class="skill-row">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px;">
+          <span style="font-weight: 600; color: #1E293B;">Writing</span>
+          <span style="font-weight: 700; color: #0F172A;">
+            {% if skill_scores.1.score > 0 %}
+              {% if goal_score.scale_type == 'IELTS_BAND' %}
+                {{ goal_score.writing_score_display }} ({{ skill_scores.1.score }}/30đ)
+              {% elif goal_score.scale_type == 'VSTEP_10' %}
+                {{ goal_score.writing_score_display }} VSTEP
+              {% else %}
+                {{ skill_scores.1.score }}/30đ
+              {% endif %}
+            {% else %}
+              <span style="font-size: 12px; font-weight: 600; color: #64748B; background: #F1F5F9; padding: 2px 7px; border-radius: 4px;">Chưa làm</span>
+            {% endif %}
+          </span>
         </div>
-        <div style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.6;">
-          Thí sinh có nền tảng <strong>Đọc hiểu & Nghe tốt</strong> (trên 80%). Kỹ năng Viết có cấu trúc rõ ràng nhưng
-          cần đa dạng hóa từ vựng học thuật. Kỹ năng Nói phát âm dễ nghe, cần tăng tính lưu loát và tự tin khi phản xạ.
+        <div class="skill-track">
+          <div class="skill-fill" style="width: {{ skill_scores.1.pct }}%; background: #D97706;"></div>
         </div>
       </div>
+
+      <!-- Kỹ năng 3: Speaking -->
+      <div class="skill-row">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px;">
+          <span style="font-weight: 600; color: #1E293B;">Speaking</span>
+          <span style="font-weight: 700; color: #0F172A;">
+            {% if has_speaking_voice and skill_scores.2.score > 0 %}
+              {% if goal_score.scale_type == 'IELTS_BAND' %}
+                {{ goal_score.speaking_score_display }} ({{ skill_scores.2.score }}/30đ)
+              {% elif goal_score.scale_type == 'VSTEP_10' %}
+                {{ goal_score.speaking_score_display }} VSTEP
+              {% else %}
+                {{ skill_scores.2.score }}/30đ
+              {% endif %}
+            {% else %}
+              <span style="font-size: 12px; font-weight: 600; color: #64748B; background: #F1F5F9; padding: 2px 7px; border-radius: 4px;">Chưa làm</span>
+            {% endif %}
+          </span>
+        </div>
+        <div class="skill-track">
+          <div class="skill-fill" style="width: {% if has_speaking_voice %}{{ skill_scores.2.pct }}{% else %}0{% endif %}%; background: #EA580C;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nhận xét tổng quan sinh từ kết quả thực tế -->
+    <div style="margin-top: 14px; padding: 10px 14px; background: #F8FAFC; border-left: 3px solid #94A3B8; border-radius: 4px; font-size: 12.5px; color: #475569; line-height: 1.55;">
+      <strong style="color: #1E293B;">Đánh giá tổng quan:</strong> {{ ai_overall_comment }}
     </div>
   </div>
 
 </div>
 
-<!-- ─── AI FEEDBACK CHI TIẾT (WRITING & SPEAKING) ─────────── -->
-<div class="two-col" style="margin-bottom: 24px;">
-
-  <!-- PHÂN TÍCH WRITING TỪ AI -->
-  <div class="card rounded-2xl shadow-sm">
-    <div class="card-header">
-      <div>
-        <div class="card-title">✍️ Phân tích Rubric Writing</div>
-        <div class="card-subtitle">Điểm AI sơ bộ: {{ skill_scores.1.score }}/30 · Phân tích tiêu chí {{ goal_score.goal_title|default:goal_type }}</div>
-      </div>
-      <span class="badge badge-ai">Gemini 3.5 Flash</span>
+<!-- ─── KHỐI KHÓA HỌC PHÙ HỢP ĐỀ XUẤT ──────────────────────── -->
+<div class="card" style="background: #FFFDFB; border: 1.5px solid #FED7AA; border-radius: 8px; padding: 18px 22px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+  <div>
+    <div style="font-size: 11.5px; font-weight: 700; color: #C2410C; text-transform: uppercase; letter-spacing: 0.5px;">
+      Khóa học phù hợp đề xuất
     </div>
-    <div class="card-body">
-      <div class="ai-feedback-card">
-        <div class="ai-feedback-header">
-          <span>✦ Rubric Chấm điểm Chi tiết</span>
-        </div>
-        <div class="ai-criteria">
-          {% for c in writing_criteria %}
-          <div class="criterion">
-            <span class="criterion-name">{{ c.name }}</span>
-            <div class="criterion-bar">
-              <div class="criterion-fill" data-width="{{ c.pct }}%" style="width: {{ c.pct }}%;"></div>
-            </div>
-            <span class="criterion-score">{{ c.score }}</span>
-          </div>
-          {% endfor %}
-        </div>
-
-        <div
-          style="margin-top: 14px; font-size: 12.5px; color: var(--text-secondary); padding: 12px; background: rgba(255,255,255,.75); border-radius: var(--radius-md); line-height: 1.6;">
-          <strong style="color: var(--accent-purple);">Nhận xét AI:</strong>
-          {% if writing_comment %}{{ writing_comment }}{% else %}Bài viết đã đề cập đầy đủ các luận điểm theo yêu cầu đề bài. Cần đa dạng hóa từ vựng học thuật và tăng cường liên kết giữa các đoạn văn. Cấu trúc câu nhìn chung tốt nhưng đôi chỗ còn lặp lại cấu trúc đơn.{% endif %}
-        </div>
-
-        {% if student_writing_answer %}
-        <details style="margin-top: 12px; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 14px;">
-          <summary style="font-size: 12.5px; font-weight: 700; color: var(--text-primary); cursor: pointer;">
-            📄 Xem lại bài viết học viên đã nộp (Task 1 & Task 2)
-          </summary>
-          <div style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.65; margin-top: 10px; white-space: pre-wrap; font-family: inherit; background: #fff; padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">{{ student_writing_answer }}</div>
-        </details>
-        {% endif %}
-
-        {% if teacher_writing_comment %}
-        <div style="margin-top: 12px; padding: 12px 14px; background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: var(--radius-md); font-size: 13px; color: #065F46; line-height: 1.55;">
-          <strong>👨‍🏫 Nhận xét chính thức của Giáo viên (Writing):</strong>
-          <div style="margin-top: 4px; font-weight: 500;">{{ teacher_writing_comment }}</div>
-        </div>
-        {% elif is_teacher_approved and teacher_note %}
-        <div style="margin-top: 12px; padding: 10px 14px; background: var(--emerald-light); border: 1px solid #A7F3D0; border-radius: var(--radius-md); font-size: 12.5px; color: #065F46;">
-          <strong>👨‍🏫 Nhận xét của Giảng viên:</strong> {{ teacher_note }}
-        </div>
-        {% endif %}
-      </div>
+    <div style="font-size: 17px; font-weight: 800; color: #0F172A; margin-top: 3px;">
+      {{ khoa_de_xuat|default:"Lớp Pre-IELTS Foundation" }}
+    </div>
+    <div style="font-size: 13px; color: #64748B; margin-top: 2px;">
+      Lộ trình đào tạo được cá nhân hóa theo trình độ kiểm tra và mục tiêu của học viên.
     </div>
   </div>
+  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+    <a href="{% url 'billing:payment_detail' %}" class="btn" style="background: #EA580C; color: #FFFFFF; font-weight: 600; padding: 9px 18px; border-radius: 6px; font-size: 13.5px; text-decoration: none;">
+      Xem học phí & lộ trình
+    </a>
+    <a href="{% url 'users:student_dashboard' %}" class="btn" style="background: #FFFFFF; color: #334155; border: 1px solid #CBD5E1; font-weight: 600; padding: 9px 16px; border-radius: 6px; font-size: 13.5px; text-decoration: none;">
+      Về Dashboard
+    </a>
+  </div>
+</div>
 
-  <!-- PHÂN TÍCH SPEAKING TỪ AI -->
-  <div class="card rounded-2xl shadow-sm">
-    <div class="card-header">
-      <div>
-        <div class="card-title">🎙️ Phân tích Rubric Speaking</div>
-        <div class="card-subtitle">Điểm AI sơ bộ: {{ skill_scores.2.score }}/30 · Phân tích tiêu chí {{ goal_score.goal_title|default:goal_type }}</div>
+<!-- ─── ACCORDION: CHI TIẾT RUBRIC CHẤM ĐIỂM (WRITING & SPEAKING) ── -->
+<details class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; margin-bottom: 24px; overflow: hidden;">
+  <summary style="padding: 16px 20px; font-size: 14.5px; font-weight: 700; color: #1E293B; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; background: #FFFFFF;">
+    <span style="display: inline-flex; align-items: center; gap: 8px;">
+      <i class="fa-solid fa-list-check" style="color: #64748B;"></i>
+      <span>Chi tiết tiêu chí chấm điểm Rubric (Writing & Speaking)</span>
+    </span>
+    <span style="font-size: 13px; font-weight: 500; color: #64748B; display: inline-flex; align-items: center; gap: 6px;">
+      Xem chi tiết <i class="fa-solid fa-chevron-down accordion-chevron" style="font-size: 11px;"></i>
+    </span>
+  </summary>
+
+  <div class="rubric-grid" style="border-top: 1px solid #F1F5F9;">
+    <!-- CỘT 1: WRITING RUBRIC -->
+    <div style="background: #FAFAFA; border: 1px solid #E2E8F0; border-radius: 6px; padding: 18px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #E2E8F0;">
+        <div style="font-size: 14.5px; font-weight: 700; color: #0F172A;">Tiêu chí chấm Writing</div>
+        <span style="font-size: 12px; font-weight: 600; color: #64748B;">Điểm: {{ skill_scores.1.score }}/30</span>
       </div>
-      <span class="badge badge-ai">Gemini Speech-AI</span>
-    </div>
-    <div class="card-body">
-      <div class="ai-feedback-card">
-        <div class="ai-feedback-header">
-          <span>✦ Rubric Chấm điểm Chi tiết</span>
-        </div>
-        <div class="ai-criteria">
-          {% for c in speaking_criteria %}
-          <div class="criterion">
-            <span class="criterion-name">{{ c.name }}</span>
-            <div class="criterion-bar">
-              <div class="criterion-fill" data-width="{{ c.pct }}%" style="width: {{ c.pct }}%;"></div>
-            </div>
-            <span class="criterion-score">{{ c.score }}</span>
+
+      <div style="margin-bottom: 14px;">
+        {% for c in writing_criteria %}
+        <div style="margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px;">
+            <span style="color: #334155; font-weight: 500;">{{ c.name }}</span>
+            <span style="color: #0F172A; font-weight: 700;">{{ c.score }}</span>
           </div>
-          {% endfor %}
+          <div style="height: 5px; background: #E2E8F0; border-radius: 999px; overflow: hidden;">
+            <div style="width: {{ c.pct }}%; height: 100%; background: #D97706; border-radius: 999px;"></div>
+          </div>
         </div>
-
-        <div
-          style="margin-top: 14px; font-size: 12.5px; color: var(--text-secondary); padding: 12px; background: rgba(255,255,255,.75); border-radius: var(--radius-md); line-height: 1.6;">
-          <strong style="color: var(--accent-purple);">Nhận xét AI:</strong>
-          {% if speaking_comment %}{{ speaking_comment }}{% else %}Phát âm khá rõ ràng và dễ nghe. Tốc độ nói đôi khi chậm và có nhiều khoảng dừng ngập ngừng. Cần cải thiện tính lưu loát và mở rộng vốn từ vựng trong giao tiếp phản xạ hàng ngày.{% endif %}
-        </div>
-
-        {% if student_speaking_answer %}
-        <details style="margin-top: 12px; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 14px;">
-          <summary style="font-size: 12.5px; font-weight: 700; color: var(--text-primary); cursor: pointer;">
-            🎙️ Xem lại nội dung lời nói (Transcript) đã ghi âm
-          </summary>
-          <div style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.65; margin-top: 10px; white-space: pre-wrap; font-family: inherit; background: #fff; padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);">{{ student_speaking_answer }}</div>
-        </details>
-        {% endif %}
-
-        {% if teacher_speaking_comment %}
-        <div style="margin-top: 12px; padding: 12px 14px; background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: var(--radius-md); font-size: 13px; color: #065F46; line-height: 1.55;">
-          <strong>👨‍🏫 Nhận xét chính thức của Giáo viên (Speaking):</strong>
-          <div style="margin-top: 4px; font-weight: 500;">{{ teacher_speaking_comment }}</div>
-        </div>
-        {% endif %}
+        {% endfor %}
       </div>
 
-      <!-- Trình phát Audio nghe lại bài Speaking -->
-      <div style="margin-top: 16px; background: var(--bg-app); border-radius: var(--radius-md); padding: 12px 16px;">
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
-          📼 Nghe lại bài nói của bạn:
+      <div style="padding: 10px 12px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; font-size: 12.5px; color: #475569; line-height: 1.55;">
+        <strong style="color: #1E293B;">Nhận xét:</strong> {{ writing_comment }}
+      </div>
+
+      {% if student_writing_answer %}
+      <details style="margin-top: 10px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; padding: 8px 12px;">
+        <summary style="font-size: 12.5px; font-weight: 600; color: #334155; cursor: pointer;">
+          Xem lại bài viết học viên đã nộp
+        </summary>
+        <div style="font-size: 12.5px; color: #475569; line-height: 1.6; margin-top: 8px; white-space: pre-wrap; background: #F8FAFC; padding: 10px; border-radius: 4px; border: 1px solid #E2E8F0;">{{ student_writing_answer }}</div>
+      </details>
+      {% endif %}
+
+      {% if teacher_writing_comment %}
+      <div style="margin-top: 10px; padding: 10px 12px; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 4px; font-size: 12.5px; color: #065F46;">
+        <strong>Nhận xét của Giáo viên:</strong> {{ teacher_writing_comment }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- CỘT 2: SPEAKING RUBRIC -->
+    <div style="background: #FAFAFA; border: 1px solid #E2E8F0; border-radius: 6px; padding: 18px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #E2E8F0;">
+        <div style="font-size: 14.5px; font-weight: 700; color: #0F172A;">Tiêu chí chấm Speaking</div>
+        <span style="font-size: 12px; font-weight: 600; color: #64748B;">
+          {% if has_speaking_voice and skill_scores.2.score > 0 %}Điểm: {{ skill_scores.2.score }}/30{% else %}Chưa làm{% endif %}
+        </span>
+      </div>
+
+      {% if has_speaking_voice and skill_scores.2.score > 0 %}
+      <div style="margin-bottom: 14px;">
+        {% for c in speaking_criteria %}
+        <div style="margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px;">
+            <span style="color: #334155; font-weight: 500;">{{ c.name }}</span>
+            <span style="color: #0F172A; font-weight: 700;">{{ c.score }}</span>
+          </div>
+          <div style="height: 5px; background: #E2E8F0; border-radius: 999px; overflow: hidden;">
+            <div style="width: {{ c.pct }}%; height: 100%; background: #EA580C; border-radius: 999px;"></div>
+          </div>
         </div>
-        <audio controls style="width: 100%; border-radius: 8px;">
-          <source src="https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg" type="audio/ogg">
-          Trình duyệt không hỗ trợ audio.
+        {% endfor %}
+      </div>
+
+      <div style="padding: 10px 12px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; font-size: 12.5px; color: #475569; line-height: 1.55;">
+        <strong style="color: #1E293B;">Nhận xét:</strong> {{ speaking_comment }}
+      </div>
+
+      {% if audio_url %}
+      <div style="margin-top: 10px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; padding: 8px 12px;">
+        <div style="font-size: 12px; font-weight: 600; color: #64748B; margin-bottom: 6px;">Nghe lại bài nói:</div>
+        <audio controls style="width: 100%; height: 36px;">
+          <source src="{{ audio_url }}" type="audio/webm">
+          Trình duyệt không hỗ trợ phát audio.
         </audio>
       </div>
+      {% endif %}
+
+      {% if teacher_speaking_comment %}
+      <div style="margin-top: 10px; padding: 10px 12px; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 4px; font-size: 12.5px; color: #065F46;">
+        <strong>Nhận xét của Giáo viên:</strong> {{ teacher_speaking_comment }}
+      </div>
+      {% endif %}
+
+      {% else %}
+      <!-- THÔNG BÁO GỌN KHI CHƯA LÀM BÀI NÓI (KHÔNG VẼ 4 THANH 0.0 VÀ KHÔNG HIỂN THỊ AUDIO GIẢ) -->
+      <div style="padding: 24px 16px; text-align: center; background: #FFFFFF; border: 1px dashed #CBD5E1; border-radius: 4px; color: #64748B;">
+        <i class="fa-solid fa-microphone-slash" style="font-size: 24px; color: #94A3B8; margin-bottom: 8px; display: block;"></i>
+        <div style="font-size: 13.5px; font-weight: 700; color: #334155;">Chưa có bài nói</div>
+        <div style="font-size: 12.5px; color: #64748B; margin-top: 4px; line-height: 1.5;">
+          Học viên chưa thực hiện thu âm phần thi Speaking trong phiên kiểm tra này.
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
-
-</div>
-
-<!-- ─── BƯỚC TIẾP THEO & CALL TO ACTION ──────────────────── -->
-<div
-  style="text-align: center; padding: 28px; background: linear-gradient(135deg, var(--coral-light), #FFF8F5); border-radius: var(--radius-2xl); border: 1.5px solid #FFD4C5; box-shadow: var(--shadow-sm);">
-  <div style="font-size: 36px; margin-bottom: 8px;">🎉</div>
-  <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 6px;">
-    Bạn đã hoàn thành bài kiểm tra đầu vào!
-  </h2>
-  <p
-    style="font-size: 13.5px; color: var(--text-secondary); margin-bottom: 20px; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.6;">
-    Hồ sơ của bạn đã được chuyển tới <strong>Giáo viên chuyên môn</strong> để duyệt điểm chính thức. Bạn có thể xem
-    trước thông tin khóa học và hướng dẫn thanh toán học phí.
-  </p>
-  <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-    <a href="{% url 'billing:payment_detail' %}" class="btn btn-primary btn-lg">
-      💳 Xem trước Học phí & Lớp học →
-    </a>
-    <a href="{% url 'users:student_dashboard' %}" class="btn btn-outline btn-lg">
-      🏠 Trở về Dashboard
-    </a>
-  </div>
-</div>
+</details>
 
 {% else %}
-<!-- ─── EMPTY STATE: CHƯA CÓ BÀI KIỂM TRA NÀO ──────────────── -->
-<div class="page-header">
-  <div class="page-breadcrumb">📊 <span>Học viên</span> / Kết quả kiểm tra đầu vào</div>
-  <div>
-    <h1 class="page-title">Kết quả Kiểm tra Trình độ 📊</h1>
-    <p class="page-subtitle">Chưa có kết quả kiểm tra năng lực đầu vào</p>
+<!-- ─── EMPTY STATE: CHƯA CÓ KẾT QUẢ KIỂM TRA ──────────────── -->
+<div class="page-header" style="margin-bottom: 24px;">
+  <div class="page-breadcrumb">
+    <a href="{% url 'users:student_dashboard' %}" style="color: inherit; text-decoration: none;">Học viên</a>
+    <span> / </span>Kết quả kiểm tra đầu vào
   </div>
+  <h1 class="page-title" style="margin-top: 6px; font-size: 22px; font-weight: 700; color: #0F172A;">Kết quả kiểm tra đầu vào</h1>
 </div>
 
-<div class="card rounded-2xl shadow-sm text-center" style="padding: 56px 24px; max-width: 660px; margin: 40px auto; border: 1.5px dashed #CBD5E1; background: #FFFFFF;">
-  <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--coral-light); color: var(--accent-coral); font-size: 36px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 22px;">
+<div class="card" style="padding: 48px 24px; max-width: 600px; margin: 32px auto; text-align: center; border: 1px dashed #CBD5E1; background: #FFFFFF; border-radius: 8px;">
+  <div style="width: 64px; height: 64px; border-radius: 50%; background: #FFF7ED; color: #EA580C; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 18px;">
     <i class="fa-solid fa-clipboard-question"></i>
   </div>
-  <h2 style="font-size: 22px; font-weight: 800; color: var(--text-primary); margin-bottom: 12px;">
-    Chưa có kết quả kiểm tra trình độ 📊
+  <h2 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">
+    Chưa có kết quả kiểm tra trình độ
   </h2>
-  <p style="font-size: 14.5px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 28px; max-width: 520px; margin-left: auto; margin-right: auto;">
-    Hệ thống chưa ghi nhận bài làm kiểm tra nào của bạn. Hãy hoàn thành bài kiểm tra đầu vào trực tuyến 4 kỹ năng (105 phút) gồm: Trắc nghiệm &amp; Nghe (45') và Viết &amp; Nói (60') để nhận kết quả phân tích năng lực từ AI Gemini và Giảng viên chuyên môn.
+  <p style="font-size: 13.5px; color: #64748B; line-height: 1.6; margin-bottom: 24px;">
+    Hệ thống chưa ghi nhận bài làm kiểm tra nào của bạn. Hãy hoàn thành bài kiểm tra đầu vào trực tuyến để nhận phân tích năng lực và lộ trình đào tạo phù hợp.
   </p>
-  <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
-    <a href="{% url 'placement_tests:test_room' %}" class="btn btn-primary btn-lg" style="font-weight: 700; padding: 12px 26px;">
-      <i class="fa-solid fa-play"></i> Bắt đầu làm bài test ngay (105 phút) 🚀
+  <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+    <a href="{% url 'placement_tests:test_room' %}" class="btn" style="background: #EA580C; color: #FFFFFF; font-weight: 600; padding: 10px 20px; border-radius: 6px; font-size: 13.5px; text-decoration: none;">
+      Làm bài kiểm tra ngay
     </a>
-    <a href="{% url 'users:student_dashboard' %}" class="btn btn-outline btn-lg" style="padding: 12px 22px;">
-      <i class="fa-solid fa-house"></i> Về Dashboard học viên
+    <a href="{% url 'users:student_dashboard' %}" class="btn" style="background: #FFFFFF; color: #334155; border: 1px solid #CBD5E1; font-weight: 600; padding: 10px 18px; border-radius: 6px; font-size: 13.5px; text-decoration: none;">
+      Về Dashboard
     </a>
   </div>
 </div>
@@ -435,7 +428,7 @@
 {% block extra_js %}
 <script>
   async function requestTeacherReview(phienId) {
-    if (!confirm('Bạn có muốn gửi phiên làm bài #' + phienId + ' sang cho Giảng viên chuyên môn thẩm định và chấm điểm chính thức không?')) {
+    if (!confirm('Bạn có muốn gửi phiên làm bài #' + phienId + ' sang cho Giảng viên chuyên môn thẩm định không?')) {
       return;
     }
 
