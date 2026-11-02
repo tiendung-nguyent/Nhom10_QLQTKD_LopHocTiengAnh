@@ -1,0 +1,428 @@
+{% extends "allauth/layouts/base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block head_title %}Hoàn tất Đăng ký Google{% endblock %}
+
+{% block extra_head %}
+<style>
+  .auth-signup-wrapper {
+    padding: 38px 40px;
+  }
+
+  @media (max-width: 640px) {
+    .auth-signup-wrapper {
+      padding: 26px 20px;
+    }
+  }
+
+  /* Connected Account Preview Card */
+  .social-account-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(135deg, rgba(66, 133, 244, 0.05), rgba(52, 168, 83, 0.05));
+    border: 1.5px solid rgba(66, 133, 244, 0.2);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  [data-theme="dark"] .social-account-card {
+    background: rgba(66, 133, 244, 0.1);
+    border-color: rgba(66, 133, 244, 0.35);
+  }
+
+  .social-avatar-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 2px solid #fff;
+  }
+
+  .social-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .social-account-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .social-account-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 3px;
+  }
+
+  .social-account-email {
+    font-size: 13px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .badge-verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #ECFDF5;
+    color: #059669;
+    border: 1px solid #A7F3D0;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  [data-theme="dark"] .badge-verified {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6EE7B7;
+    border-color: rgba(16, 185, 129, 0.35);
+  }
+
+  /* Form Styling */
+  .auth-custom-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .form-label {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .form-label i {
+    color: #4285F4;
+  }
+
+  .required-star {
+    color: #EF4444;
+    margin-left: 2px;
+  }
+
+  .input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-icon {
+    position: absolute;
+    left: 16px;
+    color: var(--text-muted, #9CA3AF);
+    font-size: 15px;
+    pointer-events: none;
+    transition: color 0.2s;
+  }
+
+  .form-control-input {
+    width: 100%;
+    padding: 14px 16px 14px 46px;
+    border: 1.5px solid var(--border-color, #E5E7EB);
+    border-radius: 12px;
+    background: var(--bg-card, #FFFFFF);
+    color: var(--text-primary, #111827);
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 500;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+  }
+
+  .form-control-input:focus {
+    border-color: #4285F4;
+    box-shadow: 0 0 0 3.5px rgba(66, 133, 244, 0.16);
+  }
+
+  .form-control-input:focus + .input-icon,
+  .input-with-icon:focus-within .input-icon {
+    color: #4285F4;
+  }
+
+  .form-error-msg {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: #DC2626;
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  .form-help-text {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.45;
+  }
+
+  /* Submit Button */
+  .btn-submit-signup {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 22px;
+    background: linear-gradient(135deg, #1A73E8, #2563EB);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 15.5px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.28);
+    transition: all 0.25s ease;
+    box-sizing: border-box;
+    margin-top: 8px;
+  }
+
+  .btn-submit-signup:hover {
+    background: linear-gradient(135deg, #1557B0, #1D4ED8);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.38);
+    transform: translateY(-2px);
+  }
+
+  .btn-submit-signup:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.2);
+  }
+
+  /* Footer Action */
+  .auth-footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 18px;
+  }
+
+  .btn-cancel-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel-link:hover {
+    color: var(--accent-coral, #FF6B4A);
+    background: var(--bg-app);
+  }
+
+  /* Security Badges */
+  .auth-security-box {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .sec-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .text-emerald { color: #10B981; }
+  .text-amber { color: #F59E0B; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-signup-wrapper">
+
+  <!-- Brand Pill -->
+  <div class="auth-badge-pill">
+    <svg viewBox="0 0 24 24" width="16" height="16">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+    </svg>
+    <span>Xác thực Tài khoản Google</span>
+  </div>
+
+  <h1 class="auth-card-title">Xác nhận Đăng ký Tài khoản 👋</h1>
+  <p class="auth-card-sub">
+    Chào mừng bạn! Vui lòng xác nhận email liên kết với tài khoản Google để hoàn tất và truy cập vào hệ thống <strong>Academix</strong>.
+  </p>
+
+  <!-- Django Messages (nếu có thông báo đăng nhập trước đó) -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="auth-alert-box {% if 'error' in message.tags %}error{% elif 'success' in message.tags %}success{% else %}info{% endif %}">
+        {% if 'error' in message.tags %}
+          <i class="fa-solid fa-circle-exclamation" style="color: #EF4444; font-size: 16px;"></i>
+        {% elif 'success' in message.tags %}
+          <i class="fa-solid fa-circle-check" style="color: #10B981; font-size: 16px;"></i>
+        {% else %}
+          <i class="fa-solid fa-circle-info" style="color: #3B82F6; font-size: 16px;"></i>
+        {% endif %}
+        <div>{{ message }}</div>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Thẻ thông tin tài khoản Google đã kết nối -->
+  <div class="social-account-card">
+    <div class="social-avatar-wrap">
+      {% if account.extra_data.picture %}
+        <img src="{{ account.extra_data.picture }}" alt="Avatar" class="social-avatar-img">
+      {% else %}
+        <svg viewBox="0 0 24 24" width="28" height="28">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+        </svg>
+      {% endif %}
+    </div>
+    <div class="social-account-info">
+      <div class="social-account-name">
+        <span>{{ account.extra_data.name|default:account.user.username|default:"Tài khoản Google" }}</span>
+        <span class="badge-verified"><i class="fa-solid fa-check"></i> Google</span>
+      </div>
+      <div class="social-account-email">
+        {{ account.extra_data.email|default:form.email.value|default:"Chưa có email" }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Form hoàn tất đăng ký -->
+  {% url 'socialaccount_signup' as action_url %}
+  <form class="auth-custom-form" method="post" action="{{ action_url|default:'' }}" id="signup-form">
+    {% csrf_token %}
+    {{ redirect_field }}
+
+    <!-- Render trường Email -->
+    {% if form.email %}
+      <div class="form-group">
+        <label for="{{ form.email.id_for_label }}" class="form-label">
+          <i class="fa-regular fa-envelope"></i> Địa chỉ Email đăng ký
+          <span class="required-star">*</span>
+        </label>
+        <div class="input-with-icon">
+          <i class="fa-solid fa-at input-icon"></i>
+          <input type="email"
+                 name="{{ form.email.name }}"
+                 id="{{ form.email.id_for_label }}"
+                 value="{{ form.email.value|default:account.extra_data.email|default:'' }}"
+                 class="form-control-input"
+                 placeholder="ten_ban@gmail.com"
+                 required>
+        </div>
+        {% if form.email.errors %}
+          {% for error in form.email.errors %}
+            <div class="form-error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ error }}</div>
+          {% endfor %}
+        {% else %}
+          <div class="form-help-text">Email từ tài khoản Google của bạn sẽ được dùng làm định danh đăng nhập chính thức.</div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <!-- Render các trường khác của Form nếu có (như username) -->
+    {% for field in form %}
+      {% if field.name != 'email' %}
+        <div class="form-group">
+          <label for="{{ field.id_for_label }}" class="form-label">
+            <i class="fa-regular fa-user"></i> {{ field.label }}
+            {% if field.field.required %}<span class="required-star">*</span>{% endif %}
+          </label>
+          <div class="input-with-icon">
+            <i class="fa-solid fa-pen-nib input-icon"></i>
+            <input type="{{ field.field.widget.input_type|default:'text' }}"
+                   name="{{ field.name }}"
+                   id="{{ field.id_for_label }}"
+                   value="{{ field.value|default:'' }}"
+                   class="form-control-input"
+                   placeholder="{{ field.label }}"
+                   {% if field.field.required %}required{% endif %}>
+          </div>
+          {% if field.errors %}
+            {% for error in field.errors %}
+              <div class="form-error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ error }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    <!-- Nút Hoàn tất đăng ký -->
+    <button type="submit" class="btn-submit-signup" id="submit-btn" onclick="handleSubmitLoading(this)">
+      <span id="btn-text"><i class="fa-solid fa-circle-check"></i> Hoàn tất & Tiếp tục vào hệ thống</span>
+      <i class="fa-solid fa-arrow-right" id="btn-icon"></i>
+    </button>
+  </form>
+
+  <!-- Nút hủy / quay lại -->
+  <div class="auth-footer-actions">
+    <a href="{% url 'users:student_login' %}" class="btn-cancel-link">
+      <i class="fa-solid fa-arrow-left"></i> Quay lại trang Đăng nhập
+    </a>
+  </div>
+
+  <!-- Security Note -->
+  <div class="auth-security-box">
+    <div class="sec-item">
+      <i class="fa-solid fa-shield-halved text-emerald"></i>
+      <span>Bảo mật OAuth 2.0</span>
+    </div>
+    <div class="sec-item">
+      <i class="fa-solid fa-bolt text-amber"></i>
+      <span>Đăng nhập 1 chạm an toàn</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function handleSubmitLoading(btn) {
+    const btnText = document.getElementById('btn-text');
+    const btnIcon = document.getElementById('btn-icon');
+    if (btnText) btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang kích hoạt tài khoản...';
+    if (btnIcon) btnIcon.style.display = 'none';
+    btn.style.opacity = '0.85';
+  }
+</script>
+{% endblock %}
+
