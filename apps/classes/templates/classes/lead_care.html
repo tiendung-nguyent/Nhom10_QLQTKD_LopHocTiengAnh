@@ -59,10 +59,13 @@
     transition: all 0.15s ease;
   }
   .btn-action-icon:hover {
-    background: #111827;
+    background: #EA580C; /* Màu cam rực rỡ */
     color: #FFFFFF;
-    border-color: #111827;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    border-color: #EA580C;
+    box-shadow: 0 3px 8px rgba(234, 88, 12, 0.35);
+  }
+  .btn-action-icon:hover i {
+    color: #FFFFFF !important;
   }
 </style>
 {% endblock %}
@@ -70,19 +73,19 @@
 {% block content %}
 <!-- ─── TIÊU ĐỀ TRANG ─────────────────────────────────────── -->
 <div class="page-header">
-  <div class="page-breadcrumb">🎯 <span>Tuyển sinh</span> / Chăm sóc Khách hàng Tiềm năng</div>
+  <div class="page-breadcrumb"><span>Tuyển sinh</span> / Chăm sóc Khách hàng Tiềm năng</div>
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
-      <h1 class="page-title">Chăm sóc Khách hàng Tiềm năng 🎯</h1>
+      <h1 class="page-title">Chăm sóc Khách hàng Tiềm năng</h1>
       <p class="page-subtitle">Quản lý phễu tiếp nhận, liên hệ tư vấn lộ trình và hẹn lịch test đầu vào — Đồng bộ trực
         tiếp lên Dashboard Học viên</p>
     </div>
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
       <a href="{% url 'classes:class_status' %}" class="btn btn-outline btn-sm">
-        🏫 Tình trạng Lớp & Sĩ số
+        Tình trạng Lớp & Sĩ số
       </a>
       <button type="button" class="btn btn-outline btn-sm" onclick="window.location.reload()">
-        🔄 Làm mới
+        Làm mới
       </button>
     </div>
   </div>
@@ -178,7 +181,7 @@
 <div class="card rounded-2xl shadow-sm" style="margin-bottom: 24px;">
   <div class="card-header">
     <div>
-      <div class="card-title">📋 Danh sách Khách hàng Tiềm năng & Hồ sơ Tư vấn</div>
+      <div class="card-title">Danh sách Khách hàng Tiềm năng & Hồ sơ Tư vấn</div>
       <div class="card-subtitle">Mỗi lần chăm sóc sẽ tự động cập nhật vào <strong>Lịch sử Tư vấn</strong> và
         <strong>Tiến trình Hồ sơ</strong> của học viên</div>
     </div>
@@ -343,7 +346,7 @@
       <!-- Kênh liên hệ & Chuyên viên -->
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
         <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Kênh liên hệ *</label>
+          <label class="form-label">Kênh liên hệ <span style="color: #EF4444; font-weight: bold;">*</span></label>
           <select name="kenh_lien_he" class="form-control" required style="font-weight: 600;">
             <option value="Gọi điện thoại">📞 Gọi điện thoại</option>
             <option value="Nhắn tin Zalo / SMS">💬 Nhắn tin Zalo / SMS</option>
@@ -352,7 +355,7 @@
           </select>
         </div>
         <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Chuyên viên phụ trách *</label>
+          <label class="form-label">Chuyên viên phụ trách <span style="color: #EF4444; font-weight: bold;">*</span></label>
           <select name="nhan_vien_id" class="form-control" id="modal-advisor-select" required style="font-weight: 600;">
             {% for adv in advisors %}
             <option value="{{ adv.id }}" {% if current_advisor_id and adv.id == current_advisor_id %}selected{% endif %}>
@@ -365,7 +368,7 @@
       <!-- Cập nhật trạng thái tiến trình BPMN -->
       <div class="form-group">
         <label class="form-label" style="color: var(--accent-orange); font-weight: 700;">
-          🎯 Cập nhật Tiến trình Hồ sơ (BPMN Pipeline)
+          Cập nhật Tiến trình Hồ sơ (BPMN Pipeline)
         </label>
         <select name="trang_thai_moi" class="form-control" id="modal-status-select" onchange="handleStatusChange()"
           style="font-weight: 600;">
@@ -393,7 +396,7 @@
       <!-- Input Lý do từ chối (Chỉ hiện khi chọn TU_CHOI theo BPMN) -->
       <div class="form-group" id="refusal-box" style="display: none;">
         <label class="form-label" style="color: #EF4444; font-weight: 700;">
-          ⚠️ Lý do học viên từ chối / Đề xuất hủy bỏ / Đổi khung giờ (BPMN AS-IS)
+          Lý do học viên từ chối / Đề xuất hủy bỏ / Đổi khung giờ (BPMN AS-IS)
         </label>
         <input type="text" name="ly_do_tu_choi" id="modal-refusal-input" class="form-control"
           placeholder="Ví dụ: Bận lịch tối T3/T5, đề xuất học ca sáng T2/T4/T6...">
@@ -401,7 +404,7 @@
 
       <!-- Nội dung kết quả chăm sóc -->
       <div class="form-group">
-        <label class="form-label">💬 Nội dung tư vấn & Kết quả chăm sóc *</label>
+        <label class="form-label">Nội dung tư vấn & Kết quả chăm sóc <span style="color: #EF4444; font-weight: bold;">*</span></label>
         <textarea name="ket_qua" class="form-control" rows="4" required
           placeholder="Ghi nhận chi tiết: Học viên có mục tiêu gì, hẹn ngày giờ test hoặc tư vấn khóa học nào, phản hồi của học viên..."></textarea>
       </div>
@@ -409,7 +412,7 @@
       <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
         <button type="button" class="btn btn-outline" onclick="closeModal('contact-modal')">Hủy bỏ</button>
         <button type="submit" class="btn btn-emerald btn-lg" id="btn-submit-contact" style="font-weight: 700;">
-          ✔ Lưu kết quả & Cập nhật tiến trình học viên
+          Lưu kết quả & Cập nhật tiến trình học viên
         </button>
       </div>
     </form>
@@ -420,7 +423,7 @@
 <div class="modal-overlay" id="history-modal">
   <div class="modal-box" style="max-width: 600px;">
     <h2 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
-      <span>📜</span> Lịch sử Chăm sóc & Tiếp nhận
+      Lịch sử Chăm sóc & Tiếp nhận
     </h2>
     <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
       Học viên: <strong id="history-student-name" style="color: var(--text-primary);"></strong> · Phụ trách: <strong
@@ -606,12 +609,12 @@
 
           closeModal('contact-modal');
           btn.disabled = false;
-          btn.textContent = '✔ Lưu kết quả & Cập nhật tiến trình học viên';
+          btn.textContent = 'Lưu kết quả & Cập nhật tiến trình học viên';
           setTimeout(() => window.location.reload(), 1200);
         } else {
           Toast.show(data.message || 'Lỗi khi lưu chăm sóc khách hàng', 'error');
           btn.disabled = false;
-          btn.textContent = '✔ Lưu kết quả & Cập nhật tiến trình học viên';
+          btn.textContent = 'Lưu kết quả & Cập nhật tiến trình học viên';
         }
       } catch (err) {
         Toast.show('Đã cập nhật chăm sóc khách hàng thành công!', 'success');
