@@ -303,11 +303,20 @@ def lead_care(request):
         badge_class, badge_label = status_badges.get(h.trang_thai, ('badge-gray', h.get_trang_thai_display()))
 
         # Lấy điểm test và giáo viên duyệt nếu có từ các phiên làm bài
+        any_phien = h.phien_lam_bais.order_by('-id').first()
         latest_phien = h.phien_lam_bais.filter(
             Q(ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN) |
             Q(bai_lam_ky_nangs__trang_thai_cham='GV_DA_DUYET')
         ).order_by('-id').first()
         kq = getattr(latest_phien, 'ket_qua_kiem_tra', None) if latest_phien else None
+        if not kq and any_phien and hasattr(any_phien, 'ket_qua_kiem_tra'):
+            kq = any_phien.ket_qua_kiem_tra
+
+        da_test_lead = bool(
+            h.trang_thai in [HoSoTuVan.TrangThai.DA_TEST, HoSoTuVan.TrangThai.DE_XUAT_LOP, HoSoTuVan.TrangThai.HOAN_THANH]
+            or (any_phien and any_phien.trang_thai == PhienLamBai.TrangThai.HOAN_THANH)
+            or kq
+        )
 
         giao_vien_cham = None
         if kq and kq.nhan_vien_xac_nhan:
@@ -356,12 +365,14 @@ def lead_care(request):
             'ly_do_tu_choi': h.ly_do_tu_choi or '',
             'target_goal': target_goal,
             'test_score': round(kq.tong_diem, 1) if kq else None,
+            'da_test': da_test_lead,
             'test_level': kq.trinh_do if kq else None,
             'giao_vien_cham': giao_vien_cham,
             'contact_count': len(contacts),
             'latest_contact': latest_c,
             'da_xep_lop': da_xep,
             'ten_lop': gd.lop_hoc.ten_lop if da_xep else '',
+            'da_test': da_test_lead,
         })
 
     # Danh sách nhân viên tư vấn
@@ -594,11 +605,26 @@ def lead_consult(request, hstv_id):
     kh = hstv.khach_hang
 
     # Điểm test và giáo viên chấm nếu có
+    any_phien = hstv.phien_lam_bais.order_by('-id').first()
     latest_phien = hstv.phien_lam_bais.filter(
         Q(ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN) |
         Q(bai_lam_ky_nangs__trang_thai_cham='GV_DA_DUYET')
     ).order_by('-id').first()
     kq = getattr(latest_phien, 'ket_qua_kiem_tra', None) if latest_phien else None
+    if not kq and any_phien and hasattr(any_phien, 'ket_qua_kiem_tra'):
+        kq = any_phien.ket_qua_kiem_tra
+
+    da_test = bool(
+        hstv.trang_thai in [HoSoTuVan.TrangThai.DA_TEST, HoSoTuVan.TrangThai.DE_XUAT_LOP, HoSoTuVan.TrangThai.HOAN_THANH]
+        or (any_phien and any_phien.trang_thai == PhienLamBai.TrangThai.HOAN_THANH)
+        or kq
+    )
+
+    thoi_gian_test_str = ''
+    if any_phien:
+        test_dt = any_phien.hoan_thanh or any_phien.bat_dau or any_phien.thoi_gian_hen
+        if test_dt:
+            thoi_gian_test_str = timezone.localtime(test_dt).strftime('%Y-%m-%dT%H:%M')
 
     giao_vien_cham = None
     if kq and kq.nhan_vien_xac_nhan:
@@ -664,6 +690,8 @@ def lead_consult(request, hstv_id):
         'hstv': hstv,
         'student': kh,
         'test_score': round(kq.tong_diem, 1) if kq else None,
+        'da_test': da_test,
+        'thoi_gian_test_str': thoi_gian_test_str,
         'test_level': kq.trinh_do if kq else None,
         'giao_vien_cham': giao_vien_cham,
         'contacts': contacts,

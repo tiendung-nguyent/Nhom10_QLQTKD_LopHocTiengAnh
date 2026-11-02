@@ -41,6 +41,29 @@
     border: 2px solid #fff;
     box-shadow: 0 0 0 2px var(--accent-purple);
   }
+
+  /* Nút thao tác icon đen trắng tối giản */
+  .btn-action-icon {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1.5px solid #1F2937;
+    background: #FFFFFF;
+    color: #111827;
+    font-size: 13.5px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+  }
+  .btn-action-icon:hover {
+    background: #111827;
+    color: #FFFFFF;
+    border-color: #111827;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  }
 </style>
 {% endblock %}
 
@@ -171,7 +194,7 @@
           <th>Trạng thái hồ sơ</th>
           <th>Chuyên viên phụ trách</th>
           <th>Tương tác gần nhất</th>
-          <th style="text-align: center; width: 190px; min-width: 190px;">Thao tác chăm sóc</th>
+          <th style="text-align: center; width: 100px; min-width: 100px;">Thao tác</th>
         </tr>
       </thead>
       <tbody>
@@ -201,6 +224,13 @@
               <i class="fa-solid fa-user-check"></i> GV: {{ lead.giao_vien_cham }}
             </div>
             {% endif %}
+            {% elif lead.da_test %}
+            <div style="font-weight: 700; color: var(--text-primary); font-size: 13px;">
+              {{ lead.target_goal|default:"🎯 Luyện thi IELTS" }}
+            </div>
+            <span class="badge badge-purple" style="font-size: 11px; margin-top: 3px;">
+              ✦ Đã làm bài test
+            </span>
             {% else %}
             <div style="font-weight: 700; color: var(--text-primary); font-size: 13px;">
               {{ lead.target_goal|default:"🎯 Luyện thi IELTS" }}
@@ -249,17 +279,16 @@
             <span class="text-muted" style="font-size: 12px; font-style: italic;">Chưa có lịch sử liên hệ</span>
             {% endif %}
           </td>
-          <td style="text-align: center; width: 190px; min-width: 190px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center;">
-              <a href="{% url 'classes:lead_consult' lead.id %}" class="btn btn-emerald btn-sm"
-                style="font-weight: 700; padding: 7px 6px; font-size: 12px; width: 100%; white-space: nowrap; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px;"
-                title="Chăm sóc, tư vấn lộ trình, xếp lớp & sinh VietQR">
-                📞 Chăm sóc
+          <td style="text-align: center; width: 100px; min-width: 100px;">
+            <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+              <a href="{% url 'classes:lead_consult' lead.id %}" class="btn-action-icon"
+                title="Tư vấn & Xếp lớp">
+                <i class="fa-solid fa-headset"></i>
               </a>
-              <button type="button" class="btn btn-outline btn-sm"
-                style="padding: 7px 6px; font-size: 12px; width: 100%; white-space: nowrap;"
+              <button type="button" class="btn-action-icon"
+                title="Xem lịch sử tương tác"
                 onclick="openHistoryModal('{{ lead.id }}', '{{ lead.ho_ten }}')">
-                📜 Lịch sử
+                <i class="fa-solid fa-clock-rotate-left"></i>
               </button>
             </div>
           </td>
