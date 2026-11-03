@@ -1698,59 +1698,58 @@
 
 <!-- ─── MODAL YÊU CẦU ĐIỀN THÔNG TIN HỌC VIÊN MỚI (CHỈ HIỂN THỊ 1 LẦN DUY NHẤT) ─── -->
 <div class="modal-overlay {% if not can_take_test and not test_already_completed %}show{% endif %}" id="student-gate-modal">
-  <div class="modal-box" style="max-width: 580px;">
-    <div style="text-align: center; margin-bottom: 18px;">
-      <div style="width: 56px; height: 56px; background: var(--coral-light); border: 2px solid #FFD4C5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 24px; color: var(--accent-coral);">
+  <div class="modal-box" style="max-width: 530px; width: 94vw; max-height: calc(100vh - 36px); overflow-y: auto; padding: 20px 22px; box-sizing: border-box; border-radius: 16px;">
+    <div style="text-align: center; margin-bottom: 12px;">
+      <div style="width: 42px; height: 42px; background: var(--coral-light); border: 2px solid #FFD4C5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; font-size: 19px; color: var(--accent-coral);">
         📝
       </div>
-      <h2 class="modal-title" id="gate-modal-title" style="margin-bottom: 6px;">Yêu cầu thông tin Học viên Mới</h2>
-      <p id="gate-modal-desc" style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
-        Chào mừng bạn đến với Academix! Bạn chỉ cần điền thông tin và chọn mục tiêu học tập <strong>1 lần duy nhất</strong>.
-        Hệ thống sẽ lưu hồ sơ vĩnh viễn và không bao giờ yêu cầu bạn điền lại ở các lần đăng nhập sau.
+      <h2 class="modal-title" id="gate-modal-title" style="margin: 0 0 3px; font-size: 17.5px; font-weight: 700;">Yêu cầu thông tin Học viên Mới</h2>
+      <p id="gate-modal-desc" style="font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin: 0;">
+        Điền thông tin và chọn mục tiêu học tập (hệ thống lưu hồ sơ vĩnh viễn cho các lần đăng nhập sau).
       </p>
     </div>
 
     <!-- Alert khi đã nộp học phí (Chỉ được đổi SĐT) -->
-    <div id="gate-paid-alert" style="display:none; background: #FEF3C7; border: 1.5px solid #FDE68A; border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 14px; font-size: 12.5px; color: #92400E; align-items: center; gap: 10px;">
-      <i class="fa-solid fa-lock" style="font-size: 16px; color: var(--accent-coral);"></i>
-      <span><strong>Chính sách đào tạo:</strong> Học viên đã nộp học phí không được tự ý đổi Họ tên và Mục tiêu khóa học. Bạn chỉ có thể cập nhật Số điện thoại liên hệ.</span>
+    <div id="gate-paid-alert" style="display:none; background: #FEF3C7; border: 1.5px solid #FDE68A; border-radius: var(--radius-md); padding: 8px 12px; margin-bottom: 10px; font-size: 12px; color: #92400E; align-items: center; gap: 8px;">
+      <i class="fa-solid fa-lock" style="font-size: 14px; color: var(--accent-coral);"></i>
+      <span><strong>Chính sách đào tạo:</strong> Học viên đã nộp học phí chỉ có thể cập nhật Số điện thoại liên hệ.</span>
     </div>
 
     <!-- Form điền thông tin nhanh -->
     <form id="quick-profile-form" method="POST" action="{% url 'users:quick_profile_api' %}" onsubmit="submitQuickProfile(event)">
       {% csrf_token %}
-      <div class="form-group" style="margin-bottom: 12px;">
-        <label class="form-label" style="font-size: 12.5px;">Họ và tên học viên <span style="color:var(--accent-coral)">*</span></label>
-        <input type="text" id="gate-hoten" name="ho_ten" class="form-control" placeholder="Ví dụ: Nguyễn Mai Phương" value="{% if student.ho_ten %}{{ student.ho_ten }}{% elif student_name and student_name != 'Học viên' %}{{ student_name }}{% endif %}" required>
+      <div class="form-group" style="margin-bottom: 9px;">
+        <label class="form-label" style="font-size: 12px; margin-bottom: 4px;">Họ và tên học viên <span style="color:var(--accent-coral)">*</span></label>
+        <input type="text" id="gate-hoten" name="ho_ten" class="form-control" style="padding: 7px 11px; font-size: 13px;" placeholder="Ví dụ: Nguyễn Mai Phương" value="{% if student.ho_ten %}{{ student.ho_ten }}{% elif student_name and student_name != 'Học viên' %}{{ student_name }}{% endif %}" required>
       </div>
 
-      <div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+      <div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 9px;">
         <div class="form-group">
-          <label class="form-label" style="font-size: 12.5px; display: flex; justify-content: space-between; align-items: center;">
+          <label class="form-label" style="font-size: 12px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
             <span>Email học viên <span style="color:var(--accent-coral)">*</span></span>
             {% if student_email or student.email %}
-            <span style="font-size: 11px; color: var(--accent-emerald); font-weight: 600;"><i class="fa-solid fa-circle-check"></i> Đã đồng bộ Google</span>
+            <span style="font-size: 10.5px; color: var(--accent-emerald); font-weight: 600;"><i class="fa-solid fa-circle-check"></i> Đã đồng bộ Google</span>
             {% else %}
-            <span style="font-size: 11px; color: var(--accent-coral); font-weight: 600;"><i class="fa-solid fa-asterisk"></i> Bắt buộc</span>
+            <span style="font-size: 10.5px; color: var(--accent-coral); font-weight: 600;"><i class="fa-solid fa-asterisk"></i> Bắt buộc</span>
             {% endif %}
           </label>
-          <input type="email" id="gate-email" name="email" class="form-control" placeholder="Nhập địa chỉ email của bạn" value="{{ student_email|default:student.email }}" {% if student_email or student.email %}readonly style="background: var(--bg-app); cursor: not-allowed; font-weight: 600; color: var(--text-primary);"{% else %}style="background: #fff; font-weight: 600; color: var(--text-primary);"{% endif %} required title="Email học viên dùng để đối soát bài làm và nhận bảng điểm">
+          <input type="email" id="gate-email" name="email" class="form-control" style="padding: 7px 11px; font-size: 13px; {% if student_email or student.email %}background: var(--bg-app); cursor: not-allowed; font-weight: 600; color: var(--text-primary);{% else %}background: #fff; font-weight: 600; color: var(--text-primary);{% endif %}" placeholder="Nhập địa chỉ email của bạn" value="{{ student_email|default:student.email }}" required title="Email học viên dùng để đối soát bài làm và nhận bảng điểm">
         </div>
         <div class="form-group">
-          <label class="form-label" style="font-size: 12.5px;">Số điện thoại / Zalo <span style="color:var(--accent-coral)">*</span></label>
-          <input type="tel" id="gate-sdt" name="so_dien_thoai" class="form-control" placeholder="0912345678 (10 số)" value="{{ student.so_dien_thoai }}" maxlength="15" required autofocus>
-          <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Số điện thoại bắt buộc gồm đúng 10 chữ số.</div>
+          <label class="form-label" style="font-size: 12px; margin-bottom: 4px;">Số điện thoại / Zalo <span style="color:var(--accent-coral)">*</span></label>
+          <input type="tel" id="gate-sdt" name="so_dien_thoai" class="form-control" style="padding: 7px 11px; font-size: 13px;" placeholder="0912345678 (10 số)" value="{{ student.so_dien_thoai }}" maxlength="15" required autofocus>
+          <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">Bắt buộc đúng 10 chữ số.</div>
         </div>
       </div>
 
-      <div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+      <div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 9px;">
         <div class="form-group">
-          <label class="form-label" style="font-size: 12.5px;">Ngày sinh <span style="color:var(--accent-coral)">*</span></label>
-          <input type="date" id="gate-ngaysinh" name="ngay_sinh" class="form-control" value="{% if student.ngay_sinh %}{{ student.ngay_sinh }}{% endif %}" required title="Vui lòng chọn ngày tháng năm sinh của học viên (bắt buộc)">
+          <label class="form-label" style="font-size: 12px; margin-bottom: 4px;">Ngày sinh <span style="color:var(--accent-coral)">*</span></label>
+          <input type="date" id="gate-ngaysinh" name="ngay_sinh" class="form-control" style="padding: 6px 11px; font-size: 13px;" value="{% if student.ngay_sinh %}{{ student.ngay_sinh }}{% endif %}" required title="Vui lòng chọn ngày tháng năm sinh của học viên (bắt buộc)">
         </div>
         <div class="form-group">
-          <label class="form-label" style="font-size: 12.5px;">Mục tiêu học tập <span style="color:var(--accent-coral)">*</span></label>
-          <select id="gate-muctieu" name="goal_type" class="form-control" onchange="handleTargetGoalChange(this.value)">
+          <label class="form-label" style="font-size: 12px; margin-bottom: 4px;">Mục tiêu học tập <span style="color:var(--accent-coral)">*</span></label>
+          <select id="gate-muctieu" name="goal_type" class="form-control" style="padding: 7px 11px; font-size: 13px;" onchange="handleTargetGoalChange(this.value)">
             <option value="IELTS" selected>Luyện thi IELTS</option>
             <option value="DAU_RA_DH">🎓 Chuẩn đầu ra Đại học</option>
             <option value="GIAO_TIEP">💼 Giao tiếp công sở & Đi làm</option>
@@ -1759,11 +1758,11 @@
         </div>
       </div>
 
-      <div class="form-group" id="group-target-ielts" style="margin-bottom: 14px;">
-        <label class="form-label" style="font-size: 12.5px; font-weight: 700;">
+      <div class="form-group" id="group-target-ielts" style="margin-bottom: 9px;">
+        <label class="form-label" style="font-size: 12px; font-weight: 700; margin-bottom: 4px;">
           <i class="fa-solid fa-bullseye" style="color:var(--accent-coral)"></i> Chọn Band IELTS mục tiêu <span style="color:var(--accent-coral)">*</span>:
         </label>
-        <select id="gate-ielts-band" name="target_detail" class="form-control">
+        <select id="gate-ielts-band" name="target_detail" class="form-control" style="padding: 7px 11px; font-size: 13px;">
           <option value="0 đến 3.0">Band 0 đến 3.0 (Pre-IELTS / Xây dựng nền tảng)</option>
           <option value="3.0 đến 4.5">Band 3.0 đến 4.5 (IELTS Foundation cơ bản)</option>
           <option value="4.5 đến 5.5">Band 4.5 đến 5.5 (IELTS Intermediate bứt phá)</option>
@@ -1772,29 +1771,29 @@
         </select>
       </div>
 
-      <div class="form-group" id="group-target-daura" style="margin-bottom: 14px; display: none;">
-        <label class="form-label" style="font-size: 12.5px; font-weight: 700;">
+      <div class="form-group" id="group-target-daura" style="margin-bottom: 9px; display: none;">
+        <label class="form-label" style="font-size: 12px; font-weight: 700; margin-bottom: 4px;">
           <i class="fa-solid fa-graduation-cap" style="color:var(--accent-purple)"></i> Chọn Chuẩn đầu ra mục tiêu <span style="color:var(--accent-coral)">*</span>:
         </label>
-        <select id="gate-daura-level" class="form-control">
+        <select id="gate-daura-level" class="form-control" style="padding: 7px 11px; font-size: 13px;">
           <option value="B1" selected>Chuẩn đầu ra B1 (VSTEP B1 / CEFR B1)</option>
           <option value="B2">Chuẩn đầu ra B2 (VSTEP B2 / CEFR B2)</option>
         </select>
       </div>
 
-      <div style="background: var(--bg-app); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center;">
+      <div style="background: var(--bg-app); border-radius: var(--radius-sm); padding: 7px 11px; margin-bottom: 12px; font-size: 11.5px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center;">
         <i class="fa-solid fa-shield-halved" style="color: var(--accent-emerald);"></i>
         <span>Thông tin dùng để đối soát bài làm AI, xếp lớp chính xác và chuyển kết quả sang Giảng viên duyệt.</span>
       </div>
 
       <div style="display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
-        <button type="button" class="btn btn-outline" id="gate-close-btn" onclick="closeModal('student-gate-modal')" style="font-size: 13px; display: none;">
+        <button type="button" class="btn btn-outline" id="gate-close-btn" onclick="closeModal('student-gate-modal')" style="font-size: 12.5px; padding: 7px 12px; display: none;">
           Đóng cửa sổ
         </button>
-        <a href="{% url 'users:student_login' %}" class="btn btn-outline" id="gate-switch-btn" style="font-size: 13px;">
+        <a href="{% url 'users:student_login' %}" class="btn btn-outline" id="gate-switch-btn" style="font-size: 12.5px; padding: 7px 12px;">
           Đăng nhập tài khoản khác
         </a>
-        <button type="submit" class="btn btn-primary" id="gate-submit-btn" style="font-size: 13px; font-weight: 700;">
+        <button type="submit" class="btn btn-primary" id="gate-submit-btn" style="font-size: 12.5px; font-weight: 700; padding: 8px 16px;">
           <i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài
         </button>
       </div>
@@ -1964,6 +1963,7 @@
     sessionStorage.removeItem('ws_started');
     sessionStorage.removeItem('placement_timer_mcq');
     sessionStorage.removeItem('placement_timer_ws');
+    sessionStorage.removeItem('placement_mcq_draft_answers');
     localStorage.removeItem('placement_draft');
     return true;
   }
@@ -1980,6 +1980,7 @@
     sessionStorage.removeItem('mcq_started');
     sessionStorage.removeItem('placement_timer_mcq');
     sessionStorage.removeItem('mcq_submitted');
+    sessionStorage.removeItem('placement_mcq_draft_answers');
     return true;
   }
 
@@ -1994,8 +1995,14 @@
     }
     mcqStarted = true;
     sessionStorage.setItem('mcq_started', 'true');
-    document.getElementById('mcq-start-banner').style.display = 'none';
-    document.getElementById('mcq-questions-container').style.display = 'block';
+    if (mcqTimeRemaining <= 0) {
+      mcqTimeRemaining = MCQ_TOTAL_SECS;
+      sessionStorage.setItem('placement_timer_mcq', mcqTimeRemaining);
+    }
+    const startBanner = document.getElementById('mcq-start-banner');
+    if (startBanner) startBanner.style.display = 'none';
+    const qContainer = document.getElementById('mcq-questions-container');
+    if (qContainer) qContainer.style.display = 'block';
 
     if (activeTimerInterval) clearInterval(activeTimerInterval);
     activeTimerInterval = setInterval(() => {
@@ -2501,8 +2508,66 @@
     box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // ─── NỘP BÀI TRẮC NGHIỆM QUA FETCH API ─────────────────────
+  // ─── THEO DÕI TIẾN ĐỘ & TỰ ĐỘNG LƯU BÀI LÀM TRẮC NGHIỆM ─────
+  function updateMCQProgress() {
+    const allRadios = document.querySelectorAll('#mcq-form input[type=radio]');
+    const checkedRadios = document.querySelectorAll('#mcq-form input[type=radio]:checked');
+    const count = checkedRadios.length;
+    const countEl = document.getElementById('answered-count');
+    if (countEl) {
+      countEl.textContent = count;
+    }
+
+    allRadios.forEach(radio => {
+      const label = radio.closest('.option-item');
+      if (label) {
+        if (radio.checked) {
+          label.style.borderColor = 'var(--accent-orange)';
+          label.style.background = 'rgba(234, 88, 12, 0.06)';
+          label.style.fontWeight = '600';
+        } else {
+          label.style.borderColor = 'var(--border-color)';
+          label.style.background = '';
+          label.style.fontWeight = 'normal';
+        }
+      }
+    });
+
+    // Lưu nháp câu trả lời vào sessionStorage để không bao giờ bị mất khi tải lại trang
+    const draft = {};
+    checkedRadios.forEach(r => {
+      const qId = r.name.replace('q_', '');
+      draft[qId] = r.value;
+    });
+    sessionStorage.setItem('placement_mcq_draft_answers', JSON.stringify(draft));
+  }
+
+  function restoreMCQDraft() {
+    try {
+      const raw = sessionStorage.getItem('placement_mcq_draft_answers');
+      if (raw) {
+        const draft = JSON.parse(raw);
+        Object.entries(draft).forEach(([qId, val]) => {
+          const input = document.querySelector(`#mcq-form input[name="q_${qId}"][value="${val}"]`);
+          if (input) {
+            input.checked = true;
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('Error restoring MCQ draft:', err);
+    }
+    updateMCQProgress();
+  }
+
   const mcqForm = document.getElementById('mcq-form');
+  if (mcqForm) {
+    mcqForm.addEventListener('change', updateMCQProgress);
+  }
+  // Khôi phục nháp các câu đã chọn ngay khi tải trang
+  restoreMCQDraft();
+
+  // ─── NỘP BÀI TRẮC NGHIỆM QUA FETCH API ─────────────────────
   if (mcqForm) {
     mcqForm.addEventListener('submit', async e => {
       e.preventDefault();
@@ -2517,7 +2582,7 @@
       });
 
       try {
-        const csrfToken = document.querySelector('#mcq-form [name=csrfmiddlewaretoken]')?.value;
+        const csrfToken = document.querySelector('#mcq-form [name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
         const res = await fetch("{% url 'placement_tests:submit_mcq' %}", {
           method: 'POST',
           headers: {
@@ -2526,6 +2591,14 @@
           },
           body: JSON.stringify({ answers: answers })
         });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          const msg = errData?.message || `Lỗi máy chủ (${res.status}). Vui lòng thử lại!`;
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-check-to-slot"></i> Nộp bài Trắc nghiệm';
+          Toast.show(msg, 'error');
+          return;
+        }
         const data = await res.json();
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-check"></i> Đã nộp thành công';
@@ -2533,11 +2606,12 @@
         if (data.status === 'success') {
           mcqSubmitted = true;
           sessionStorage.setItem('mcq_submitted', 'true');
+          sessionStorage.removeItem('placement_mcq_draft_answers');
           unlockTabWS();
 
-          // banner merged into review box
-          document.getElementById('mcq-score-display').textContent = data.score;
-          document.getElementById('mcq-questions-container').style.display = 'none';
+          // Ẩn khung câu hỏi trắc nghiệm
+          const qContainer = document.getElementById('mcq-questions-container');
+          if (qContainer) qContainer.style.display = 'none';
 
           // Cập nhật và hiển thị khung đối soát kết quả chi tiết
           const reviewBox = document.getElementById('mcq-review-detail-box');
@@ -2649,28 +2723,32 @@
             }
           }
 
-          document.getElementById('modal-feedback-title').textContent = 'Hoàn thành bài Trắc nghiệm!';
-          document.getElementById('modal-feedback-desc').textContent = 'Hệ thống đã tự động đối soát đáp án.';
-          document.getElementById('modal-feedback-score').textContent = `${data.score} / ${data.total} điểm`;
-          document.getElementById('modal-feedback-note').textContent = `Đúng ${data.correct_count}/${data.total_questions} câu (${data.percentage}%). Bỏ trống ${data.blank_count} câu (0đ).`;
-          
-          document.getElementById('modal-criteria-breakdown').innerHTML = `
-            <div style="background: var(--bg-card); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 12px;">
-              <span style="font-weight:700; color:var(--accent-emerald);">✓ Mở khóa thành công:</span> Bạn có thể chuyển sang làm phần thi Writing & Speaking (60 phút) ngay bây giờ.
-            </div>
-            <button type="button" class="btn btn-outline btn-block btn-sm" onclick="closeModal('result-feedback-modal'); toggleMCQReviewDetails();" style="border-color:#059669; color:#059669; font-weight:700;">
-              <i class="fa-solid fa-list-check"></i> Xem lại chi tiết đáp án &amp; giải thích 25 câu
-            </button>
-          `;
+          // Cập nhật thông tin trên modal phản hồi
+          const titleEl = document.getElementById('modal-feedback-title');
+          if (titleEl) titleEl.textContent = 'Hoàn thành bài Trắc nghiệm!';
+          const descEl = document.getElementById('modal-feedback-desc');
+          if (descEl) descEl.textContent = 'Hệ thống đã tự động đối soát đáp án.';
+          const scoreEl = document.getElementById('modal-feedback-score');
+          if (scoreEl) scoreEl.textContent = `${data.score} / ${data.total}đ`;
+          const cmpEl = document.getElementById('modal-feedback-target-compare');
+          if (cmpEl) cmpEl.textContent = `Đúng ${data.correct_count}/${data.total_questions} câu (${data.percentage}%). Bỏ trống ${data.blank_count} câu.`;
+          const rEl = document.getElementById('modal-skill-reading');
+          if (rEl) rEl.textContent = `${data.score}đ`;
+          const wEl = document.getElementById('modal-skill-writing');
+          if (wEl) wEl.textContent = 'Chưa nộp';
+          const sEl = document.getElementById('modal-skill-speaking');
+          if (sEl) sEl.textContent = 'Chưa nộp';
+
           openModal('result-feedback-modal');
-          Toast.show(data.message, 'success', 5000);
+          Toast.show(data.message || 'Nộp bài Trắc nghiệm thành công!', 'success', 5000);
         } else {
           Toast.show(data.message || 'Lỗi khi nộp bài trắc nghiệm', 'error');
         }
       } catch (err) {
+        console.error('Error during MCQ submit:', err);
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-check-to-slot"></i> Nộp bài Trắc nghiệm';
-        Toast.show('Lỗi kết nối máy chủ khi nộp bài.', 'error');
+        Toast.show('Lỗi xử lý kết quả: ' + (err.message || 'Vui lòng thử lại!'), 'error');
       }
     });
   }
@@ -2841,7 +2919,7 @@
     const mucTieuFull = `${goalType} (${targetDetail})`;
 
     try {
-      const csrfToken = document.querySelector('#quick-profile-form [name=csrfmiddlewaretoken]')?.value;
+      const csrfToken = document.querySelector('#quick-profile-form [name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
       const res = await fetch("{% url 'users:quick_profile_api' %}", {
         method: 'POST',
         headers: {
@@ -2858,34 +2936,35 @@
           target_detail: targetDetail
         })
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        const msg = errData?.message || `Lỗi máy chủ (${res.status}). Vui lòng thử lại!`;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài';
+        Toast.show(msg, 'error');
+        return;
+      }
       const data = await res.json();
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài';
 
       if (data.status === 'success') {
         canTakeTest = true;
-        closeModal('student-gate-modal');
+        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Đang tải đề thi...';
 
-        const overlay = document.getElementById('test-lock-overlay');
-        if (overlay) overlay.style.display = 'none';
-        document.getElementById('test-sections-wrapper')?.classList.remove('blur-locked');
-
-        // Cập nhật thanh hiển thị thông tin học viên ngay lập tức
         if (data.student) {
           const nameEl = document.getElementById('display-student-name');
           if (nameEl && data.student.ho_ten) nameEl.textContent = data.student.ho_ten;
         }
 
         if (data.has_paid) {
-          // Nếu đã đóng học phí: Chỉ đổi SĐT -> Không cần reload đề thi
-          Toast.show(data.message || 'Cập nhật số điện thoại thành công!', 'success', 5000);
-          setTimeout(() => window.location.reload(), 1200);
+          Toast.show(data.message || 'Cập nhật số điện thoại thành công!', 'success', 2000);
+          setTimeout(() => window.location.reload(), 600);
         } else {
-          // Chưa đóng học phí: Reload để sinh lại bộ đề thi thích ứng đúng mục tiêu mới
-          Toast.show(data.message || 'Hồ sơ đã lưu thành công! Đang thiết lập đề thi...', 'success', 3000);
+          Toast.show(data.message || 'Hồ sơ lưu thành công! Đang vào phòng thi...', 'success', 2000);
           setTimeout(() => {
-            window.location.href = "{% url 'placement_tests:test_room' %}?refresh_test=1";
-          }, 800);
+            window.location.href = "{% url 'placement_tests:test_room' %}";
+          }, 300);
         }
       } else {
         Toast.show(data.message || 'Lỗi khi lưu thông tin.', 'error');
