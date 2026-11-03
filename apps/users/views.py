@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta, datetime
 from apps.users.models import KhachHang, NhanVien
-from apps.users.helpers import get_account_email
+from apps.users.helpers import get_account_email, get_user_role
 from apps.classes.models import HoSoTuVan, KhoaHoc, LopHoc, GhiDanh
 from apps.billing.models import PhieuHocPhi
 from apps.placement_tests.models import PhienLamBai, KetQuaKiemTra, BaiLamKyNang
@@ -688,8 +688,6 @@ def student_dashboard(request):
     context = {
         'student': student_data,
         'today': now,
-        'total_revenue': total_confirmed_revenue,
-        'pending_revenue': pending_revenue,
         'test_completed': test_completed,
         'is_teacher_approved': is_teacher_approved,
         'ai_score': display_score,
@@ -1126,6 +1124,8 @@ def accountant_dashboard(request):
 
     context = {
         'today': now,
+        'total_revenue': total_confirmed_revenue,
+        'pending_revenue': pending_revenue,
         'total_revenue_num': total_confirmed_revenue_num,
         'total_revenue_vnd': total_confirmed_revenue_vnd,
         'pending_revenue_num': pending_revenue_num,
