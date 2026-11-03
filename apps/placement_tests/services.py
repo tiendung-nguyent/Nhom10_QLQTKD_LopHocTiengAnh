@@ -462,19 +462,22 @@ def grade_writing_with_gemini(task1_text: str, task2_text: str, target_goal: str
 
 def is_empty_or_placeholder_speaking(transcript: str) -> bool:
     """Kiểm tra nếu bài nói Speaking hoàn toàn không có âm thanh / không có từ ngữ thực tế."""
-    if not transcript or not transcript.strip():
+    if not transcript or not str(transcript).strip():
         return True
     
-    clean = transcript.strip().lower()
+    clean = str(transcript).strip().lower()
     placeholder_patterns = [
-        r'ch[ưu][ưa]\s*(?:thu|ghi)\s*[âa]m',
-        r'[đd][aã]\s*ho[àa]n\s*t[ấa]t\s*(?:thu|ghi)\s*[âa]m',
+        r'ch[ưu]a\s*(?:th[ựu]c\s*hi[ệe]n\s*)?(?:thu|ghi)\s*[âa]m[^\n]*',
+        r'[đd][aã]\s*ho[àa]n\s*t[ấa]t\s*(?:thu|ghi)\s*[âa]m[^\n]*',
         r'ghi\s*[âa]m\s*task\s*\d*',
-        r'b[ảa]n\s*ghi\s*[âa]m\s*gi[ọo]ng\s*n[óo]i',
-        r'th[íi]\s*sinh\s*[đd][aã]\s*ho[àa]n\s*th[àa]nh',
+        r'b[ảa]n\s*ghi\s*[âa]m[^\n]*',
+        r'th[íi]\s*sinh\s*(?:kh[ôo]ng|[đd][aã]\s*ho[àa]n\s*th[àa]nh)[^\n]*',
+        r'task\s*\d*\s*spoken\s+response\s+recorded[^\n]*',
+        r'spoken\s+response\s+recorded[^\n]*',
         r'task\s*\d*\s*:',
         r'\(\d+s\)',
         r'\[audio recorded[^\]]*\]',
+        r'\[b[ảa]n\s*ghi\s*[âa]m[^\]]*\]',
         r'[\(\)\d\s\:\,\.\-\_]+',
     ]
     test_str = clean
@@ -1494,7 +1497,7 @@ def calculate_goal_based_score(mcq_score: float, writing_result: dict, speaking_
             'main_score_number': overall_band,
             'max_score_display': "Band 9.0",
             'level_label': f"IELTS Overall Band {overall_band}",
-            'target_comparison': f"Mục tiêu [{target_str}]: {'Đạt mục tiêu' if overall_band >= 5.5 else 'Chưa đạt mục tiêu'}",
+            'target_comparison': f"{'Đạt mục tiêu' if overall_band >= 5.5 else 'Chưa đạt mục tiêu'} {target_detail or '5.0 – 6.5'}".replace('[', '').replace(']', ''),
             'reading_score_display': f"Band {reading_band}",
             'writing_score_display': f"Band {writing_band}",
             'speaking_score_display': f"Band {speaking_band}",
@@ -1536,7 +1539,7 @@ def calculate_goal_based_score(mcq_score: float, writing_result: dict, speaking_
             'main_score_number': vstep_total,
             'max_score_display': "10.0 (VSTEP)",
             'level_label': f"Chuẩn VSTEP {achieved_level}",
-            'target_comparison': f"Mục tiêu [{target_detail or 'B1/B2'}]: {status_str}",
+            'target_comparison': status_str,
             'reading_score_display': f"{vstep_reading}/10",
             'writing_score_display': f"{vstep_writing}/10",
             'speaking_score_display': f"{vstep_speaking}/10",
