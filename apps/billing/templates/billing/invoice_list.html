@@ -121,7 +121,15 @@
       <div class="card-subtitle" style="font-size: 12.5px;">Kế toán có thể bấm "Xác nhận thu đủ" trực tiếp bất kỳ lúc
         nào để hoàn tất quy trình và tự động kích hoạt tài khoản lớp học</div>
     </div>
-    <span class="badge badge-coral">{{ stat_pending_count }} ca chờ duyệt</span>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <button type="button" class="btn btn-outline btn-sm" id="btn-sort-invoices"
+              onclick="toggleTableSortTime('invoices-table', this, 7)"
+              title="Đảo chiều sắp xếp theo thời gian chuyển khoản">
+        <i class="fa-solid fa-arrow-down-wide-short"></i>
+        <span class="sort-text">Gần nhất trước</span>
+      </button>
+      <span class="badge badge-coral">{{ stat_pending_count }} ca chờ duyệt</span>
+    </div>
   </div>
   <div class="table-wrapper" style="overflow-x: auto;">
     <table id="invoices-table" style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
@@ -135,7 +143,11 @@
           <th style="padding: 10px 10px; text-align: right; width: 95px;">Phải thu</th>
           <th style="padding: 10px 10px; text-align: right; width: 95px;">Đã chuyển</th>
           <th style="padding: 10px 8px; text-align: center; width: 90px;">Mã GD NH</th>
-          <th style="padding: 10px 8px; text-align: center; width: 85px;">Thời gian</th>
+          <th style="padding: 10px 8px; text-align: center; width: 95px; cursor: pointer; user-select: none;"
+              onclick="toggleTableSortTime('invoices-table', document.getElementById('btn-sort-invoices'), 7)"
+              title="Bấm để đổi sắp xếp thời gian">
+            Thời gian <i class="fa-solid fa-sort" style="font-size: 11px; opacity: 0.6;"></i>
+          </th>
           <th style="padding: 10px 8px; text-align: center; width: 95px;">HV báo CK</th>
           <th style="padding: 10px 8px; text-align: center; width: 115px;">Trạng thái</th>
           <th style="padding: 10px 10px; text-align: center; width: 145px;">Thao tác</th>
@@ -143,10 +155,10 @@
       </thead>
       <tbody>
         {% for item in invoice_list %}
-        <tr data-status="{{ item.trang_thai }}" id="row-invoice-{{ item.ma_phieu_id }}"
+        <tr data-status="{{ item.trang_thai }}" data-timestamp="{{ item.timestamp }}" id="row-invoice-{{ item.ma_phieu_id }}"
           style="border-bottom: 1px solid var(--border-color); transition: background 0.15s;">
           <!-- 1. STT -->
-          <td style="text-align: center; font-weight: 700; color: var(--text-muted); padding: 9px 8px;">
+          <td class="stt-cell" style="text-align: center; font-weight: 700; color: var(--text-muted); padding: 9px 8px;">
             {{ forloop.counter0|add:page_obj.start_index }}
           </td>
 

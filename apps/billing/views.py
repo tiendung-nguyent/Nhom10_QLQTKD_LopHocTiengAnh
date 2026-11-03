@@ -278,6 +278,7 @@ def invoice_list(request):
             'so_tien_da_chuyen': so_tien_da_chuyen,
             'ma_gd_ngan_hang': f"VCB{p.id:06d}" if (is_paid or p.hoc_vien_da_xac_nhan) else '—',
             'thoi_gian': p.thoi_gian_hv_xac_nhan or p.han_thanh_toan,
+            'timestamp': int((p.thoi_gian_hv_xac_nhan or timezone.make_aware(datetime.combine(p.han_thanh_toan, datetime.min.time()))).timestamp()),
             'trang_thai': p.trang_thai,
             'hoc_vien_da_xac_nhan': p.hoc_vien_da_xac_nhan,
             'thoi_gian_hv_xac_nhan': p.thoi_gian_hv_xac_nhan,

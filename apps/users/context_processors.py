@@ -54,9 +54,15 @@ def role_context(request):
 
     # 5. Tên hiển thị người dùng theo vai trò
     if role == 'TEACHER':
-        display_user_name = request.session.get('user_name') or (
-            request.user.get_full_name() if (hasattr(request, 'user') and request.user.is_authenticated and request.user.get_full_name()) else 'Ms. Trần Thanh Thảo'
-        )
+        display_user_name = request.session.get('user_name')
+        if not display_user_name and student_email:
+            nv = NhanVien.objects.filter(email__iexact=student_email).first()
+            if nv:
+                display_user_name = nv.ho_ten
+        if not display_user_name:
+            display_user_name = (
+                request.user.get_full_name() if (hasattr(request, 'user') and request.user.is_authenticated and request.user.get_full_name()) else 'Hán Min'
+            )
     elif role == 'STAFF':
         display_user_name = request.session.get('user_name') or (
             request.user.get_full_name() if (hasattr(request, 'user') and request.user.is_authenticated and request.user.get_full_name()) else 'Lê Văn Tư Vấn'

@@ -33,7 +33,7 @@ def student_auth(request, default_tab='login'):
             request.session.get('role') and (request.session.get('user_email') or request.session.get('student_email'))
         )
         if user_is_auth:
-            role = request.session.get('role') or get_user_role(request) or 'STUDENT'
+            role = get_user_role(request) or request.session.get('role') or 'STUDENT'
             if role == 'TEACHER':
                 return redirect(next_url or 'users:teacher_dashboard')
             elif role == 'ACCOUNTANT':
@@ -829,13 +829,15 @@ def teacher_dashboard(request):
             elif b.ky_nang == 'TRAC_NGHIEM':
                 mcq_sc = val
 
+        nt = p.hoan_thanh or p.bat_dau or now
         real_reviews.append({
             'id': p.id,
             'ma_phien': f"{p.id:03d}",
             'ten_hoc_vien': kh.ho_ten if (kh and kh.ho_ten) else (kh.email if kh else 'Học viên'),
             'email': kh.email if kh else '',
             'ten_bai': p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else 'Placement Test',
-            'ngay_thi': p.hoan_thanh or p.bat_dau or now,
+            'ngay_thi': nt,
+            'timestamp': int(nt.timestamp()),
             'speaking_score': round(spk_sc, 1),
             'writing_score': round(wri_sc, 1),
             'mcq_score': round(mcq_sc, 1),
@@ -977,13 +979,30 @@ def accountant_dashboard(request):
     if not request.session.get('user_email') and not (hasattr(request, 'user') and request.user.is_authenticated):
         return redirect('users:student_login')
     now = timezone.now()
-    context = {
-        'today': now,
-        'total_revenue': '45.0',
-        'pending_count': 3,
-        'confirmed_count': 10,
-        'rate_paid': '76.9',
-        'pending_transactions': [
+    from apps.billing.models import PhieuHocPhi
+    real_phps = list(PhieuHocPhi.objects.filter(
+        trang_thai__in=['CHO_XAC_NHAN', 'CHUA_TT']
+    ).select_related('ghi_danh__ho_so_tu_van__khach_hang', 'ghi_danh__lop_hoc').order_by('-thoi_gian_hv_xac_nhan', '-id'))
+
+    acc_txs = []
+    for p in real_phps:
+        kh = p.ghi_danh.ho_so_tu_van.khach_hang if (p.ghi_danh and p.ghi_danh.ho_so_tu_van) else None
+        lop = p.ghi_danh.lop_hoc if p.ghi_danh else None
+        tg = p.thoi_gian_hv_xac_nhan or now
+        acc_txs.append({
+            'ma_phieu': p.ma_tham_chieu,
+            'ho_ten': kh.ho_ten if (kh and kh.ho_ten) else (kh.email if kh else 'Học viên'),
+            'email': kh.email if kh else '',
+            'ten_lop': lop.ten_lop if lop else 'Chưa gán lớp',
+            'so_tien': float(p.so_tien),
+            'ma_gd_ngan_hang': f"VCB{p.id:06d}",
+            'thoi_gian': tg,
+            'timestamp': int(tg.timestamp()),
+            'trang_thai': p.trang_thai,
+        })
+
+    if not acc_txs:
+        acc_txs = [
             {
                 'ma_phieu': 'HP-1128-001',
                 'ho_ten': 'Nguyễn Thị Lan',
@@ -992,6 +1011,7 @@ def accountant_dashboard(request):
                 'so_tien': 4500000,
                 'ma_gd_ngan_hang': 'FT26301045123',
                 'thoi_gian': now - timedelta(hours=2),
+                'timestamp': int((now - timedelta(hours=2)).timestamp()),
                 'trang_thai': 'CHO_DUYET',
             },
             {
@@ -1002,6 +1022,7 @@ def accountant_dashboard(request):
                 'so_tien': 3800000,
                 'ma_gd_ngan_hang': 'FT26301052789',
                 'thoi_gian': now - timedelta(hours=5),
+                'timestamp': int((now - timedelta(hours=5)).timestamp()),
                 'trang_thai': 'CHO_DUYET',
             },
             {
@@ -1012,9 +1033,18 @@ def accountant_dashboard(request):
                 'so_tien': 5200000,
                 'ma_gd_ngan_hang': 'FT26301099881',
                 'thoi_gian': now - timedelta(hours=7),
+                'timestamp': int((now - timedelta(hours=7)).timestamp()),
                 'trang_thai': 'CHO_DUYET',
             },
-        ],
+        ]
+
+    context = {
+        'today': now,
+        'total_revenue': '45.0',
+        'pending_count': len(acc_txs),
+        'confirmed_count': 10,
+        'rate_paid': '76.9',
+        'pending_transactions': acc_txs,
         'recent_confirmed': [
             {
                 'ho_ten': 'Phạm Quốc Tuấn',
@@ -1053,7 +1083,8 @@ def redirect_by_role_view(request):
 
     # 1. Kiem tra tai khoan NhanVien
     if email:
-        nv = NhanVien.objects.filter(email=email).first()
+        email_clean = email.strip().lower()
+        nv = NhanVien.objects.filter(email__iexact=email_clean).first()
         if nv:
             if nv.vai_tro == NhanVien.VaiTro.GIAO_VIEN:
                 request.session['role'] = 'TEACHER'
