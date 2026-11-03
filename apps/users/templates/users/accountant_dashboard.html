@@ -141,9 +141,42 @@
     width: 11%;
     text-align: right;
   }
-  .col-wait {
-    width: 10%;
+  th.col-wait, td.col-wait {
+    width: 150px;
+    min-width: 150px;
     text-align: center;
+  }
+  .wait-badge {
+    white-space: nowrap !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 11.5px;
+    line-height: 1.2;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  /* Dưới 4 giờ: chữ xám, không nền */
+  .wait-badge.wait-normal {
+    color: #64748B;
+    background: transparent;
+    border: none;
+    font-weight: 500;
+  }
+  /* 4 đến 12 giờ: cam nhạt */
+  .wait-badge.wait-warning {
+    color: #C2410C;
+    background: #FFEDD5;
+    border: 1px solid #FED7AA;
+    font-weight: 600;
+  }
+  /* Trên 12 giờ: đỏ nhạt */
+  .wait-badge.wait-danger {
+    color: #991B1B;
+    background: #FEE2E2;
+    border: 1px solid #FCA5A5;
+    font-weight: 700;
   }
   .col-act {
     width: 12%;
@@ -524,19 +557,22 @@
             </div>
           </td>
 
-          <!-- 7. Chờ (10%, canh giữa): Nhãn có min-width 82px thẳng hàng giữa các dòng -->
+          <!-- 7. Chờ (150px, canh giữa, không ngắt dòng) -->
           <td class="col-wait">
-            {% if item.is_urgent %}
-            <span style="color: #991B1B; background: #FEE2E2; border: 1px solid #FCA5A5; border-radius: 4px; padding: 2px 6px; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; min-width: 82px; gap: 4px;" title="Chờ đối soát trên 4 giờ – Cần ưu tiên xử lý ngay!">
-              <i class="fa-solid fa-triangle-exclamation"></i> {{ item.thoi_gian_cho }}
+            {% if item.wait_level == 'danger' %}
+            <span class="wait-badge wait-danger" title="Chờ đối soát trên 12 giờ – Cần ưu tiên xử lý!">
+              <i class="fa-solid fa-triangle-exclamation" style="font-size: 11px;"></i>
+              <span>{{ item.thoi_gian_cho }}</span>
             </span>
-            {% elif item.is_overdue %}
-            <span style="color: #C2410C; background: #FFEDD5; border: 1px solid #FED7AA; border-radius: 4px; padding: 2px 6px; font-weight: 600; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; min-width: 82px; gap: 4px;">
-              <i class="fa-regular fa-clock"></i> {{ item.thoi_gian_cho }}
+            {% elif item.wait_level == 'warning' %}
+            <span class="wait-badge wait-warning" title="Chờ đối soát từ 4 đến 12 giờ">
+              <i class="fa-regular fa-clock" style="font-size: 11px;"></i>
+              <span>{{ item.thoi_gian_cho }}</span>
             </span>
             {% else %}
-            <span style="color: #64748B; font-size: 11px; display: inline-block; min-width: 82px; text-align: center;">
-              {{ item.thoi_gian_cho }}
+            <span class="wait-badge wait-normal" title="Mới tiếp nhận (dưới 4 giờ)">
+              <i class="fa-regular fa-clock" style="font-size: 11px; color: #94A3B8;"></i>
+              <span>{{ item.thoi_gian_cho }}</span>
             </span>
             {% endif %}
           </td>

@@ -1867,6 +1867,47 @@ def test_result(request):
             elif b.ky_nang == 'TRAC_NGHIEM' and b.nhan_xet_gv:
                 teacher_mcq_comment = b.nhan_xet_gv
 
+    # ─── BỔ SUNG DỮ LIỆU ĐỐI SOÁT TRẮC NGHIỆM & BÀI LÀM CHO TRANG KẾT QUẢ ───
+    completed_summary = build_completed_summary(selected_phien) if selected_phien else {}
+
+    raw_mcq_details = request.session.get('placement_mcq_details', [])
+    mcq_correct = request.session.get('placement_mcq_correct', 0)
+    mcq_wrong = request.session.get('placement_mcq_wrong', 0)
+    mcq_blank = request.session.get('placement_mcq_blank', 0)
+    mcq_total = request.session.get('placement_mcq_total', 25)
+    mcq_percentage = request.session.get('placement_mcq_percentage', 0)
+
+    if (not raw_mcq_details or mcq_correct == 0) and selected_phien:
+        ct_mcq = selected_phien.cau_tra_lois.filter(
+            models.Q(noi_dung_tra_loi__icontains='KẾT QUẢ BÀI LÀM TRẮC NGHIỆM') |
+            models.Q(cau_hoi__loai=CauHoi.Loai.TRAC_NGHIEM)
+        ).first()
+        if ct_mcq and ct_mcq.noi_dung_tra_loi:
+            parsed_db_mcq = parse_mcq_summary_structured(ct_mcq.noi_dung_tra_loi, goal_type=goal_type)
+            if parsed_db_mcq.get('questions'):
+                raw_mcq_details = parsed_db_mcq['questions']
+                mcq_correct = parsed_db_mcq.get('correct_count', 0)
+                mcq_wrong = parsed_db_mcq.get('wrong_count', 0)
+                mcq_blank = parsed_db_mcq.get('blank_count', 0)
+                mcq_total = parsed_db_mcq.get('total_questions', 25)
+                mcq_percentage = parsed_db_mcq.get('percentage', 0)
+
+    for d in raw_mcq_details:
+        idx = d.get('index', 1)
+        if not d.get('audio_file') and (d.get('category') == 'Nghe hiểu' or 'LISTENING' in str(d.get('category')).upper() or idx <= 5):
+            d['audio_file'] = f"audio/listening_q{idx}.wav"
+        for eng_cat in [' (Listening)', ' (Grammar)', ' (Vocabulary)', ' (Reading)']:
+            if eng_cat in str(d.get('category', '')):
+                d['category'] = d['category'].replace(eng_cat, '')
+        if d.get('user_opt_text') in ['Để trống (Chưa chọn đáp án)', '[Chưa điền đáp án - Bỏ trống 0 điểm]']:
+            d['user_opt_text'] = 'Bạn chưa trả lời'
+        if d.get('status_label') in ['BỎ TRỐNG', 'Bỏ trống']:
+            d['status_label'] = 'Chưa trả lời'
+        elif d.get('status_label') in ['SAI', 'Sai']:
+            d['status_label'] = 'Sai'
+        elif d.get('status_label') in ['ĐÚNG', 'Đúng']:
+            d['status_label'] = 'Đúng (+1.6đ)'
+
     scale_type = goal_score.get('scale_type')
     main_num = float(goal_score.get('main_score_number', 0) or 0)
     if scale_type == 'IELTS_BAND':
@@ -1877,6 +1918,13 @@ def test_result(request):
         ring_pct = round(min(100.0, max(0.0, float(total))), 1)
 
     context = {
+        'completed_summary': completed_summary,
+        'mcq_details': raw_mcq_details,
+        'mcq_correct': mcq_correct,
+        'mcq_wrong': mcq_wrong,
+        'mcq_blank': mcq_blank,
+        'mcq_total': mcq_total,
+        'mcq_percentage': mcq_percentage,
         'has_test_results': True,
         'phien': {'ma_phien': phien_id, 'hoan_thanh': hoan_thanh_time, 'id': selected_phien.id if selected_phien else '001'},
         'danh_sach_phien': danh_sach_phien,

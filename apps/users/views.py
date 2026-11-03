@@ -1023,19 +1023,42 @@ def accountant_dashboard(request):
         ma_gd_nh = gd.ma_gd_ngan_hang if (gd and gd.ma_gd_ngan_hang) else f"VCB{p.id:06d}"
         noi_dung_nhan = gd.noi_dung_ck if (gd and gd.noi_dung_ck) else p.ma_tham_chieu
 
-        # Tính thời gian chờ đối soát (nổi bật cam nếu > 1h, đỏ đậm khẩn cấp nếu >= 4h)
+        # Tính thời gian chờ đối soát theo chuẩn hiển thị phân cấp:
+        # - Dưới 1h: "chờ 45p"
+        # - Từ 1h - 24h: bỏ phút, chỉ hiện giờ ("chờ 13h")
+        # - Trên 24h: "chờ 1 ngày 3h" hoặc "chờ 1 ngày"
+        # Phân cấp màu:
+        # - Dưới 4h: bình thường (chữ xám, không nền)
+        # - 4h đến 12h: cảnh báo vừa (cam nhạt)
+        # - Trên 12h: khẩn cấp (đỏ nhạt)
         diff = now - tg
         minutes_wait = max(1, int(diff.total_seconds() // 60))
+        hours_wait = minutes_wait // 60
+        days_wait = hours_wait // 24
+
         if minutes_wait < 60:
             thoi_gian_cho = f"chờ {minutes_wait}p"
+        elif hours_wait < 24:
+            thoi_gian_cho = f"chờ {hours_wait}h"
+        else:
+            remain_h = hours_wait % 24
+            if remain_h > 0:
+                thoi_gian_cho = f"chờ {days_wait} ngày {remain_h}h"
+            else:
+                thoi_gian_cho = f"chờ {days_wait} ngày"
+
+        if hours_wait < 4:
+            wait_level = 'normal'
             is_overdue = False
             is_urgent = False
-        else:
-            hours_wait = minutes_wait // 60
-            remain_min = minutes_wait % 60
-            thoi_gian_cho = f"chờ {hours_wait}h {remain_min}p" if remain_min > 0 else f"chờ {hours_wait}h"
+        elif hours_wait < 12:
+            wait_level = 'warning'
             is_overdue = True
-            is_urgent = (hours_wait >= 4)
+            is_urgent = False
+        else:
+            wait_level = 'danger'
+            is_overdue = True
+            is_urgent = True
 
         # Trạng thái đối soát khớp số tiền & nội dung
         clean_ref = p.ma_tham_chieu.strip().upper()
@@ -1079,6 +1102,8 @@ def accountant_dashboard(request):
             'doi_soat_badge': doi_soat_badge,
             'thoi_gian': tg,
             'thoi_gian_cho': thoi_gian_cho,
+            'wait_level': wait_level,
+            'hours_wait': hours_wait,
             'is_overdue': is_overdue,
             'is_urgent': is_urgent,
             'timestamp': int(tg.timestamp()),
