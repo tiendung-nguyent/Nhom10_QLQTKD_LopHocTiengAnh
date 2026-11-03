@@ -65,12 +65,15 @@ def payment_detail(request):
             assigned_giao_vien = {'ho_ten': 'Ms. Trần Thanh Thảo'}
             si_so_hien_tai = GhiDanh.objects.filter(lop_hoc=assigned_lop_hoc).count()
 
+            si_so_toi_da = assigned_lop_hoc.si_so_toi_da or 20
+            so_cho_con_lai = max(0, si_so_toi_da - si_so_hien_tai)
+
             phieu_hp = PhieuHocPhi.objects.filter(ghi_danh=ghi_danh).first()
             if not phieu_hp:
                 # Tự động tạo phiếu học phí theo học phí khóa học nếu chưa có
                 hoc_phi_val = assigned_khoa_hoc.hoc_phi if (assigned_khoa_hoc and assigned_khoa_hoc.hoc_phi) else 4500000
-                ref_code = f"HP{assigned_lop_hoc.id:02d}{student.id:04d}"
-                qr_url = generate_vietcombank_qr(hoc_phi_val, f"ACADEMIX HP {ref_code}")
+                ref_code = f"ACADEMIX HV{student.id:03d} HD{ghi_danh.id:02d}"
+                qr_url = generate_vietcombank_qr(hoc_phi_val, ref_code)
                 phieu_hp = PhieuHocPhi.objects.create(
                     ghi_danh=ghi_danh,
                     ma_tham_chieu=ref_code,
@@ -80,10 +83,27 @@ def payment_detail(request):
                     han_thanh_toan=(assigned_lop_hoc.ngay_khai_giang or (now.date() + timedelta(days=7))),
                     trang_thai=PhieuHocPhi.TrangThai.CHUA_TT
                 )
-            elif not phieu_hp.qr_image_url:
-                qr_url = generate_vietcombank_qr(phieu_hp.so_tien, f"ACADEMIX HP {phieu_hp.ma_tham_chieu}")
-                phieu_hp.qr_image_url = qr_url
-                phieu_hp.save(update_fields=['qr_image_url'])
+            else:
+                raw_ref = phieu_hp.ma_tham_chieu.strip()
+                if raw_ref.startswith('ACADEMIX HP '):
+                    raw_ref = raw_ref.replace('ACADEMIX HP ', 'ACADEMIX ')
+                    phieu_hp.ma_tham_chieu = raw_ref
+                    phieu_hp.save(update_fields=['ma_tham_chieu'])
+                if not raw_ref.startswith('ACADEMIX '):
+                    raw_ref = f"ACADEMIX {raw_ref}"
+                qr_url = generate_vietcombank_qr(phieu_hp.so_tien, raw_ref)
+                if phieu_hp.qr_image_url != qr_url:
+                    phieu_hp.qr_image_url = qr_url
+                    phieu_hp.save(update_fields=['qr_image_url'])
+
+            so_ngay_con_lai = None
+            if phieu_hp and phieu_hp.han_thanh_toan:
+                so_ngay_con_lai = max(0, (phieu_hp.han_thanh_toan - now.date()).days)
+
+            # Đồng bộ trình độ kiểm tra đầu vào và lớp học
+            if assigned_khoa_hoc and ('A1' in assigned_khoa_hoc.ten_khoa or 'Starter' in assigned_khoa_hoc.ten_khoa):
+                if 'A2' in str(trinh_do_test) or 'Pre-IELTS' in str(trinh_do_test):
+                    trinh_do_test = 'A1 – Starter (Khởi động nền tảng)'
 
             giao_dich_list = list(GiaoDichThanhToan.objects.filter(phieu_hoc_phi=phieu_hp).order_by('-thoi_gian'))
 
@@ -99,6 +119,8 @@ def payment_detail(request):
         'phieu': phieu_hp,
         'is_paid': is_paid,
         'si_so_hien_tai': si_so_hien_tai,
+        'so_cho_con_lai': so_cho_con_lai if has_assigned_class else 0,
+        'so_ngay_con_lai': so_ngay_con_lai if has_assigned_class else None,
         'tong_diem': tong_diem_test,
         'trinh_do': trinh_do_test,
         'ngan_hang': 'Vietcombank (VCB)',

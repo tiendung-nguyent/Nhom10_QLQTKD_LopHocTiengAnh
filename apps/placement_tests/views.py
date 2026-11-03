@@ -255,11 +255,11 @@ def parse_mcq_summary_structured(raw, goal_type='IELTS', adjustments=None):
         pass
 
     category_labels = {
-        'LISTENING': 'Nghe hiểu (Listening)',
-        'GRAMMAR': 'Ngữ pháp (Grammar)',
-        'VOCAB': 'Từ vựng (Vocabulary)',
-        'VOCABULARY': 'Từ vựng (Vocabulary)',
-        'READING': 'Đọc hiểu (Reading)'
+        'LISTENING': 'Nghe hiểu',
+        'GRAMMAR': 'Ngữ pháp',
+        'VOCAB': 'Từ vựng',
+        'VOCABULARY': 'Từ vựng',
+        'READING': 'Đọc hiểu'
     }
 
     adjustments = adjustments or {}
@@ -339,7 +339,6 @@ def _extract_phien_summary(phien):
         if bl.ky_nang == 'TRAC_NGHIEM': p_mcq = val
         elif bl.ky_nang == 'WRITING': p_w = val
         elif bl.ky_nang == 'SPEAKING': p_s = val
-    p_total = round(p_mcq + p_w + p_s, 1)
     comp_date = phien.hoan_thanh or phien.bat_dau
 
     cau_tralois = phien.cau_tra_lois.all().select_related('cau_hoi')
@@ -347,7 +346,17 @@ def _extract_phien_summary(phien):
     s_ans = next((tl for tl in cau_tralois if tl.cau_hoi and tl.cau_hoi.ky_nang == 'SPEAKING'), None)
 
     has_w_text = bool(w_ans and w_ans.noi_dung_tra_loi and w_ans.noi_dung_tra_loi.replace('[TASK 1]', '').replace('[TASK 2]', '').strip())
-    has_s_voice = bool(s_ans and s_ans.noi_dung_tra_loi and s_ans.noi_dung_tra_loi.strip() and 'Chưa thực hiện' not in s_ans.noi_dung_tra_loi)
+
+    from apps.placement_tests.services import is_empty_or_placeholder_speaking, calculate_goal_based_score
+    s_text = (s_ans.noi_dung_tra_loi or '').strip() if s_ans else ''
+    has_s_voice = bool(s_text and not is_empty_or_placeholder_speaking(s_text))
+
+    if not has_s_voice:
+        p_s = 0.0
+    if not has_w_text:
+        p_w = 0.0
+
+    p_total = round(p_mcq + p_w + p_s, 1)
 
     ai_feedback = ''
     try:
@@ -363,19 +372,59 @@ def _extract_phien_summary(phien):
     except Exception:
         pass
 
+    goal_type = 'IELTS'
+    target_detail = '5.0 đến 6.5'
+    if phien.bai_kiem_tra and phien.bai_kiem_tra.ten_bai:
+        t_name = phien.bai_kiem_tra.ten_bai
+        if 'DAU_RA' in t_name or 'Đại học' in t_name: goal_type = 'DAU_RA_DH'
+        elif 'GIAO_TIEP' in t_name or 'Giao tiếp' in t_name: goal_type = 'GIAO_TIEP'
+        elif 'MAT_GOC' in t_name or 'Mất gốc' in t_name: goal_type = 'MAT_GOC'
+
+    w_eval = {'overall_score': round(p_w / 3.0, 1), 'ielts_band': round(p_w / 3.0, 1)} if has_w_text else {'overall_score': 0.0, 'ielts_band': 0.0}
+    s_eval = {'overall_score': round(p_s / 3.0, 1), 'ielts_band': round(p_s / 3.0, 1)} if has_s_voice else {'overall_score': 0.0, 'ielts_band': 0.0}
+
+    goal_score = calculate_goal_based_score(
+        mcq_score=p_mcq,
+        writing_result=w_eval,
+        speaking_result=s_eval,
+        goal_type=goal_type,
+        target_detail=target_detail
+    )
+
     kq_obj = getattr(phien, 'ket_qua_kiem_tra', None)
-    cefr_level = kq_obj.trinh_do if (kq_obj and kq_obj.trinh_do) else ('B2' if p_total >= 75 else ('B1' if p_total >= 55 else 'A2'))
+    cefr_level = kq_obj.trinh_do if (kq_obj and kq_obj.trinh_do) else goal_score.get('cefr_equivalent', 'A2')
+
+    task1_submitted = ''
+    task2_submitted = ''
+    if w_ans and w_ans.noi_dung_tra_loi:
+        raw_text = w_ans.noi_dung_tra_loi
+        if '[TASK 2]' in raw_text:
+            parts = raw_text.split('[TASK 2]')
+            task1_submitted = parts[0].replace('[TASK 1]', '').strip()
+            task2_submitted = parts[1].strip()
+        else:
+            task1_submitted = raw_text.replace('[TASK 1]', '').strip()
+
+    speaking_submitted = s_text if has_s_voice else 'Chưa thực hiện thu âm Speaking'
 
     return {
         'phien_id': phien.id,
         'mcq_score': p_mcq,
-        'writing_score': p_w,
-        'speaking_score': p_s,
+        'writing_score': p_w if has_w_text else None,
+        'speaking_score': p_s if has_s_voice else None,
+        'has_speaking': has_s_voice,
+        'has_writing': has_w_text,
         'total_score': p_total,
+        'goal_type': goal_type,
+        'target_detail': target_detail,
+        'goal_score': goal_score,
+        'task1_submitted': task1_submitted,
+        'task2_submitted': task2_submitted,
+        'speaking_submitted': speaking_submitted,
         'writing_status': 'DA_CHAM' if has_w_text else 'CHUA_LAM',
         'speaking_status': 'DA_CHAM' if has_s_voice else 'CHUA_LAM',
-        'writing_status_label': 'Đã chấm' if has_w_text else 'Chưa làm',
-        'speaking_status_label': 'Đã chấm' if has_s_voice else 'Chưa làm',
+        'writing_status_label': 'AI chấm sơ bộ' if has_w_text else 'Chưa làm',
+        'speaking_status_label': 'AI chấm sơ bộ' if has_s_voice else 'Chưa làm',
         'cefr_level': cefr_level,
         'ai_feedback': ai_feedback,
         'completed_at': comp_date.strftime('%d/%m/%Y %H:%M') if comp_date else '',
@@ -678,6 +727,23 @@ def test_room(request):
         }
     }
 
+    raw_mcq_details = request.session.get('placement_mcq_details', [])
+    for d in raw_mcq_details:
+        idx = d.get('index', 1)
+        if not d.get('audio_file') and (d.get('category') == 'Nghe hiểu' or 'LISTENING' in str(d.get('category')).upper() or idx <= 5):
+            d['audio_file'] = f"audio/listening_q{idx}.wav"
+        for eng_cat in [' (Listening)', ' (Grammar)', ' (Vocabulary)', ' (Reading)']:
+            if eng_cat in str(d.get('category', '')):
+                d['category'] = d['category'].replace(eng_cat, '')
+        if d.get('user_opt_text') in ['Để trống (Chưa chọn đáp án)', '[Chưa điền đáp án - Bỏ trống 0 điểm]']:
+            d['user_opt_text'] = 'Bạn chưa trả lời'
+        if d.get('status_label') in ['BỎ TRỐNG', 'Bỏ trống']:
+            d['status_label'] = 'Chưa trả lời'
+        elif d.get('status_label') in ['SAI', 'Sai']:
+            d['status_label'] = 'Sai'
+        elif d.get('status_label') in ['ĐÚNG', 'Đúng']:
+            d['status_label'] = 'Đúng (+1.6đ)'
+
     speaking_task_info = speaking_tasks_bank.get(goal_type, speaking_tasks_bank['IELTS'])
 
     context = {
@@ -695,7 +761,7 @@ def test_room(request):
         'can_retake': not is_goal_approved,
         'mcq_submitted': mcq_submitted,
         'mcq_score': mcq_score,
-        'mcq_details': request.session.get('placement_mcq_details', []),
+        'mcq_details': raw_mcq_details,
         'mcq_correct': request.session.get('placement_mcq_correct', 0),
         'mcq_wrong': request.session.get('placement_mcq_wrong', 0),
         'mcq_blank': request.session.get('placement_mcq_blank', 0),
@@ -769,6 +835,9 @@ def submit_mcq(request):
         correct_ans = str(q.get('correct_option', 'A')).strip().upper()
         explanation = q.get('explanation', '')
         correct_opt_text = options_dict.get(correct_ans, '')
+        audio_file = q.get('audio_file', '')
+        if not audio_file and (cat_key == 'LISTENING' or idx <= 5):
+            audio_file = f"audio/listening_q{idx}.wav" 
 
         # Kiểm tra đáp án học viên đã nộp
         raw_ans = answers.get(q_id)
@@ -786,24 +855,24 @@ def submit_mcq(request):
                 is_blank = False
                 correct_count += 1
                 status = 'CORRECT'
-                status_label = 'ĐÚNG'
+                status_label = 'Đúng (+1.6đ)'
                 pts = point_per_q
             else:
                 is_correct = False
                 is_blank = False
                 wrong_count += 1
                 status = 'WRONG'
-                status_label = 'SAI'
+                status_label = 'Sai'
                 pts = 0.0
         else:
-            # Học viên KHÔNG ĐIỀN -> ĐỂ TRỐNG VÀ TRỪ ĐIỂM (0 điểm)
+            # Học viên chưa chọn đáp án
             user_ans = ''
-            user_opt_text = 'Để trống (Chưa chọn đáp án)'
+            user_opt_text = 'Bạn chưa trả lời'
             is_correct = False
             is_blank = True
             blank_count += 1
             status = 'BLANK'
-            status_label = 'BỎ TRỐNG'
+            status_label = 'Chưa trả lời'
             pts = 0.0
 
         item = {
@@ -811,6 +880,7 @@ def submit_mcq(request):
             'q_id': q_id,
             'category': cat_label,
             'question_text': q_text,
+            'audio_file': audio_file,
             'options': [{'key': k, 'text': f"{k}. {v}"} for k, v in options_dict.items()],
             'user_ans': user_ans,
             'user_opt_text': user_opt_text,
@@ -829,7 +899,7 @@ def submit_mcq(request):
         if is_correct:
             ans_str = f"Học viên chọn: {user_ans} | Đáp án đúng: {correct_ans} (✔ Đúng)"
         elif is_blank:
-            ans_str = f"Học viên chọn: [Bỏ trống] | Đáp án đúng: {correct_ans} (⚠️ Bỏ trống - Trừ điểm)"
+            ans_str = f"Học viên chọn: [Bỏ trống] | Đáp án đúng: {correct_ans} (Bỏ trống - Không tính điểm)"
         else:
             ans_str = f"Học viên chọn: {user_ans} | Đáp án đúng: {correct_ans} (❌ Sai)"
 
@@ -1077,24 +1147,39 @@ def submit_writing_speaking(request):
         target_goal=goal_type, target_detail=target_detail
     )
 
-    # Gọi Gemini AI chấm Speaking (Nếu không có voice -> chấm thật 0.0 điểm)
-    speaking_details = {
-        'task1': t1_clean if t1_clean else 'Chưa thực hiện thu âm Task 1',
-        'task2': t2_clean if t2_clean else 'Chưa thực hiện thu âm Task 2',
-        'task3': t3_clean if t3_clean else 'Chưa thực hiện thu âm Task 3'
-    }
-    speaking_result = grade_speaking_with_gemini(
-        speaking_transcript, speaking_details,
-        target_goal=goal_type, target_detail=target_detail
-    )
+    # Kiểm tra xem có dữ liệu giọng nói thực tế không
+    from apps.placement_tests.services import is_empty_or_placeholder_speaking, get_fallback_speaking_evaluation
+    has_speaking = not is_empty_or_placeholder_speaking(speaking_transcript)
+    has_writing = bool(task1_writing.strip() or task2_writing.strip())
+
+    if not has_speaking:
+        speaking_result = get_fallback_speaking_evaluation('', target_goal=goal_type)
+        speaking_score_10 = 0.0
+        speaking_scaled = 0.0
+        speaking_status = 'CHUA_LAM'
+        speaking_status_label = 'Chưa làm'
+    else:
+        speaking_details = {
+            'task1': t1_clean if t1_clean else 'Chưa thực hiện thu âm Task 1',
+            'task2': t2_clean if t2_clean else 'Chưa thực hiện thu âm Task 2',
+            'task3': t3_clean if t3_clean else 'Chưa thực hiện thu âm Task 3'
+        }
+        speaking_result = grade_speaking_with_gemini(
+            speaking_transcript, speaking_details,
+            target_goal=goal_type, target_detail=target_detail
+        )
+        speaking_score_10 = float(speaking_result.get('overall_score', 0.0) if speaking_result else 0.0)
+        speaking_scaled = round(speaking_score_10 * 3.0, 1)
+        speaking_status = 'DA_CHAM'
+        speaking_status_label = 'AI chấm sơ bộ'
 
     writing_score_10 = float(writing_result.get('overall_score', 0.0) if writing_result else 0.0)
-    speaking_score_10 = float(speaking_result.get('overall_score', 0.0) if speaking_result else 0.0)
+    writing_scaled = round(writing_score_10 * 3.0, 1) if has_writing else 0.0
+    writing_status = 'DA_CHAM' if has_writing else 'CHUA_LAM'
+    writing_status_label = 'AI chấm sơ bộ' if has_writing else 'Chưa làm'
 
-    writing_scaled = round(writing_score_10 * 3.0, 1)
-    speaking_scaled = round(speaking_score_10 * 3.0, 1)
     mcq_score = request.session.get('placement_mcq_score', 0.0)
-    total_exam_score = round(mcq_score + writing_scaled + speaking_scaled, 1)
+    total_exam_score = round(mcq_score + writing_scaled + (speaking_scaled if has_speaking else 0.0), 1)
 
     cefr_overall = "B2" if total_exam_score >= 75 else ("B1" if total_exam_score >= 55 else "A2")
 
@@ -1155,8 +1240,8 @@ def submit_writing_speaking(request):
                 phien_lam_bai=phien_obj,
                 ky_nang='SPEAKING',
                 defaults={
-                    'diem_tu_dong': speaking_scaled,
-                    'trang_thai_cham': BaiLamKyNang.TrangThaiCham.AI_DA_CHAM
+                    'diem_tu_dong': speaking_scaled if has_speaking else 0.0,
+                    'trang_thai_cham': BaiLamKyNang.TrangThaiCham.AI_DA_CHAM if has_speaking else BaiLamKyNang.TrangThaiCham.CHO_CHAM
                 }
             )
             BaiLamKyNang.objects.update_or_create(
@@ -1199,8 +1284,8 @@ def submit_writing_speaking(request):
             tl_s = CauTraLoi.objects.create(
                 phien_lam_bai=phien_obj,
                 cau_hoi=cau_s,
-                noi_dung_tra_loi=speaking_transcript,
-                diem_tu_dong=speaking_scaled
+                noi_dung_tra_loi=speaking_transcript if has_speaking else "Chưa thực hiện thu âm Speaking",
+                diem_tu_dong=speaking_scaled if has_speaking else 0.0
             )
             ChamDiemAI.objects.create(
                 cau_tra_loi=tl_s,
@@ -1253,8 +1338,14 @@ def submit_writing_speaking(request):
     exam_summary = {
         'phien_id': phien_obj.id if phien_obj else '001',
         'mcq_score': mcq_score,
-        'writing_score': writing_scaled,
-        'speaking_score': speaking_scaled,
+        'writing_score': writing_scaled if has_writing else None,
+        'speaking_score': speaking_scaled if has_speaking else None,
+        'has_writing': has_writing,
+        'has_speaking': has_speaking,
+        'writing_status': writing_status,
+        'speaking_status': speaking_status,
+        'writing_status_label': writing_status_label,
+        'speaking_status_label': speaking_status_label,
         'total_score': total_exam_score,
         'cefr_level': goal_score.get('cefr_equivalent', cefr_overall),
         'goal_type': goal_type,

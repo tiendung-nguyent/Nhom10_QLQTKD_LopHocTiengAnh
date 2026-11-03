@@ -768,7 +768,7 @@ def lead_apply_class_tuition(request, hstv_id):
     )
 
     # 3. Tạo / Cập nhật PhieuHocPhi
-    ref_code = f"ACADEMIX HP HV{kh.id:03d} HD{ghi_danh.id:02d}"
+    ref_code = f"ACADEMIX HV{kh.id:03d} HD{ghi_danh.id:02d}"
     qr_url = generate_vietcombank_qr(amount=final_fee, content=ref_code)
 
     phieu_hp, _ = PhieuHocPhi.objects.update_or_create(

@@ -28,6 +28,17 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['nhom10-qlqtkd-lophoctienganh.onrender.com', 'localhost', '127.0.0.1', '*']
 
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://localhost',
+    'http://127.0.0.1',
+    'https://*.onrender.com',
+    'https://nhom10-qlqtkd-lophoctienganh.onrender.com',
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Application definition
 
 INSTALLED_APPS = [

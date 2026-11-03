@@ -78,6 +78,27 @@ class PhieuHocPhi(models.Model):
         verbose_name_plural = 'Danh sách phiếu học phí'
         ordering = ['han_thanh_toan']
 
+    @property
+    def so_tien_vnd(self):
+        val = int(self.so_tien or 0)
+        return f"{val:,} ₫".replace(',', '.')
+
+    @property
+    def so_tien_raw(self):
+        return int(self.so_tien or 0)
+
+    @property
+    def hoc_phi_goc_vnd(self):
+        if self.hoc_phi_goc:
+            return f"{int(self.hoc_phi_goc):,} ₫".replace(',', '.')
+        return None
+
+    @property
+    def so_tien_giam_vnd(self):
+        if self.so_tien_giam:
+            return f"{int(self.so_tien_giam):,} ₫".replace(',', '.')
+        return None
+
     def __str__(self):
         return f'PHP #{self.pk} – {self.ma_tham_chieu} ({self.trang_thai})'
 
@@ -164,6 +185,11 @@ class GiaoDichThanhToan(models.Model):
         verbose_name = 'Giao dịch thanh toán'
         verbose_name_plural = 'Danh sách giao dịch thanh toán'
         ordering = ['-thoi_gian']
+
+    @property
+    def so_tien_vnd(self):
+        val = int(self.so_tien or 0)
+        return f"{val:,} ₫".replace(',', '.')
 
     def __str__(self):
         return f'GD #{self.pk} – {self.ma_gd_ngan_hang} ({self.so_tien:,.0f}đ)'
