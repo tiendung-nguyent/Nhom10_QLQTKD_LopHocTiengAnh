@@ -1005,9 +1005,9 @@
           </td>
           <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
             {% if item.is_approved or item.trang_thai == 'approved' %}
-              <button type="button" class="btn btn-outline btn-sm" disabled style="opacity: 0.7; cursor: not-allowed; background: #F8FAFC; color: #10B981; border-color: #A7F3D0; font-weight: 700; padding: 4px 8px; font-size: 11px; white-space: nowrap;" title="Bài thi đã được phê duyệt">
-                <i class="fa-solid fa-check"></i> Đã duyệt
-              </button>
+              <a href="?session={{ item.id }}&skill=SPEAKING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" class="btn btn-outline btn-sm" style="font-weight: 600; padding: 4px 10px; font-size: 11.5px; border-radius: 6px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; color: var(--accent-orange); border-color: #FDBA74; background: #FFF7ED;" title="Xem lại chi tiết bài làm đã duyệt">
+                <i class="fa-solid fa-eye"></i> Xem chi tiết
+              </a>
             {% else %}
               <a href="?session={{ item.id }}&skill=SPEAKING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" class="btn btn-primary btn-sm" style="font-weight: 700; padding: 4px 10px; font-size: 11.5px; border-radius: 6px; white-space: nowrap; display: inline-flex; align-items: center; gap: 3px;">
                 <span>Duyệt</span> <i class="fa-solid fa-pen-to-square"></i>

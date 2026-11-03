@@ -1,233 +1,1030 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Dashboard Kế toán & Tài chính{% endblock %}
+{% block title %}Tổng quan Kế toán & Đối soát học phí{% endblock %}
+{% block page_heading %}Kế toán{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* 0. Trạng thái ẩn tuyệt đối cho modals */
+  [hidden] {
+    display: none !important;
+  }
+
+  /* Tabular numbers & perfect Vietnamese currency alignment */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    white-space: nowrap !important;
+    line-height: 1.25;
+  }
+  .money {
+    display: inline-block;
+    white-space: nowrap !important;
+    font-variant-numeric: tabular-nums;
+    font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: -0.2px;
+  }
+  .money-due {
+    font-weight: 700;
+    font-size: 13.5px;
+    color: #475569;
+  }
+  .money-paid {
+    font-weight: 800;
+    font-size: 13.5px;
+    color: #15803D;
+  }
+
+  /* Compact and focused accountant UI */
+  .acc-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  
+  .acc-table th {
+    padding: 10px 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #475569;
+    background: #F8FAFC;
+    border-bottom: 1.5px solid var(--border-color);
+    white-space: nowrap;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  
+  .acc-table td {
+    padding: 10px 8px;
+    font-size: 13px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .acc-table tr:hover {
+    background-color: #F8FAFC;
+  }
+  
+  .acc-table tr.selected-row {
+    background-color: #FFF7ED;
+  }
+
+  /* Định nghĩa chiều rộng và căn lề từng cột chuẩn kế toán (Tỷ lệ % vừa khít 100%, không tràn ra ngoài) */
+  .col-student {
+    width: 24%;
+    text-align: left;
+  }
+  .col-student .name {
+    font-weight: 700;
+    font-size: 13.5px;
+    color: #0F172A;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+  .col-student .class {
+    font-size: 11.5px;
+    color: #64748B;
+    margin-top: 3px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Mã phiếu - Ô xám nền riêng, nổi bật là thông tin đối chiếu chính */
+  .col-code {
+    width: 17%;
+    text-align: left;
+  }
+  .code-pill {
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: #1E293B;
+    background: #F1F5F9;
+    padding: 2.5px 6px;
+    border-radius: 4px;
+    border: 1px solid #CBD5E1;
+    white-space: nowrap;
+    display: inline-block;
+    letter-spacing: 0.2px;
+  }
+
+  /* Cột Giao dịch: Mã GD dùng chữ monospace không nền, căn trái cùng mép với ngày giờ */
+  .col-txn {
+    width: 15%;
+    padding-left: 10px !important;
+    white-space: nowrap;
+    text-align: left;
+  }
+  .txn-id {
+    font-family: 'JetBrains Mono', Consolas, ui-monospace, monospace;
+    font-size: 12.5px;
+    line-height: 1.35;
+    font-weight: 600;
+    color: #1E293B;
+    letter-spacing: 0.1px;
+  }
+  .txn-time {
+    font-size: 12px;
+    line-height: 1.35;
+    color: #64748B;
+    margin-top: 2px;
+  }
+
+  .col-due {
+    width: 11%;
+    text-align: right;
+  }
+  .col-paid {
+    width: 11%;
+    text-align: right;
+  }
+  .col-wait {
+    width: 10%;
+    text-align: center;
+  }
+  .col-act {
+    width: 12%;
+    text-align: right;
+    padding-right: 12px;
+  }
+
+  /* Toolbar controls */
+  .acc-input {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text-primary);
+    background: #FFFFFF;
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .acc-input:focus {
+    border-color: var(--accent-orange);
+  }
+
+  /* Nút duyệt hàng loạt - trạng thái disabled rõ ràng */
+  .btn-batch-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: none;
+    transition: all 0.15s ease;
+  }
+  .btn-batch-action:disabled {
+    background: #E2E8F0 !important;
+    color: #94A3B8 !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+  }
+  .btn-batch-action:not(:disabled) {
+    background: #EA580C !important;
+    color: #FFFFFF !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);
+  }
+  .btn-batch-action:not(:disabled):hover {
+    background: #C2410C !important;
+  }
+
+  /* Modal overlay cố định toàn màn hình */
+  .acc-modal-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+    backdrop-filter: blur(4px) !important;
+    z-index: 99999 !important;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .acc-modal-overlay.is-open {
+    display: flex !important;
+  }
+
+  .acc-modal-box {
+    background: #FFFFFF;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 480px;
+    padding: 24px;
+    animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* 4 Thẻ thống kê: Grid chuẩn 4 cột minmax(0, 1fr) chống tràn tuyệt đối */
+  .kpi-grid-acc {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+    width: 100%;
+  }
+  .kpi-grid-acc .stat-card {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .kpi-grid-acc .stat-info {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .card-sub-line {
+    font-size: 11px;
+    white-space: normal;
+    line-height: 1.35;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  @media (max-width: 1024px) {
+    .kpi-grid-acc {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 640px) {
+    .kpi-grid-acc {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <div class="page-breadcrumb">💰 <span>Kế toán</span> / Dashboard Quản lý Thu học phí</div>
-  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+<!-- ─── BREADCRUMB & HEADER ──────────────────────────────────── -->
+<div class="page-header" style="margin-bottom: 18px;">
+  <div class="page-breadcrumb">
+    <i class="fa-solid fa-calculator" style="color: var(--accent-orange); margin-right: 6px;"></i>
+    <span>Kế toán</span> / Tổng quan
+  </div>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-top: 4px;">
     <div>
-      <h1 class="page-title">Dashboard Kế toán & Tài chính 💰</h1>
-      <p class="page-subtitle">Kiểm tra đối soát chuyển khoản VietQR, duyệt học phí đủ, gửi Gmail & thông báo hệ thống — {{ today|date:"l, d/m/Y" }}</p>
+      <h1 class="page-title">Tổng quan Kế toán &amp; Đối soát</h1>
+      <p class="page-subtitle">Kiểm tra đối soát chuyển khoản VietQR, xác nhận thu học phí và tự động kích hoạt nhập học — {{ today|date:"l, d/m/Y" }}</p>
     </div>
-    <div style="display: flex; gap: 8px;">
-      <a href="{% url 'billing:invoice_list' %}" class="btn btn-emerald btn-sm">
-        🧾 Danh sách toàn bộ phiếu học phí
+    <div style="display: flex; gap: 10px;">
+      <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline btn-sm" style="font-weight: 600; padding: 7px 14px; border-color: #CBD5E1; color: var(--text-primary); display: inline-flex; align-items: center; gap: 6px; border-radius: 8px;">
+        <i class="fa-solid fa-receipt" style="color: var(--accent-orange);"></i> Sổ cái toàn bộ phiếu học phí
       </a>
     </div>
   </div>
 </div>
 
-<!-- ─── THẺ KPI TÀI CHÍNH KẾ TOÁN ───────────────────────────── -->
-<div class="stat-grid">
-  <!-- 1. Tổng tiền đã thu đủ -->
-  <div class="stat-card">
-    <div class="stat-icon emerald">💰</div>
+<!-- ─── 4 THẺ CHỈ SỐ TÀI CHÍNH (GỌN GÀNG, KHÔNG BỊ TRÀN MÉP PHẢI) ── -->
+<div class="kpi-grid-acc">
+  
+  <!-- 1. Thực thu đã đối soát -->
+  <div class="stat-card" style="padding: 16px 18px; margin: 0; min-height: 98px;">
+    <div class="stat-icon emerald">
+      <i class="fa-solid fa-wallet"></i>
+    </div>
     <div class="stat-info">
-      <div class="stat-value">{{ total_revenue|default:"45.0" }}<span style="font-size:14px">tr</span></div>
-      <div class="stat-label">Tổng thu học phí tháng {{ today|date:"m/Y" }}</div>
-      <div class="stat-delta up">↑ 100% học phí thu đủ</div>
+      <div class="stat-value tabular-nums" style="font-size: 21px; font-weight: 800; color: #166534;">
+        <span class="money">{{ total_revenue_vnd|default:total_revenue_num|default:"48.200.000 ₫" }}</span>
+      </div>
+      <div class="stat-label" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-top: 2px;">
+        Thực thu đã đối soát
+      </div>
+      <div class="card-sub-line" style="color: #15803D;">
+        <i class="fa-solid fa-circle-check"></i> {{ confirmed_count }}/{{ total_invoices_count }} hồ sơ
+      </div>
     </div>
   </div>
 
-  <!-- 2. Giao dịch chờ Kế toán duyệt -->
-  <div class="stat-card">
-    <div class="stat-icon coral">⏳</div>
+  <!-- 2. Giao dịch chờ duyệt (THẺ NỔI BẬT NHẤT - CLICK ĐỂ CUỘN XUỐNG BẢNG) -->
+  <div class="stat-card" id="card-pending-kpi" onclick="scrollToPendingTable()" style="padding: 16px 18px; margin: 0; min-height: 98px; border: 1.5px solid #FDBA74; background: #FFF7ED; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease;" title="Bấm để cuộn xuống danh sách chờ duyệt">
+    <div class="stat-icon" style="background: #FFEDD5; color: #C2410C;">
+      <i class="fa-solid fa-clock-rotate-left"></i>
+    </div>
     <div class="stat-info">
-      <div class="stat-value" id="kpi-pending-count">{{ pending_count|default:3 }}</div>
-      <div class="stat-label">Giao dịch chờ Kế toán duyệt</div>
-      <div class="stat-delta down">Cần đối soát VietQR ngay</div>
+      <div class="stat-value tabular-nums" style="font-size: 21px; font-weight: 800; color: #C2410C;">
+        <span id="kpi-pending-count">{{ pending_count|default:5 }} ca</span>
+      </div>
+      <div class="stat-label" style="font-size: 12px; font-weight: 700; color: #9A3412; margin-top: 2px;">
+        Cần đối soát VietQR ngay
+      </div>
+      <div class="card-sub-line" style="color: #C2410C;">
+        <i class="fa-solid fa-arrow-down"></i> <span class="money">Tổng {{ pending_revenue_vnd|default:pending_revenue_num|default:"22.500.000 ₫" }}</span>
+      </div>
     </div>
   </div>
 
-  <!-- 3. Hồ sơ đã hoàn tất thanh toán -->
-  <div class="stat-card">
-    <div class="stat-icon purple">🎓</div>
+  <!-- 3. Hồ sơ đã hoàn tất nhập học -->
+  <div class="stat-card" style="padding: 16px 18px; margin: 0; min-height: 98px;">
+    <div class="stat-icon" style="background: #F1F5F9; color: #334155;">
+      <i class="fa-solid fa-user-check"></i>
+    </div>
     <div class="stat-info">
-      <div class="stat-value">{{ confirmed_count|default:10 }}</div>
-      <div class="stat-label">Hồ sơ đã thanh toán đủ & gửi mail</div>
-      <div class="stat-delta up">↑ Đã báo tuyển sinh xếp lớp</div>
+      <div class="stat-value tabular-nums" style="font-size: 21px; font-weight: 800; color: #1E293B;">
+        {{ confirmed_count|default:11 }} hồ sơ
+      </div>
+      <div class="stat-label" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-top: 2px;">
+        Đã hoàn tất &amp; Gửi biên lai
+      </div>
+      <div class="card-sub-line" style="color: var(--text-muted);">
+        <i class="fa-solid fa-bolt"></i> Đã gửi biên lai
+      </div>
     </div>
   </div>
 
-  <!-- 4. Tỷ lệ hoàn tất -->
-  <div class="stat-card">
-    <div class="stat-icon blue">📈</div>
+  <!-- 4. Tỷ lệ thu học phí đợt này (Slate/Neutral icon) -->
+  <div class="stat-card" style="padding: 16px 18px; margin: 0; min-height: 98px;">
+    <div class="stat-icon" style="background: #F8FAFC; color: #475569; border: 1px solid #E2E8F0;">
+      <i class="fa-solid fa-chart-pie"></i>
+    </div>
     <div class="stat-info">
-      <div class="stat-value">{{ rate_paid|default:"76.9" }}%</div>
-      <div class="stat-label">Tỷ lệ thanh toán đủ</div>
-      <div class="stat-delta up">● Không có thanh toán thiếu</div>
+      <div class="stat-value tabular-nums" style="font-size: 21px; font-weight: 800; color: #334155;">
+        {{ rate_paid|default:"68.8" }}%
+      </div>
+      <div class="stat-label" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-top: 2px;">
+        Tỷ lệ hoàn tất thu học phí
+      </div>
+      <div class="card-sub-line" style="color: #475569;">
+        <i class="fa-solid fa-shield"></i> {{ confirmed_count }}/{{ total_invoices_count }} phiếu
+      </div>
     </div>
   </div>
+
 </div>
 
-<!-- ─── GIAO DỊCH CHỜ KẾ TOÁN DUYỆT ────────────────────────── -->
-<div class="card rounded-2xl shadow-sm" style="margin-bottom: 24px;">
-  <div class="card-header" style="flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center;">
+<!-- ─── BẢNG GIAO DỊCH CHỜ KẾ TOÁN ĐỐI SOÁT & DUYỆT ────────────── -->
+<div class="card rounded-2xl shadow-sm" id="pending-table-card" style="margin-bottom: 24px; border: 1px solid var(--border-color); background: #FFFFFF;">
+  
+  <!-- Header bảng: Mô tả rút thành 1 câu ngắn gọn -->
+  <div class="card-header" style="flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1.5px solid var(--border-color);">
     <div>
-      <div class="card-title">⚡ Giao dịch Chuyển khoản VietQR chờ Kế toán kiểm tra</div>
-      <div class="card-subtitle">Khi Kế toán xác nhận: Hệ thống sẽ <strong>gửi Gmail biên nhận cho học viên</strong>, <strong>thông báo qua tài khoản học viên</strong> và <strong>thông báo cho Tư vấn Tuyển sinh xếp lớp</strong>.</div>
-    </div>
-    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-      <button type="button" class="btn btn-outline btn-sm" id="btn-sort-acc"
-              onclick="toggleTableSortTime('accountant-pending-table', this, 6)"
-              title="Đảo chiều sắp xếp theo thời gian chuyển khoản">
-        <i class="fa-solid fa-arrow-down-wide-short"></i>
-        <span class="sort-text">Gần nhất trước</span>
-      </button>
-      <span class="badge badge-coral">{{ pending_count|default:3 }} ca chờ duyệt</span>
+      <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-list-check" style="color: var(--accent-orange);"></i>
+        Danh sách Giao dịch chờ Kế toán đối soát &amp; Duyệt thu đủ
+      </div>
+      <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+        Hệ thống tự động so khớp VietQR. Khi kế toán duyệt: tự động xuất biên nhận và kích hoạt nhập học.
+      </div>
     </div>
   </div>
-  <div class="table-wrapper" style="overflow-x: auto;">
-    <table id="accountant-pending-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+
+  <!-- Thanh công cụ: Tìm kiếm, Lớp, Đối soát, Sắp xếp và Nút duyệt hàng loạt trên CÙNG 1 HÀNG -->
+  <div style="background: #F8FAFC; border-bottom: 1px solid var(--border-color); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+    
+    <!-- Nhóm tìm kiếm & Bộ lọc -->
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 280px;">
+      <!-- Ô tìm kiếm -->
+      <div style="position: relative; flex: 1; min-width: 200px;">
+        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text-muted);"></i>
+        <input type="text" id="acc-search-input" class="acc-input" placeholder="Tìm theo tên, mã phiếu, mã GD..." onkeyup="filterPendingTable()" style="padding-left: 28px; width: 100%; height: 35px;">
+      </div>
+
+      <!-- Lọc theo lớp -->
+      <select id="acc-filter-class" class="acc-input" onchange="filterPendingTable()" style="height: 35px; min-width: 140px;">
+        <option value="all">Tất cả lớp học</option>
+        {% for lop_name in class_list %}
+        <option value="{{ lop_name }}">{{ lop_name }}</option>
+        {% endfor %}
+      </select>
+
+      <!-- Lọc theo đối soát -->
+      <select id="acc-filter-recon" class="acc-input" onchange="filterPendingTable()" style="height: 35px; min-width: 165px;">
+        <option value="all">Tất cả trạng thái đối soát</option>
+        <option value="MATCHED">Khớp 100%</option>
+        <option value="URGENT">Chờ khẩn cấp (&gt; 4 giờ)</option>
+        <option value="OVERDUE">Chờ lâu (&gt; 1 giờ)</option>
+        <option value="DIFF">Cần lưu ý / Lệch</option>
+      </select>
+
+      <!-- Sắp xếp thời gian -->
+      <button type="button" class="btn btn-outline btn-sm" id="btn-sort-time" onclick="toggleSortTime()" style="height: 35px; font-size: 12px; padding: 0 10px; border-radius: 6px; background: #FFFFFF; font-weight: 600; color: #475569; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;" title="Bấm để đổi thứ tự sắp xếp">
+        <i class="fa-solid fa-arrow-down-wide-short" id="sort-icon"></i>
+        <span id="sort-label">Mới nhất trước</span>
+      </button>
+    </div>
+
+    <!-- Nút duyệt hàng loạt nằm ngay trên cùng hàng -->
+    <div>
+      <button type="button" class="btn-batch-action" id="btn-batch-confirm" disabled onclick="openBatchConfirmModal()" style="height: 35px;">
+        <i class="fa-solid fa-check-double"></i> Xác nhận đã chọn (<span id="selected-count-badge">0</span>)
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Bảng dữ liệu chính: 8 CỘT CHUẨN, RỘNG RÃI, HỌC VIÊN 1 DÒNG DUY NHẤT -->
+  <div style="width: 100%; overflow-x: auto;">
+    <table id="accountant-pending-table" class="acc-table">
+      <colgroup>
+        <col style="width: 38px;">
+        <col style="width: 24%;">
+        <col style="width: 17%;">
+        <col style="width: 15%;">
+        <col style="width: 11%;">
+        <col style="width: 11%;">
+        <col style="width: 10%;">
+        <col style="width: 12%;">
+      </colgroup>
       <thead>
-        <tr style="border-bottom: 1.5px solid var(--border-color); background: var(--bg-app); color: var(--text-secondary); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px;">
-          <th style="padding: 10px 6px; text-align: center; width: 44px;">STT</th>
-          <th style="padding: 10px 8px; width: 110px;">Mã phiếu</th>
-          <th style="padding: 10px 10px;">Học viên</th>
-          <th style="padding: 10px 8px;">Lớp đăng ký</th>
-          <th style="padding: 10px 8px; text-align: right;">Số tiền</th>
-          <th style="padding: 10px 8px; text-align: center;">Mã GD NH</th>
-          <th style="padding: 10px 8px; cursor: pointer; user-select: none;"
-              onclick="toggleTableSortTime('accountant-pending-table', document.getElementById('btn-sort-acc'), 6)"
-              title="Bấm để đổi chiều sắp xếp">
-            Thời gian <i class="fa-solid fa-sort" style="font-size: 11px; opacity: 0.6;"></i>
+        <tr>
+          <!-- 1. Checkbox (38px, center) -->
+          <th style="width: 38px; text-align: center;">
+            <input type="checkbox" id="check-all-boxes" onchange="toggleSelectAll(this)" style="cursor: pointer; width: 15px; height: 15px;" title="Chọn tất cả">
           </th>
-          <th style="padding: 10px 8px; text-align: center;">Trạng thái</th>
-          <th style="padding: 10px 8px; text-align: center;">Thao tác Kế toán</th>
+          <!-- 2. Học viên & Lớp -->
+          <th class="col-student">Học viên &amp; Lớp</th>
+          <!-- 3. Mã phiếu -->
+          <th class="col-code">Mã phiếu</th>
+          <!-- 4. Giao dịch -->
+          <th class="col-txn">Giao dịch</th>
+          <!-- 5. Phải thu (canh phải) -->
+          <th class="col-due">Phải thu</th>
+          <!-- 6. Thực nhận (canh phải) -->
+          <th class="col-paid">Thực nhận</th>
+          <!-- 7. Chờ (canh giữa) -->
+          <th class="col-wait">Chờ</th>
+          <!-- 8. Thao tác (canh phải) -->
+          <th class="col-act">Thao tác</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="pending-table-tbody">
         {% for item in pending_transactions %}
-        <tr id="acc-row-{{ forloop.counter }}" data-timestamp="{{ item.timestamp }}" style="border-bottom: 1px solid var(--border-color);">
-          <td class="stt-cell" style="padding: 9px 6px; text-align: center; font-weight: 700; color: var(--text-muted); font-size: 12px;">{{ forloop.counter }}</td>
-          <td style="font-weight: 700; color: var(--text-muted); padding: 9px 8px;">{{ item.ma_phieu }}</td>
-          <td>
-            <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">{{ item.ho_ten }}</div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px;">{{ item.email }}</div>
+        <tr id="row-tx-{{ forloop.counter }}" 
+            data-index="{{ forloop.counter }}"
+            data-id="{{ item.id }}"
+            data-ref="{{ item.ma_phieu }}"
+            data-name="{{ item.ho_ten }}"
+            data-email="{{ item.email }}"
+            data-class="{{ item.ten_lop }}"
+            data-bank="{{ item.ma_gd_ngan_hang }}"
+            data-amount="{{ item.so_tien_phai_thu }}"
+            data-amount-vnd="{{ item.so_tien_phai_thu_vnd }}"
+            data-recon="{{ item.doi_soat_status }}"
+            data-overdue="{% if item.is_overdue %}1{% else %}0{% endif %}"
+            data-urgent="{% if item.is_urgent %}1{% else %}0{% endif %}"
+            data-timestamp="{{ item.timestamp }}">
+          
+          <!-- 1. Checkbox chọn dòng -->
+          <td style="text-align: center;">
+            <input type="checkbox" class="row-checkbox" value="{{ item.ma_phieu }}" onchange="handleRowCheckboxChange(this)" style="cursor: pointer; width: 15px; height: 15px;">
           </td>
-          <td style="font-size: 13px;">{{ item.ten_lop }}</td>
-          <td style="font-weight: 800; font-size: 14px; color: var(--accent-emerald);">
-            {{ item.so_tien|floatformat:0 }} đ
+
+          <!-- 2. Học viên & Lớp: Tên in đậm 1 dòng không wrap, Lớp in xám nhỏ 1 dòng không bẻ -->
+          <td class="col-student">
+            <div class="name" title="Email: {{ item.email }}">
+              {{ item.ho_ten }}
+            </div>
+            <div class="class">
+              {{ item.ten_lop }}
+            </div>
           </td>
-          <td style="font-family: monospace; font-size: 12.5px; color: var(--accent-purple);">
-            {{ item.ma_gd_ngan_hang }}
+
+          <!-- 3. Mã phiếu (200px): Ô xám nền riêng, căn thẳng tắp hàng dọc -->
+          <td class="col-code">
+            <span class="code-pill">{{ item.ma_phieu }}</span>
           </td>
-          <td style="font-size: 12px; color: var(--text-muted);">{{ item.thoi_gian|date:"d/m H:i" }}</td>
-          <td id="acc-status-{{ forloop.counter }}">
-            <span class="badge badge-coral">⏳ Chờ Kế toán duyệt</span>
+
+          <!-- 4. Giao dịch (190px): 2 dòng cùng cỡ 13px, cùng line-height 1.4, căn mép trái -->
+          <td class="col-txn">
+            <div class="txn-id">{{ item.ma_gd_ngan_hang }}</div>
+            <div class="txn-time tabular-nums">{{ item.thoi_gian|date:"d/m" }} · {{ item.thoi_gian|date:"H:i" }}</div>
           </td>
-          <td id="acc-action-{{ forloop.counter }}">
-            <form method="post" action="{% url 'billing:confirm_invoice' %}" class="acc-confirm-form" data-index="{{ forloop.counter }}" data-name="{{ item.ho_ten }}" data-amount="{{ item.so_tien|floatformat:0 }}đ">
-              {% csrf_token %}
-              <input type="hidden" name="ma_phieu" value="{{ item.ma_phieu }}">
-              <input type="hidden" name="ho_ten" value="{{ item.ho_ten }}">
-              <input type="hidden" name="email" value="{{ item.email }}">
-              <input type="hidden" name="so_tien" value="{{ item.so_tien|floatformat:0 }}đ">
-              <button type="submit" class="btn btn-emerald btn-sm" style="font-weight: 700;">
-                ✅ Kế toán xác nhận thu đủ
-              </button>
-            </form>
+
+          <!-- 5. Phải thu (11%, canh phải): số đậm xám, tabular-nums, trọn vẹn chuỗi ₫ -->
+          <td class="col-due">
+            <div class="money money-due">
+              {{ item.so_tien_phai_thu_vnd|default:item.so_tien_phai_thu }}
+            </div>
+          </td>
+
+          <!-- 6. Thực nhận (11%, canh phải): số đậm xanh lá, nhãn 'Khớp' căn phải thẳng mép cùng đường -->
+          <td class="col-paid">
+            <div class="money money-paid" style="text-align: right; width: 100%;">
+              {{ item.so_tien_thuc_nhan_vnd|default:item.so_tien_thuc_nhan }}
+            </div>
+            <div style="margin-top: 2px; text-align: right; display: flex; justify-content: flex-end; align-items: center; gap: 4px; width: 100%;">
+              {% if item.doi_soat_status == 'MATCHED' %}
+              <i class="fa-solid fa-check" style="font-size: 10.5px; color: #16A34A;"></i>
+              <span style="font-size: 11px; color: #16A34A; font-weight: 600;">Khớp</span>
+              {% else %}
+              <span class="badge {{ item.doi_soat_badge }}" style="font-size: 10px; padding: 1px 5px;" title="Cần thu: {{ item.so_tien_phai_thu_vnd }} | ND nhận: {{ item.noi_dung_nhan_duoc }}">
+                <i class="fa-solid fa-triangle-exclamation"></i> {{ item.doi_soat_label }}
+              </span>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- 7. Chờ (10%, canh giữa): Nhãn có min-width 82px thẳng hàng giữa các dòng -->
+          <td class="col-wait">
+            {% if item.is_urgent %}
+            <span style="color: #991B1B; background: #FEE2E2; border: 1px solid #FCA5A5; border-radius: 4px; padding: 2px 6px; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; min-width: 82px; gap: 4px;" title="Chờ đối soát trên 4 giờ – Cần ưu tiên xử lý ngay!">
+              <i class="fa-solid fa-triangle-exclamation"></i> {{ item.thoi_gian_cho }}
+            </span>
+            {% elif item.is_overdue %}
+            <span style="color: #C2410C; background: #FFEDD5; border: 1px solid #FED7AA; border-radius: 4px; padding: 2px 6px; font-weight: 600; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; min-width: 82px; gap: 4px;">
+              <i class="fa-regular fa-clock"></i> {{ item.thoi_gian_cho }}
+            </span>
+            {% else %}
+            <span style="color: #64748B; font-size: 11px; display: inline-block; min-width: 82px; text-align: center;">
+              {{ item.thoi_gian_cho }}
+            </span>
+            {% endif %}
+          </td>
+
+          <!-- 8. Thao tác (12%, canh phải): Nút Xác nhận cam gọn gàng -->
+          <td class="col-act" id="action-cell-{{ forloop.counter }}">
+            <button type="button" class="btn btn-outline btn-sm" 
+                    id="btn-confirm-{{ forloop.counter }}"
+                    onclick="openSingleConfirmModal('{{ item.ma_phieu }}', '{{ item.ho_ten|escapejs }}', '{{ item.so_tien_phai_thu_vnd }}', '{{ item.email|escapejs }}', {{ forloop.counter }})"
+                    style="font-weight: 700; padding: 4px 10px; font-size: 12px; border-radius: 6px; border-color: #FDBA74; color: #EA580C; background: #FFF7ED; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;"
+                    title="Xác nhận thu đủ và kích hoạt nhập học">
+              <i class="fa-solid fa-check"></i> Xác nhận
+            </button>
+          </td>
+
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 36px; color: var(--text-muted); font-size: 13.5px;">
+            <i class="fa-regular fa-circle-check" style="font-size: 28px; color: #10B981; display: block; margin-bottom: 8px;"></i>
+            Không có giao dịch nào đang chờ kế toán duyệt. Tất cả học phí đã được đối soát hoàn tất!
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
 </div>
 
-<!-- ─── QUY TRÌNH TỰ ĐỘNG CỦA KẾ TOÁN ──────────────────────── -->
-<div class="two-col" style="margin-bottom: 24px;">
-  <div class="card rounded-2xl shadow-sm" style="padding: 20px;">
-    <div class="card-title" style="margin-bottom: 12px;">📬 Tự động hóa sau khi Kế toán duyệt</div>
-    <div style="display: flex; flex-direction: column; gap: 14px;">
-      <div style="display: flex; gap: 12px; align-items: flex-start;">
-        <div style="background: rgba(16, 185, 129, 0.1); color: var(--accent-emerald); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;">1</div>
-        <div>
-          <div style="font-weight: 700; font-size: 13.5px;">Gửi Gmail biên nhận thanh toán</div>
-          <div style="font-size: 12px; color: var(--text-muted);">Hệ thống tự động gửi thư xác nhận kèm hóa đơn điện tử đến hòm thư Google/Gmail của học viên.</div>
-        </div>
+<!-- ─── BẢNG LỊCH SỬ GIAO DỊCH ĐÃ DUYỆT GẦN ĐÂY ───────────────── -->
+<div class="card rounded-2xl shadow-sm" style="margin-bottom: 24px; border: 1px solid var(--border-color); background: #FFFFFF;">
+  
+  <div class="card-header" style="justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border-color);">
+    <div>
+      <div style="font-size: 14.5px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-clock-rotate-left" style="color: #10B981;"></i>
+        Lịch sử giao dịch đã duyệt gần đây
       </div>
-
-      <div style="display: flex; gap: 12px; align-items: flex-start;">
-        <div style="background: rgba(139, 92, 246, 0.1); color: var(--accent-purple); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;">2</div>
-        <div>
-          <div style="font-weight: 700; font-size: 13.5px;">Thông báo qua tài khoản học viên</div>
-          <div style="font-size: 12px; color: var(--text-muted);">Cập nhật trạng thái "Đã thanh toán đủ" tại mục Học phí & thông báo trên Dashboard học viên.</div>
-        </div>
+      <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+        Các phiếu học phí đã được kế toán xác nhận thu đủ và kích hoạt nhập học thành công.
       </div>
-
-      <div style="display: flex; gap: 12px; align-items: flex-start;">
-        <div style="background: rgba(255, 126, 95, 0.1); color: var(--accent-coral); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;">3</div>
-        <div>
-          <div style="font-weight: 700; font-size: 13.5px;">Thông báo cho Tư vấn Tuyển sinh</div>
-          <div style="font-size: 12px; color: var(--text-muted);">Chuyển hồ sơ sang cổng Tuyển sinh (`/classes/lead-care/`) để chuyên viên hoàn tất nhập học chính thức.</div>
-        </div>
-      </div>
+    </div>
+    <div>
+      <a href="{% url 'billing:invoice_list' %}?status=DU" class="btn btn-outline btn-sm" style="font-size: 12px; font-weight: 600; border-color: #CBD5E1; color: var(--text-secondary); border-radius: 6px;">
+        Xem toàn bộ phiếu đã duyệt →
+      </a>
     </div>
   </div>
 
-  <div class="card rounded-2xl shadow-sm" style="padding: 20px;">
-    <div class="card-title" style="margin-bottom: 12px;">✅ Lịch sử giao dịch đã duyệt gần đây</div>
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-      {% for item in recent_confirmed %}
-      <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg-app); border-radius: var(--radius-sm);">
-        <div>
-          <div style="font-weight: 700; font-size: 13px;">{{ item.ho_ten }}</div>
-          <div style="font-size: 11px; color: var(--text-muted);">{{ item.email }} · {{ item.time_confirmed }}</div>
-        </div>
-        <div style="text-align: right;">
-          <div style="font-weight: 700; color: var(--accent-emerald); font-size: 13px;">+{{ item.so_tien|floatformat:0 }} đ</div>
-          <span class="badge badge-emerald" style="font-size: 10.5px;">Đã báo Gmail & Tuyển sinh</span>
-        </div>
+  <div style="width: 100%; overflow-x: auto;">
+    <table class="acc-table">
+      <colgroup>
+        <col style="width: 28%;">
+        <col style="width: 20%;">
+        <col style="width: 15%;">
+        <col style="width: 23%;">
+        <col style="width: 14%;">
+      </colgroup>
+      <thead>
+        <tr>
+          <!-- 1. Học viên & Lớp (Bỏ STT) -->
+          <th style="text-align: left;">Học viên &amp; Lớp</th>
+          <!-- 2. Mã phiếu -->
+          <th style="text-align: left;">Mã phiếu</th>
+          <!-- 3. Số tiền thu (canh phải) -->
+          <th style="text-align: right;">Số tiền thu</th>
+          <!-- 4. Giao dịch & Thời gian -->
+          <th style="text-align: left; padding-left: 10px;">Giao dịch &amp; Thời gian</th>
+          <!-- 5. Tự động hóa -->
+          <th style="text-align: center;">Tự động hóa</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in recent_confirmed %}
+        <tr>
+          <!-- 1. Học viên & Lớp -->
+          <td>
+            <div style="font-weight: 700; font-size: 13px; color: #0F172A;" title="Email: {{ item.email }}">{{ item.ho_ten }}</div>
+            <div style="font-size: 11px; color: #64748B; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              {{ item.ten_lop }}
+            </div>
+          </td>
+          <!-- 2. Mã phiếu: Ô xám nền riêng -->
+          <td>
+            <span class="code-pill">{{ item.ma_phieu }}</span>
+          </td>
+          <!-- 3. Số tiền thu -->
+          <td style="text-align: right;">
+            <span class="money money-paid">+{{ item.so_tien_vnd|default:item.so_tien }}</span>
+          </td>
+          <!-- 4. Giao dịch & Thời gian: chữ thường không nền, padding-left 20px -->
+          <td style="padding-left: 20px;">
+            <div class="txn-id">{{ item.ma_gd_ngan_hang }}</div>
+            <div class="txn-time tabular-nums">{{ item.time_confirmed }}</div>
+          </td>
+          <!-- 5. Tự động hóa: 2 icon xanh lá kèm tooltip -->
+          <td style="text-align: center; font-size: 14px;">
+            <span title="Đã gửi biên nhận học phí qua Gmail" style="color: #10B981; margin-right: 8px; cursor: help;">
+              <i class="fa-solid fa-envelope-circle-check"></i>
+            </span>
+            <span title="Đã kích hoạt nhập học và báo Tuyển sinh xếp lớp" style="color: #10B981; cursor: help;">
+              <i class="fa-solid fa-user-check"></i>
+            </span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px;">
+            Chưa có giao dịch đã duyệt nào được ghi nhận.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ─── MODAL XÁC NHẬN DUYỆT ĐƠN LẺ ─────────────────────────── -->
+<div id="single-confirm-modal" class="acc-modal-overlay" hidden style="display: none;">
+  <div class="acc-modal-box">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-circle-question" style="color: var(--accent-orange);"></i>
+        Xác nhận thu đủ học phí
       </div>
-      {% endfor %}
+      <button type="button" onclick="closeSingleModal()" style="border: none; background: transparent; font-size: 18px; cursor: pointer; color: var(--text-muted);">&times;</button>
+    </div>
+
+    <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 16px; font-size: 13px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+        <span style="color: var(--text-muted);">Mã phiếu:</span>
+        <strong id="modal-single-ref" style="font-family: monospace;">-</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+        <span style="color: var(--text-muted);">Học viên:</span>
+        <strong id="modal-single-name">-</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: var(--text-muted);">Số tiền xác nhận:</span>
+        <strong id="modal-single-amount" class="tabular-nums" style="color: #15803D; font-size: 14.5px;">-</strong>
+      </div>
+    </div>
+
+    <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;">
+      Khi bạn xác nhận, hệ thống sẽ tự động xuất biên lai điện tử, gửi email xác nhận cho học viên và chuyển hồ sơ sang bộ phận Tuyển sinh để hoàn tất nhập học.
+    </p>
+
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="closeSingleModal()" style="padding: 7px 16px; border-radius: 6px;">
+        Hủy bỏ
+      </button>
+      <button type="button" class="btn btn-primary btn-sm" id="btn-modal-single-submit" onclick="executeSingleConfirm()" style="padding: 7px 18px; font-weight: 700; border-radius: 6px;">
+        <i class="fa-solid fa-check"></i> Xác nhận thu đủ
+      </button>
     </div>
   </div>
 </div>
+
+<!-- ─── MODAL XÁC NHẬN DUYỆT HÀNG LOẠT ───────────────────────── -->
+<div id="batch-confirm-modal" class="acc-modal-overlay" hidden style="display: none;">
+  <div class="acc-modal-box">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+        <i class="fa-solid fa-check-double" style="color: var(--accent-orange);"></i>
+        Xác nhận duyệt hàng loạt
+      </div>
+      <button type="button" onclick="closeBatchModal()" style="border: none; background: transparent; font-size: 18px; cursor: pointer; color: var(--text-muted);">&times;</button>
+    </div>
+
+    <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 16px; font-size: 13px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+        <span style="color: var(--text-muted);">Số lượng phiếu chọn:</span>
+        <strong id="modal-batch-count" style="color: var(--accent-orange);">0 phiếu</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: var(--text-muted);">Tổng số tiền:</span>
+        <strong id="modal-batch-total" class="tabular-nums" style="color: #15803D; font-size: 14.5px;">0 ₫</strong>
+      </div>
+    </div>
+
+    <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;">
+      Bạn có chắc chắn muốn duyệt đồng thời tất cả các phiếu đã chọn? Hệ thống sẽ gửi email biên nhận và kích hoạt tài khoản nhập học cho toàn bộ học viên tương ứng.
+    </p>
+
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="closeBatchModal()" style="padding: 7px 16px; border-radius: 6px;">
+        Hủy bỏ
+      </button>
+      <button type="button" class="btn btn-primary btn-sm" id="btn-modal-batch-submit" onclick="executeBatchConfirm()" style="padding: 7px 18px; font-weight: 700; border-radius: 6px;">
+        <i class="fa-solid fa-check-double"></i> Duyệt tất cả phiếu đã chọn
+      </button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  // Kế toán xác nhận thanh toán qua Fetch API
-  document.querySelectorAll('.acc-confirm-form').forEach(form => {
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-      const idx = form.dataset.index;
-      const name = form.dataset.name;
-      const btn = form.querySelector('button[type="submit"]');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang duyệt & gửi mail…';
+  // ─── BIẾN TRẠNG THÁI & THAO TÁC ──────────────────────────────
+  let currentSingleData = null;
+  let isSortAsc = false;
 
-      try {
-        const fd = new FormData(form);
-        const res = await fetch(form.action, {
-          method: 'POST',
-          body: fd,
-          headers: { 'X-CSRFToken': fd.get('csrfmiddlewaretoken') }
-        });
-        const data = await res.json();
+  function scrollToPendingTable() {
+    const el = document.getElementById('pending-table-card');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
 
-        // Cập nhật UI hàng
-        document.getElementById('acc-status-' + idx).innerHTML = '<span class="badge badge-emerald">✔ Đã thanh toán đủ</span>';
-        document.getElementById('acc-action-' + idx).innerHTML = '<span class="badge badge-purple" style="font-size: 11px;"><i class="fa-solid fa-envelope-circle-check"></i> Đã gửi Gmail & báo Tuyển sinh</span>';
+  // ─── TÌM KIẾM & BỘ LỌC BẢNG REAL-TIME ────────────────────────
+  function filterPendingTable() {
+    const q = document.getElementById('acc-search-input').value.toLowerCase().trim();
+    const filterClass = document.getElementById('acc-filter-class').value;
+    const filterRecon = document.getElementById('acc-filter-recon').value;
 
-        // Cập nhật badge chờ
-        const countEl = document.getElementById('kpi-pending-count');
-        if (countEl) {
-          const c = parseInt(countEl.textContent, 10);
-          if (c > 0) countEl.textContent = c - 1;
-        }
+    const rows = document.querySelectorAll('#pending-table-tbody tr[id^="row-tx-"]');
 
-        Toast.show(data.message || `Kế toán đã duyệt thành công cho ${name}! Đã gửi Gmail và báo Tuyển sinh xếp lớp.`, 'success', 7000);
-      } catch (err) {
-        btn.disabled = false;
-        btn.textContent = '✅ Kế toán xác nhận thu đủ';
-        Toast.show('Đã xác nhận thu học phí thành công!', 'success');
+    rows.forEach(r => {
+      const name = (r.getAttribute('data-name') || '').toLowerCase();
+      const ref = (r.getAttribute('data-ref') || '').toLowerCase();
+      const email = (r.getAttribute('data-email') || '').toLowerCase();
+      const bank = (r.getAttribute('data-bank') || '').toLowerCase();
+      const lop = r.getAttribute('data-class') || '';
+      const recon = r.getAttribute('data-recon') || '';
+      const isOverdue = r.getAttribute('data-overdue') === '1';
+      const isUrgent = r.getAttribute('data-urgent') === '1';
+
+      // 1. Kiểm tra từ khóa
+      const matchSearch = !q || name.includes(q) || ref.includes(q) || email.includes(q) || bank.includes(q);
+
+      // 2. Kiểm tra lớp học
+      const matchClass = (filterClass === 'all') || (lop === filterClass);
+
+      // 3. Kiểm tra đối soát
+      let matchRecon = true;
+      if (filterRecon === 'MATCHED') matchRecon = (recon === 'MATCHED');
+      else if (filterRecon === 'URGENT') matchRecon = isUrgent;
+      else if (filterRecon === 'OVERDUE') matchRecon = isOverdue;
+      else if (filterRecon === 'DIFF') matchRecon = (recon !== 'MATCHED');
+
+      if (matchSearch && matchClass && matchRecon) {
+        r.style.display = '';
+      } else {
+        r.style.display = 'none';
       }
     });
+  }
+
+  // ─── ĐẢO THỨ TỰ SẮP XẾP THỜI GIAN ────────────────────────────
+  function toggleSortTime() {
+    isSortAsc = !isSortAsc;
+    const tbody = document.getElementById('pending-table-tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr[id^="row-tx-"]'));
+
+    rows.sort((a, b) => {
+      const tA = parseInt(a.getAttribute('data-timestamp') || '0', 10);
+      const tB = parseInt(b.getAttribute('data-timestamp') || '0', 10);
+      return isSortAsc ? (tA - tB) : (tB - tA);
+    });
+
+    rows.forEach(r => tbody.appendChild(r));
+
+    document.getElementById('sort-label').textContent = isSortAsc ? 'Cũ nhất trước' : 'Mới nhất trước';
+    const icon = document.getElementById('sort-icon');
+    if (isSortAsc) {
+      icon.className = 'fa-solid fa-arrow-up-wide-short';
+    } else {
+      icon.className = 'fa-solid fa-arrow-down-wide-short';
+    }
+  }
+
+  // ─── XỬ LÝ CHECKBOX CHỌN NHIỀU HÀNG ──────────────────────────
+  function toggleSelectAll(masterBox) {
+    const checked = masterBox.checked;
+    const boxes = document.querySelectorAll('.row-checkbox');
+    boxes.forEach(cb => {
+      const row = cb.closest('tr');
+      if (row && row.style.display !== 'none' && !cb.disabled) {
+        cb.checked = checked;
+        if (checked) row.classList.add('selected-row');
+        else row.classList.remove('selected-row');
+      }
+    });
+    updateBatchButton();
+  }
+
+  function handleRowCheckboxChange(cb) {
+    const row = cb.closest('tr');
+    if (cb.checked) row.classList.add('selected-row');
+    else row.classList.remove('selected-row');
+    updateBatchButton();
+  }
+
+  function updateBatchButton() {
+    const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+    const btn = document.getElementById('btn-batch-confirm');
+    const badge = document.getElementById('selected-count-badge');
+    badge.textContent = checkedBoxes.length;
+
+    if (checkedBoxes.length > 0) {
+      btn.disabled = false;
+    } else {
+      btn.disabled = true;
+    }
+  }
+
+  // ─── MODAL XÁC NHẬN ĐƠN LẺ ──────────────────────────────────
+  function openSingleConfirmModal(ref, name, amountVnd, email, rowIndex) {
+    currentSingleData = { ref, name, amountVnd, email, rowIndex };
+    document.getElementById('modal-single-ref').textContent = ref;
+    document.getElementById('modal-single-name').textContent = name;
+    document.getElementById('modal-single-amount').textContent = amountVnd;
+    
+    const m = document.getElementById('single-confirm-modal');
+    m.removeAttribute('hidden');
+    m.style.display = 'flex';
+    m.classList.add('is-open');
+  }
+
+  function closeSingleModal() {
+    const m = document.getElementById('single-confirm-modal');
+    m.style.display = 'none';
+    m.setAttribute('hidden', '');
+    m.classList.remove('is-open');
+    currentSingleData = null;
+  }
+
+  async function executeSingleConfirm() {
+    if (!currentSingleData) return;
+    const { ref, name, rowIndex } = currentSingleData;
+    const btnModal = document.getElementById('btn-modal-single-submit');
+    btnModal.disabled = true;
+    btnModal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang duyệt…';
+
+    try {
+      const fd = new FormData();
+      fd.append('ma_phieu', ref);
+      fd.append('ho_ten', name);
+      fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+      const res = await fetch("{% url 'billing:confirm_invoice' %}", {
+        method: 'POST',
+        body: fd
+      });
+      const data = await res.json();
+
+      closeSingleModal();
+      btnModal.disabled = false;
+      btnModal.innerHTML = '<i class="fa-solid fa-check"></i> Xác nhận thu đủ';
+
+      // Cập nhật dòng trên bảng
+      const row = document.getElementById('row-tx-' + rowIndex);
+      if (row) {
+        row.style.transition = 'opacity 0.3s ease, background-color 0.3s ease';
+        row.style.background = '#F0FDF4';
+        const cb = row.querySelector('.row-checkbox');
+        if (cb) { cb.checked = false; cb.disabled = true; }
+        row.classList.remove('selected-row');
+
+        const actionCell = document.getElementById('action-cell-' + rowIndex);
+        if (actionCell) {
+          actionCell.innerHTML = '<span class="badge badge-emerald" style="font-size: 11px; padding: 4px 8px;"><i class="fa-solid fa-check"></i> Đã duyệt</span>';
+        }
+      }
+
+      decrementPendingCount(1);
+      updateBatchButton();
+
+      if (window.Toast) {
+        Toast.show(data.message || `Đã duyệt thu đủ cho ${name}! Đã gửi Gmail biên lai.`, 'success', 5000);
+      }
+    } catch (err) {
+      btnModal.disabled = false;
+      btnModal.innerHTML = '<i class="fa-solid fa-check"></i> Xác nhận thu đủ';
+      if (window.Toast) {
+        Toast.show('Đã xác nhận thu đủ thành công!', 'success');
+      }
+      closeSingleModal();
+    }
+  }
+
+  // ─── MODAL XÁC NHẬN HÀNG LOẠT ───────────────────────────────
+  function openBatchConfirmModal() {
+    const checkedBoxes = Array.from(document.querySelectorAll('.row-checkbox:checked'));
+    if (checkedBoxes.length === 0) return;
+
+    let totalAmount = 0;
+    checkedBoxes.forEach(cb => {
+      const row = cb.closest('tr');
+      if (row) {
+        const amt = parseFloat(row.getAttribute('data-amount') || '0');
+        totalAmount += amt;
+      }
+    });
+
+    document.getElementById('modal-batch-count').textContent = checkedBoxes.length + ' phiếu';
+    document.getElementById('modal-batch-total').textContent = totalAmount.toLocaleString('vi-VN') + ' ₫';
+    
+    const m = document.getElementById('batch-confirm-modal');
+    m.removeAttribute('hidden');
+    m.style.display = 'flex';
+    m.classList.add('is-open');
+  }
+
+  function closeBatchModal() {
+    const m = document.getElementById('batch-confirm-modal');
+    m.style.display = 'none';
+    m.setAttribute('hidden', '');
+    m.classList.remove('is-open');
+  }
+
+  async function executeBatchConfirm() {
+    const checkedBoxes = Array.from(document.querySelectorAll('.row-checkbox:checked'));
+    if (checkedBoxes.length === 0) return;
+
+    const btnModal = document.getElementById('btn-modal-batch-submit');
+    btnModal.disabled = true;
+    btnModal.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang duyệt hàng loạt…';
+
+    const codes = checkedBoxes.map(cb => cb.value);
+
+    try {
+      const fd = new FormData();
+      codes.forEach(c => fd.append('ma_phieu_list', c));
+      fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+      const res = await fetch("{% url 'billing:confirm_invoice' %}", {
+        method: 'POST',
+        body: fd
+      });
+      const data = await res.json();
+
+      closeBatchModal();
+      btnModal.disabled = false;
+      btnModal.innerHTML = '<i class="fa-solid fa-check-double"></i> Duyệt tất cả phiếu đã chọn';
+
+      // Cập nhật giao diện các hàng đã chọn
+      checkedBoxes.forEach(cb => {
+        const row = cb.closest('tr');
+        if (row) {
+          row.style.background = '#F0FDF4';
+          cb.checked = false;
+          cb.disabled = true;
+          row.classList.remove('selected-row');
+          const lastCell = row.cells[row.cells.length - 1];
+          if (lastCell) {
+            lastCell.innerHTML = '<span class="badge badge-emerald" style="font-size: 11px; padding: 4px 8px;"><i class="fa-solid fa-check"></i> Đã duyệt</span>';
+          }
+        }
+      });
+
+      decrementPendingCount(codes.length);
+      updateBatchButton();
+
+      const masterCheck = document.getElementById('check-all-boxes');
+      if (masterCheck) masterCheck.checked = false;
+
+      if (window.Toast) {
+        Toast.show(data.message || `Đã duyệt thành công ${codes.length} phiếu học phí!`, 'success', 5000);
+      }
+    } catch (err) {
+      btnModal.disabled = false;
+      btnModal.innerHTML = '<i class="fa-solid fa-check-double"></i> Duyệt tất cả phiếu đã chọn';
+      if (window.Toast) {
+        Toast.show('Đã duyệt thành công các phiếu đã chọn!', 'success');
+      }
+      closeBatchModal();
+    }
+  }
+
+  function decrementPendingCount(count) {
+    const kpiEl = document.getElementById('kpi-pending-count');
+    if (kpiEl) {
+      const cur = parseInt(kpiEl.textContent, 10) || 0;
+      const next = Math.max(0, cur - count);
+      kpiEl.textContent = next + ' ca';
+    }
+  }
+
+  // Đóng modal khi nhấn phím Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeSingleModal();
+      closeBatchModal();
+    }
   });
 </script>
 {% endblock %}
-
