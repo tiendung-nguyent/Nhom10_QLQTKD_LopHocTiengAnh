@@ -13,8 +13,15 @@ def get_open_classes_data():
     lops = LopHoc.objects.select_related('khoa_hoc').prefetch_related('ghi_danhs__ho_so_tu_van__khach_hang').order_by('id')
     data = []
 
+    from apps.billing.models import PhieuHocPhi
+
     for lop in lops:
-        enrolled_count = lop.ghi_danhs.exclude(trang_thai=GhiDanh.TrangThai.HUY).count()
+        # Sĩ số chính thức: Chỉ đếm những học viên ĐÃ THANH TOÁN HỌC PHÍ vào lớp này
+        paid_gds = lop.ghi_danhs.filter(
+            Q(phieu_hoc_phis__trang_thai__in=[PhieuHocPhi.TrangThai.DA_TT, PhieuHocPhi.TrangThai.DU]) |
+            Q(trang_thai=GhiDanh.TrangThai.DA_XEP_LOP)
+        ).exclude(trang_thai=GhiDanh.TrangThai.HUY)
+        enrolled_count = paid_gds.count()
         max_seats = lop.si_so_toi_da or 20
         fill_pct = int(round(enrolled_count / max_seats * 100)) if max_seats else 0
         rem = max(0, max_seats - enrolled_count)
@@ -167,6 +174,43 @@ def add_class(request):
     return redirect('classes:class_status')
 
 
+
+
+def delete_class(request, lop_id):
+    """Xóa lớp học nếu chưa có học viên nào thanh toán học phí vào lớp."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+    from apps.classes.models import LopHoc, GhiDanh
+    from apps.billing.models import PhieuHocPhi
+
+    lop = LopHoc.objects.filter(id=lop_id).first()
+    if not lop:
+        return JsonResponse({'status': 'error', 'message': 'Lớp học không tồn tại!'}, status=404)
+
+    # Kiểm tra xem lớp đã có học viên nào đóng tiền chưa
+    has_paid_student = lop.ghi_danhs.filter(
+        Q(phieu_hoc_phis__trang_thai__in=[PhieuHocPhi.TrangThai.DA_TT, PhieuHocPhi.TrangThai.DU]) |
+        Q(trang_thai=GhiDanh.TrangThai.DA_XEP_LOP)
+    ).exclude(trang_thai=GhiDanh.TrangThai.HUY).exists()
+
+    if has_paid_student:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Không thể xóa lớp "{lop.ten_lop}" vì đã có học viên đóng tiền và nhập học chính thức!'
+        }, status=400)
+
+    # Xóa các ghi danh dự kiến chưa thanh toán và xóa lớp
+    lop.ghi_danhs.all().delete()
+    ten_lop = lop.ten_lop
+    lop.delete()
+
+    return JsonResponse({
+        'status': 'success',
+        'message': f'Đã xóa lớp học "{ten_lop}" thành công!'
+    })
+
+
 def do_assign(request):
     """POST xếp lớp – Ghi danh học viên vào lớp được chọn và tự động phát hành học phí."""
     if request.method != 'POST':
@@ -236,6 +280,9 @@ def lead_care(request):
     q = request.GET.get('q', '').strip()
     status_filter = request.GET.get('status', '').strip()
     advisor_filter = request.GET.get('advisor', '').strip()
+    level_filter = request.GET.get('level', '').strip().upper()
+    class_id_filter = request.GET.get('class_id', '').strip()
+    paid_only_filter = request.GET.get('paid_only', '').strip()
 
     # Xác định nhân viên tư vấn đang đăng nhập
     user_email = request.session.get('user_email', '')
@@ -274,6 +321,30 @@ def lead_care(request):
     # Lọc theo nhân viên phụ trách
     if advisor_filter:
         hstv_qs = hstv_qs.filter(nhan_vien_tu_van_id=advisor_filter)
+
+    # Lọc theo Lớp học & Chỉ những học viên đã thanh toán học phí
+    selected_class = None
+    if class_id_filter and class_id_filter.isdigit():
+        from apps.billing.models import PhieuHocPhi
+        selected_class = LopHoc.objects.filter(id=class_id_filter).first()
+        if selected_class:
+            if paid_only_filter == '1':
+                hstv_qs = hstv_qs.filter(
+                    ghi_danhs__lop_hoc_id=class_id_filter,
+                    ghi_danhs__phieu_hoc_phis__trang_thai__in=[PhieuHocPhi.TrangThai.DA_TT, PhieuHocPhi.TrangThai.DU]
+                ).exclude(ghi_danhs__trang_thai=GhiDanh.TrangThai.HUY).distinct()
+            else:
+                hstv_qs = hstv_qs.filter(
+                    ghi_danhs__lop_hoc_id=class_id_filter
+                ).exclude(ghi_danhs__trang_thai=GhiDanh.TrangThai.HUY).distinct()
+
+    # Lọc theo trình độ CEFR (nếu được chuyển từ trang Tình trạng lớp học)
+    if level_filter:
+        hstv_qs = hstv_qs.filter(
+            Q(khoa_de_xuat__trinh_do__iexact=level_filter) |
+            Q(phien_lam_bais__ket_qua_kiem_tra__trinh_do__iexact=level_filter) |
+            Q(khach_hang__muc_tieu__icontains=level_filter)
+        ).distinct()
 
     # Lọc theo từ khóa tìm kiếm (Tên, SĐT, Email, ID)
     if q:
@@ -331,14 +402,14 @@ def lead_care(request):
                     giao_vien_cham = df_gv.ho_ten_ma
 
         # Mục tiêu học tập của học viên
-        target_goal = '🎯 Luyện thi IELTS'
+        target_goal = 'Luyện thi IELTS'
         any_phien = h.phien_lam_bais.order_by('-id').first()
         if any_phien and any_phien.bai_kiem_tra and any_phien.bai_kiem_tra.ten_bai:
             b_name = any_phien.bai_kiem_tra.ten_bai
             if '(' in b_name and ')' in b_name:
-                target_goal = '🎯 ' + b_name.split('(')[-1].split(')')[0]
+                target_goal = b_name.split('(')[-1].split(')')[0]
             else:
-                target_goal = '🎯 ' + b_name
+                target_goal = b_name
 
         # Lần liên hệ gần nhất & tổng số lần
         contacts = list(h.lan_lien_hes.all().order_by('-thoi_gian'))
@@ -397,6 +468,9 @@ def lead_care(request):
         'search_query': q,
         'selected_status': status_filter,
         'selected_advisor': int(advisor_filter) if advisor_filter and advisor_filter.isdigit() else None,
+        'selected_level': level_filter,
+        'selected_class': selected_class,
+        'paid_only': (paid_only_filter == '1'),
     }
     return render(request, 'classes/lead_care.html', context)
 
@@ -465,28 +539,28 @@ def add_lead_contact(request):
             if timezone.is_naive(dt_hen):
                 dt_hen = timezone.make_aware(dt_hen)
             # Cập nhật vào phiên làm bài hoặc tạo mới phiên chờ test
-            phien_hen = hstv.phien_lam_bais.filter(trang_thai=PhienLamBai.TrangThai.DANG_LAM).order_by('-id').first()
+            phien_hen = hstv.phien_lam_bais.filter(
+                trang_thai__in=[PhienLamBai.TrangThai.DA_HEN, PhienLamBai.TrangThai.DANG_LAM]
+            ).order_by('-id').first()
             if not phien_hen:
                 bai_kt = BaiKiemTra.objects.filter(trang_thai=BaiKiemTra.TrangThai.KICH_HOAT).first()
                 phien_hen = PhienLamBai.objects.create(
                     ho_so_tu_van=hstv,
                     bai_kiem_tra=bai_kt,
                     thoi_gian_hen=dt_hen,
-                    trang_thai=PhienLamBai.TrangThai.DANG_LAM
+                    trang_thai=PhienLamBai.TrangThai.DA_HEN
                 )
             else:
                 phien_hen.thoi_gian_hen = dt_hen
-                phien_hen.save(update_fields=['thoi_gian_hen'])
+                if phien_hen.trang_thai != PhienLamBai.TrangThai.HOAN_THANH:
+                    phien_hen.trang_thai = PhienLamBai.TrangThai.DA_HEN
+                phien_hen.save(update_fields=['thoi_gian_hen', 'trang_thai'])
             hen_test_msg = f" Đã lên lịch hẹn làm test vào {dt_hen.strftime('%d/%m/%Y lúc %H:%M')}."
         except Exception:
             pass
 
-    # 3. QUY TẮC BPMN: Quá 3 lần liên hệ mà không chuyển sang Thanh toán học phí -> Tự động Hủy bỏ
+    # Ghi nhận lần liên hệ thành công (bảo toàn tiến trình tư vấn, không tự động hủy hồ sơ)
     auto_cancelled = False
-    if total_contacts >= 3 and trang_thai_moi not in [HoSoTuVan.TrangThai.DE_XUAT_LOP, HoSoTuVan.TrangThai.HOAN_THANH]:
-        trang_thai_moi = HoSoTuVan.TrangThai.TU_CHOI
-        ly_do_tu_choi = f"Tự động hủy bỏ theo quy trình BPMN: Đã liên hệ {total_contacts} lần nhưng không chuyển sang thanh toán/xếp lớp."
-        auto_cancelled = True
 
     # 4. Cập nhật nhân viên phụ trách & trạng thái hồ sơ tư vấn
     update_fields = []
@@ -533,6 +607,15 @@ def add_lead_contact(request):
     msg = f'Đã ghi nhận chăm sóc học viên "{student_name}" thành công!{hen_test_msg}'
     if auto_cancelled:
         msg = f'Hồ sơ đã đạt {total_contacts} lần liên hệ không chuyển đổi và tự động chuyển sang trạng thái "Hủy bỏ" theo quy tắc BPMN.'
+
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
+    if not is_ajax:
+        from django.contrib import messages
+        messages.success(request, msg)
+        referer = request.META.get('HTTP_REFERER')
+        if referer:
+            return redirect(referer)
+        return redirect('classes:lead_consult', hstv_id=hstv.id)
 
     return JsonResponse({
         'status': 'success',
@@ -736,19 +819,38 @@ def lead_apply_class_tuition(request, hstv_id):
     if not lop_hoc:
         return JsonResponse({'status': 'error', 'message': 'Lớp học không tồn tại!'}, status=404)
 
+    # Kiểm tra sĩ số lớp học trước khi xếp (tránh vượt sĩ số tối đa)
+    current_enrolled = GhiDanh.objects.filter(lop_hoc=lop_hoc).exclude(trang_thai=GhiDanh.TrangThai.HUY)
+    enrolled_count = current_enrolled.exclude(ho_so_tu_van=hstv).count()
+    if lop_hoc.si_so_toi_da and enrolled_count >= lop_hoc.si_so_toi_da:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Lớp "{lop_hoc.ten_lop}" đã đủ sĩ số tối đa ({lop_hoc.si_so_toi_da} học viên). Vui lòng chọn lớp khác!'
+        }, status=400)
+
     kh = hstv.khach_hang
     original_fee = Decimal(lop_hoc.khoa_hoc.hoc_phi if lop_hoc.khoa_hoc else 4500000)
     discount_fee = Decimal(0)
 
-    # Xử lý discount voucher nếu có
+    # Xử lý discount voucher nếu có (kiểm tra kích hoạt và hạn sử dụng)
     if ma_discount:
-        voucher = MaGiamGia.objects.filter(ma=ma_discount, kich_hoat=True).first()
+        now_date = timezone.now().date()
+        voucher = MaGiamGia.objects.filter(
+            Q(ngay_het_han__isnull=True) | Q(ngay_het_han__gte=now_date),
+            ma=ma_discount,
+            kich_hoat=True
+        ).first()
         if voucher:
             if voucher.loai_giam == MaGiamGia.LoaiGiam.PHAN_TRAM:
                 discount_fee = original_fee * (voucher.gia_tri / Decimal(100))
             else:
                 discount_fee = voucher.gia_tri
             discount_fee = min(discount_fee, original_fee)
+        else:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Mã ưu đãi "{ma_discount}" không hợp lệ hoặc đã hết hạn sử dụng!'
+            }, status=400)
 
     final_fee = max(Decimal(0), original_fee - discount_fee)
 
@@ -767,23 +869,29 @@ def lead_apply_class_tuition(request, hstv_id):
         }
     )
 
-    # 3. Tạo / Cập nhật PhieuHocPhi
-    ref_code = f"ACADEMIX HV{kh.id:03d} HD{ghi_danh.id:02d}"
+    # 3. Tạo / Cập nhật PhieuHocPhi (bảo toàn trạng thái ĐÃ THANH TOÁN nếu có)
+    ref_code = f"ACADEMIX HP HV{kh.id:03d} HD{ghi_danh.id:02d}"
     qr_url = generate_vietcombank_qr(amount=final_fee, content=ref_code)
+
+    existing_phieu = PhieuHocPhi.objects.filter(ghi_danh=ghi_danh).first()
+    is_already_paid = existing_phieu and existing_phieu.trang_thai in [PhieuHocPhi.TrangThai.DA_TT, PhieuHocPhi.TrangThai.DU]
+
+    phieu_defaults = {
+        'ma_tham_chieu': ref_code,
+        'hoc_phi_goc': original_fee,
+        'ma_giam_gia': ma_discount,
+        'so_tien_giam': discount_fee,
+        'so_tien': final_fee,
+        'qr_image_url': qr_url,
+        'han_thanh_toan': lop_hoc.ngay_khai_giang or (timezone.now().date() + timedelta(days=7)),
+    }
+    if not is_already_paid:
+        phieu_defaults['trang_thai'] = PhieuHocPhi.TrangThai.CHUA_TT
+        phieu_defaults['hoc_vien_da_xac_nhan'] = False
 
     phieu_hp, _ = PhieuHocPhi.objects.update_or_create(
         ghi_danh=ghi_danh,
-        defaults={
-            'ma_tham_chieu': ref_code,
-            'hoc_phi_goc': original_fee,
-            'ma_giam_gia': ma_discount,
-            'so_tien_giam': discount_fee,
-            'so_tien': final_fee,
-            'qr_image_url': qr_url,
-            'han_thanh_toan': lop_hoc.ngay_khai_giang or (timezone.now().date() + timedelta(days=7)),
-            'trang_thai': PhieuHocPhi.TrangThai.CHUA_TT,
-            'hoc_vien_da_xac_nhan': False,
-        }
+        defaults=phieu_defaults
     )
 
     # 4. Gửi thông báo hệ thống liên lane sang cho Học viên và Kế toán
@@ -815,10 +923,17 @@ def check_discount_voucher(request):
     ma = request.GET.get('code', '').strip().upper()
     hoc_phi_goc = float(request.GET.get('fee', 4500000))
     from apps.billing.models import MaGiamGia
+    from django.db.models import Q
+    from django.utils import timezone
 
-    voucher = MaGiamGia.objects.filter(ma=ma, kich_hoat=True).first()
+    now_date = timezone.now().date()
+    voucher = MaGiamGia.objects.filter(
+        Q(ngay_het_han__isnull=True) | Q(ngay_het_han__gte=now_date),
+        ma=ma,
+        kich_hoat=True
+    ).first()
     if not voucher:
-        return JsonResponse({'valid': False, 'message': 'Mã giảm giá không hợp lệ hoặc đã hết hạn!'})
+        return JsonResponse({'valid': False, 'message': 'Mã giảm giá không hợp lệ hoặc đã hết hạn sử dụng!'})
 
     if voucher.loai_giam == 'PHAN_TRAM':
         discount_val = hoc_phi_goc * (float(voucher.gia_tri) / 100.0)

@@ -182,7 +182,7 @@
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
     <div>
       <h1 class="page-title" style="font-size: 20px; display: flex; align-items: center; gap: 8px;">
-        <span>🎯 Tư vấn & Xếp lớp: <strong>{{ student.ho_ten|default:student.email }}</strong></span>
+        <span>Tư vấn & Xếp lớp: <strong>{{ student.ho_ten|default:student.email }}</strong></span>
       </h1>
       <p class="page-subtitle" style="font-size: 12.5px;">
         Xem điểm đầu vào, ghi nhận nhật ký tư vấn, chọn lớp học và phát hành mã VietQR học phí.
@@ -235,13 +235,13 @@
     {% elif da_test %}
     <div style="margin-top: 4px;">
       <span class="badge badge-purple" style="font-size: 11.5px; font-weight: 700;">
-        ✦ Đã làm bài test (Đang chờ GV duyệt điểm)
+        Đã làm bài test (Đang chờ GV duyệt điểm)
       </span>
     </div>
     {% else %}
     <div style="margin-top: 4px;">
       <span class="badge badge-coral" style="font-size: 11.5px; font-weight: 700;">
-        📝 Chưa làm bài test (105')
+        Chưa làm bài test (105')
       </span>
     </div>
     {% endif %}
@@ -258,7 +258,7 @@
     <div class="card rounded-2xl shadow-sm">
       <div class="card-header" style="padding: 14px 18px;">
         <div class="card-title" style="font-size: 14px; display: flex; align-items: center; gap: 8px;">
-          <span>📞</span> Ghi nhận Lần tư vấn / Chăm sóc
+          Ghi nhận Lần tư vấn / Chăm sóc
         </div>
       </div>
       <div class="card-body" style="padding: 16px 18px;">
@@ -268,28 +268,28 @@
 
           <div style="margin-bottom: 12px;">
             <label class="form-label" style="font-size: 12px; color: var(--accent-orange); font-weight: 700;">
-              Tiến trình hồ sơ (BPMN Pipeline) *
+              Tiến trình hồ sơ (BPMN Pipeline) <span style="color: #EF4444; font-weight: bold;">*</span>
             </label>
             <select name="trang_thai_moi" class="form-control" id="status-select" onchange="toggleRefusal()" style="font-weight: 600; font-size: 13px;">
-              <option value="DANG_XU_LY" {% if hstv.trang_thai == 'DANG_XU_LY' %}selected{% endif %}>⏳ Đang tư vấn lộ trình & mục tiêu học</option>
-              <option value="DA_TEST" {% if hstv.trang_thai == 'DA_TEST' %}selected{% endif %}>✦ Đã có điểm test – Chờ tư vấn lộ trình & xếp lớp</option>
-              <option value="DE_XUAT_LOP" {% if hstv.trang_thai == 'DE_XUAT_LOP' %}selected{% endif %}>🎯 Đã tư vấn & Đề xuất lớp học phù hợp (Chờ học phí)</option>
-              <option value="TU_CHOI" {% if hstv.trang_thai == 'TU_CHOI' %}selected{% endif %}>❌ Học viên từ chối / Bận không theo học (Hủy bỏ)</option>
+              <option value="DANG_XU_LY" {% if hstv.trang_thai == 'DANG_XU_LY' %}selected{% endif %}>Đang tư vấn lộ trình & mục tiêu học</option>
+              <option value="DA_TEST" {% if hstv.trang_thai == 'DA_TEST' %}selected{% endif %}>Đã có điểm test – Chờ tư vấn lộ trình & xếp lớp</option>
+              <option value="DE_XUAT_LOP" {% if hstv.trang_thai == 'DE_XUAT_LOP' %}selected{% endif %}>Đã tư vấn & Đề xuất lớp học phù hợp (Chờ học phí)</option>
+              <option value="TU_CHOI" {% if hstv.trang_thai == 'TU_CHOI' %}selected{% endif %}>Học viên từ chối / Bận không theo học (Hủy bỏ)</option>
             </select>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
             <div>
-              <label class="form-label" style="font-size: 12px;">Kênh liên hệ *</label>
+              <label class="form-label" style="font-size: 12px;">Kênh liên hệ <span style="color: #EF4444; font-weight: bold;">*</span></label>
               <select name="kenh_lien_he" class="form-control" required style="font-size: 12.5px; font-weight: 600;">
-                <option value="Gọi điện thoại">📞 Gọi điện thoại</option>
-                <option value="Nhắn tin Zalo / SMS">💬 Nhắn tin Zalo / SMS</option>
-                <option value="Gửi Email tư vấn">📧 Gửi Email tư vấn</option>
-                <option value="Gặp trực tiếp tại trung tâm">🏫 Gặp trực tiếp</option>
+                <option value="Gọi điện thoại">Gọi điện thoại</option>
+                <option value="Nhắn tin Zalo / SMS">Nhắn tin Zalo / SMS</option>
+                <option value="Gửi Email tư vấn">Gửi Email tư vấn</option>
+                <option value="Gặp trực tiếp tại trung tâm">Gặp trực tiếp</option>
               </select>
             </div>
             <div>
-              <label class="form-label" style="font-size: 12px;">Tư vấn viên *</label>
+              <label class="form-label" style="font-size: 12px;">Tư vấn viên <span style="color: #EF4444; font-weight: bold;">*</span></label>
               <select name="nhan_vien_id" class="form-control" required style="font-size: 12.5px; font-weight: 600;">
                 {% for adv in advisors %}
                 <option value="{{ adv.id }}" {% if current_advisor_id and adv.id == current_advisor_id %}selected{% endif %}>
@@ -303,7 +303,7 @@
           <!-- Lịch hẹn test -->
           <div style="margin-bottom: 12px;">
             <label class="form-label" style="font-size: 12px; color: var(--accent-coral); font-weight: 700; display: flex; justify-content: space-between; align-items: center;">
-              <span>📅 Lịch làm bài test đầu vào</span>
+              <span>Lịch làm bài test đầu vào</span>
               {% if da_test %}
               <span style="font-size: 11px; color: var(--accent-emerald); font-weight: 700;">
                 <i class="fa-solid fa-circle-check"></i> Đã hoàn thành kiểm tra
@@ -323,19 +323,19 @@
           <!-- Input lý do từ chối -->
           <div id="refusal-group" style="display: none; margin-bottom: 12px;">
             <label class="form-label" style="font-size: 12px; color: #EF4444; font-weight: 700;">
-              ⚠️ Lý do học viên từ chối / Đổi khung giờ
+              Lý do học viên từ chối / Đổi khung giờ
             </label>
             <input type="text" name="ly_do_tu_choi" class="form-control" placeholder="Ví dụ: Bận lịch cá nhân, không xếp được ca tối..." style="font-size: 12.5px;">
           </div>
 
           <!-- Nội dung tư vấn -->
           <div style="margin-bottom: 14px;">
-            <label class="form-label" style="font-size: 12px;">💬 Nội dung trao đổi & Kết quả tư vấn *</label>
+            <label class="form-label" style="font-size: 12px;">Nội dung trao đổi & Kết quả tư vấn <span style="color: #EF4444; font-weight: bold;">*</span></label>
             <textarea name="ket_qua" class="form-control" rows="3" required placeholder="Ghi nhận phản hồi của học viên: mong muốn ca học, mức học phí, cam kết..." style="font-size: 12.5px;"></textarea>
           </div>
 
           <button type="submit" class="btn btn-emerald btn-block" id="btn-save-contact" style="font-weight: 700; padding: 10px;">
-            ✔ Lưu Nhật ký Tư vấn
+            Lưu Nhật ký Tư vấn
           </button>
         </form>
       </div>
@@ -344,7 +344,7 @@
     <!-- Card 1.2: Lịch sử tương tác -->
     <div class="card rounded-2xl shadow-sm">
       <div class="card-header" style="padding: 12px 18px; display: flex; justify-content: space-between; align-items: center;">
-        <div class="card-title" style="font-size: 13.5px;">📜 Lịch sử Tiếp nhận & Tương tác</div>
+        <div class="card-title" style="font-size: 13.5px;">Lịch sử Tiếp nhận & Tương tác</div>
         <span class="badge badge-purple" style="font-size: 11px;">{{ contacts|length }} lượt</span>
       </div>
       <div class="card-body" style="padding: 14px 18px; max-height: 280px; overflow-y: auto;">
@@ -380,7 +380,7 @@
     <div class="card rounded-2xl shadow-sm">
       <div class="card-header" style="padding: 14px 18px;">
         <div class="card-title" style="font-size: 14px; display: flex; align-items: center; gap: 8px;">
-          <span>🏫</span> Chọn Khóa học & Lớp học
+          Chọn Khóa học & Lớp học
         </div>
       </div>
       <div class="card-body" style="padding: 16px 18px;">
@@ -433,7 +433,7 @@
                         {{ cls.ten_lop }}
                       </div>
                       <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 1px;">
-                        📅 {{ cls.lich_hoc }} · Ca: {{ cls.ca_hoc }} · GV: {{ cls.giao_vien }}
+                        {{ cls.lich_hoc }} · Ca: {{ cls.ca_hoc }} · GV: {{ cls.giao_vien }}
                       </div>
                     </div>
                   </div>
@@ -466,7 +466,7 @@
         <!-- ─── BẢNG TÍNH HỌC PHÍ & VOUCHER DISCOUNT ─── -->
         <div class="tuition-summary-box">
           <div style="font-size: 13px; font-weight: 800; color: var(--text-primary); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
-            <span>🏷️</span> Áp dụng Mã Ưu đãi & Tính Học phí
+            Áp dụng Mã Ưu đãi & Tính Học phí
           </div>
 
           <div style="display: flex; gap: 8px; margin-bottom: 12px;">
@@ -498,7 +498,7 @@
 
         <!-- Nút chốt lớp -->
         <button type="button" class="btn btn-emerald btn-block" id="btn-submit-enrollment" onclick="submitApplyClass()" style="font-weight: 800; padding: 12px 18px; font-size: 14px;">
-          🎯 Chốt Lớp & Phát hành Học phí (Sinh mã VietQR) 🚀
+          Chốt Lớp & Phát hành Học phí (Sinh mã VietQR)
         </button>
 
       </div>
@@ -508,7 +508,7 @@
     <div class="card rounded-2xl shadow-sm" id="qr-preview-card" style="{% if not current_phieu %}display: none;{% endif %} border: 2px solid var(--accent-emerald); background: #FAFDFB;">
       <div class="card-header" style="background: var(--emerald-light); border-bottom: 1.5px solid #A7F3D0; padding: 12px 18px;">
         <div class="card-title" style="color: #065F46; font-size: 13.5px; display: flex; align-items: center; gap: 8px;">
-          <span>✅</span> Đã phát hành Phiếu học phí & Mã VietQR
+          Đã phát hành Phiếu học phí & Mã VietQR
         </div>
       </div>
       <div class="card-body" style="text-align: center; padding: 18px;">
@@ -615,7 +615,7 @@
         calculateTotal();
 
         msgEl.style.color = '#059669';
-        msgEl.innerHTML = `✔ Áp dụng mã <strong>${data.code}</strong> thành công! Giảm ${data.discount_amount.toLocaleString('vi-VN')} VNĐ.`;
+        msgEl.innerHTML = `Áp dụng mã <strong>${data.code}</strong> thành công! Giảm ${data.discount_amount.toLocaleString('vi-VN')} VNĐ.`;
         if (typeof Toast !== 'undefined') Toast.show(`Đã áp dụng mã ưu đãi ${data.code}!`, 'success');
       } else {
         appliedDiscountCode = '';
@@ -657,7 +657,7 @@
       });
       const data = await res.json();
       btn.disabled = false;
-      btn.innerHTML = '🎯 Chốt Lớp & Phát hành Học phí (Sinh mã VietQR) 🚀';
+      btn.innerHTML = 'Chốt Lớp & Phát hành Học phí (Sinh mã VietQR)';
 
       if (data.status === 'success') {
         if (typeof Toast !== 'undefined') Toast.show(data.message, 'success', 5000);
@@ -675,9 +675,61 @@
       }
     } catch (err) {
       btn.disabled = false;
-      btn.innerHTML = '🎯 Chốt Lớp & Phát hành Học phí (Sinh mã VietQR) 🚀';
+      btn.innerHTML = 'Chốt Lớp & Phát hành Học phí (Sinh mã VietQR)';
       if (typeof Toast !== 'undefined') Toast.show('Lỗi kết nối máy chủ.', 'error');
     }
+  }
+
+  // Xử lý gửi form Ghi nhận Lần tư vấn qua AJAX
+  const consultForm = document.getElementById('consult-contact-form');
+  if (consultForm) {
+    consultForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-save-contact');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu nhật ký...';
+
+      try {
+        const fd = new FormData(consultForm);
+        const res = await fetch(consultForm.action, {
+          method: 'POST',
+          body: fd,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+          }
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+
+        if (data.status === 'success') {
+          if (typeof Toast !== 'undefined') {
+            Toast.show(data.message, 'success');
+          }
+          const txtArea = consultForm.querySelector('textarea[name="ket_qua"]');
+          if (txtArea) txtArea.value = '';
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
+        } else {
+          if (typeof Toast !== 'undefined') {
+            Toast.show(data.message || 'Lỗi khi lưu kết quả tư vấn.', 'error');
+          } else {
+            alert(data.message || 'Lỗi khi lưu kết quả tư vấn.');
+          }
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        if (typeof Toast !== 'undefined') {
+          Toast.show('Lỗi kết nối máy chủ.', 'error');
+        } else {
+          alert('Lỗi kết nối máy chủ.');
+        }
+      }
+    });
   }
 
   // Tự động chọn lớp ban đầu nếu đã xếp

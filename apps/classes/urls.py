@@ -6,6 +6,7 @@ app_name = 'classes'
 urlpatterns = [
     path('assignment/', views.class_assignment, name='class_assignment'),
     path('status/', views.class_status, name='class_status'),
+    path('status/<int:lop_id>/delete/', views.delete_class, name='delete_class'),
     path('assign/', views.do_assign, name='do_assign'),
     path('add/', views.add_class, name='add_class'),
     path('lead-care/', views.lead_care, name='lead_care'),
