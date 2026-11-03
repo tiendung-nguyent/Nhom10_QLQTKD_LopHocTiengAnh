@@ -958,84 +958,98 @@ def submit_mcq(request):
 
     phien_obj = None
     if student_email:
-        kh = KhachHang.objects.filter(email__iexact=student_email).first()
-        if not kh and request.session.get('student_id'):
-            kh = KhachHang.objects.filter(id=request.session['student_id']).first()
+        try:
+            kh = KhachHang.objects.filter(email__iexact=student_email).first()
+            if not kh and request.session.get('student_id'):
+                kh = KhachHang.objects.filter(id=request.session['student_id']).first()
 
-        if kh:
-            hstv, _ = HoSoTuVan.objects.get_or_create(
-                khach_hang=kh,
-                defaults={'trang_thai': HoSoTuVan.TrangThai.CHO_TEST}
-            )
+            if kh:
+                hstv = HoSoTuVan.objects.filter(khach_hang=kh).order_by('-id').first()
+                if not hstv:
+                    hstv = HoSoTuVan.objects.create(
+                        khach_hang=kh,
+                        trang_thai=HoSoTuVan.TrangThai.CHO_TEST
+                    )
 
-            bai_test, _ = BaiKiemTra.objects.get_or_create(
-                ten_bai=f"Placement Test ({goal_type} - {target_detail})",
-                defaults={'thoi_gian_phut': 105, 'trang_thai': BaiKiemTra.TrangThai.KICH_HOAT}
-            )
+                test_title = f"Placement Test ({goal_type} - {target_detail})"
+                bai_test = BaiKiemTra.objects.filter(ten_bai=test_title).order_by('-id').first()
+                if not bai_test:
+                    bai_test = BaiKiemTra.objects.create(
+                        ten_bai=test_title,
+                        thoi_gian_phut=105,
+                        trang_thai=BaiKiemTra.TrangThai.KICH_HOAT
+                    )
 
-            # Tìm phiên đang làm dở dang hoặc tạo mới
-            phien_obj = PhienLamBai.objects.filter(
-                ho_so_tu_van=hstv,
-                trang_thai=PhienLamBai.TrangThai.DANG_LAM
-            ).order_by('-bat_dau').first()
-
-            if not phien_obj:
-                phien_obj = PhienLamBai.objects.create(
+                # Tìm phiên đang làm dở dang hoặc tạo mới
+                phien_obj = PhienLamBai.objects.filter(
                     ho_so_tu_van=hstv,
-                    bai_kiem_tra=bai_test,
-                    bat_dau=timezone.now(),
                     trang_thai=PhienLamBai.TrangThai.DANG_LAM
+                ).order_by('-bat_dau').first()
+
+                if not phien_obj:
+                    phien_obj = PhienLamBai.objects.create(
+                        ho_so_tu_van=hstv,
+                        bai_kiem_tra=bai_test,
+                        bat_dau=timezone.now(),
+                        trang_thai=PhienLamBai.TrangThai.DANG_LAM
+                    )
+
+                request.session['current_phien_id'] = phien_obj.id
+
+                # Lưu / Cập nhật BaiLamKyNang cho Trắc nghiệm (giữ nguyên điểm AI gốc score)
+                blk = BaiLamKyNang.objects.filter(phien_lam_bai=phien_obj, ky_nang='TRAC_NGHIEM').first()
+                if blk:
+                    blk.diem_tu_dong = score
+                    blk.diem_dieu_chinh = None
+                    blk.trang_thai_cham = BaiLamKyNang.TrangThaiCham.AI_DA_CHAM
+                    blk.save(update_fields=['diem_tu_dong', 'diem_dieu_chinh', 'trang_thai_cham'])
+                else:
+                    BaiLamKyNang.objects.create(
+                        phien_lam_bai=phien_obj,
+                        ky_nang='TRAC_NGHIEM',
+                        diem_tu_dong=score,
+                        diem_dieu_chinh=None,
+                        trang_thai_cham=BaiLamKyNang.TrangThaiCham.AI_DA_CHAM
+                    )
+
+                # Lưu câu trả lời trắc nghiệm với đầy đủ 25 câu và thống kê BỎ TRỐNG
+                cau_mcq = CauHoi.objects.filter(bai_kiem_tra=bai_test, ky_nang=CauHoi.KyNang.READING).first()
+                if not cau_mcq:
+                    cau_mcq = CauHoi.objects.create(
+                        bai_kiem_tra=bai_test,
+                        ky_nang=CauHoi.KyNang.READING,
+                        loai=CauHoi.Loai.TRAC_NGHIEM,
+                        noi_dung='Bài thi Trắc nghiệm (Grammar, Vocab, Reading, Listening)',
+                        diem_toi_da=40,
+                        thu_tu=1
+                    )
+                summary_mcq_text = (
+                    f"KẾT QUẢ BÀI LÀM TRẮC NGHIỆM (40 ĐIỂM)\n"
+                    f"==================================================\n"
+                    f"Tổng điểm đạt được: {score} / 40 điểm ({percentage}%)\n"
+                    f"✔ Số câu đúng: {correct_count}/{total_questions} câu (+{score}đ)\n"
+                    f"❌ Số câu sai: {wrong_count}/{total_questions} câu (0đ)\n"
+                    f"⚠️ Số câu bỏ trống: {blank_count}/{total_questions} câu (0đ - trừ điểm)\n"
+                    f"==================================================\n\n"
+                    f"CHI TIẾT 25 CÂU HỎI & ĐỐI SOÁT ĐÁP ÁN:\n"
+                    f"--------------------------------------------------\n" +
+                    "\n\n".join(text_log_items)
                 )
+                tl_mcq = CauTraLoi.objects.filter(phien_lam_bai=phien_obj, cau_hoi=cau_mcq).first()
+                if tl_mcq:
+                    tl_mcq.noi_dung_tra_loi = summary_mcq_text
+                    tl_mcq.diem_tu_dong = score
+                    tl_mcq.save(update_fields=['noi_dung_tra_loi', 'diem_tu_dong'])
+                else:
+                    tl_mcq = CauTraLoi.objects.create(
+                        phien_lam_bai=phien_obj,
+                        cau_hoi=cau_mcq,
+                        noi_dung_tra_loi=summary_mcq_text,
+                        diem_tu_dong=score
+                    )
 
-            request.session['current_phien_id'] = phien_obj.id
-
-            # Lưu / Cập nhật BaiLamKyNang cho Trắc nghiệm (giữ nguyên điểm AI gốc score)
-            BaiLamKyNang.objects.update_or_create(
-                phien_lam_bai=phien_obj,
-                ky_nang='TRAC_NGHIEM',
-                defaults={
-                    'diem_tu_dong': score,
-                    'diem_dieu_chinh': None,
-                    'trang_thai_cham': BaiLamKyNang.TrangThaiCham.AI_DA_CHAM
-                }
-            )
-
-            # Lưu câu trả lời trắc nghiệm với đầy đủ 25 câu và thống kê BỎ TRỐNG
-            cau_mcq, _ = CauHoi.objects.get_or_create(
-                bai_kiem_tra=bai_test,
-                ky_nang=CauHoi.KyNang.READING,
-                defaults={
-                    'loai': CauHoi.Loai.TRAC_NGHIEM,
-                    'noi_dung': 'Bài thi Trắc nghiệm (Grammar, Vocab, Reading, Listening)',
-                    'diem_toi_da': 40,
-                    'thu_tu': 1
-                }
-            )
-            summary_mcq_text = (
-                f"KẾT QUẢ BÀI LÀM TRẮC NGHIỆM (40 ĐIỂM)\n"
-                f"==================================================\n"
-                f"Tổng điểm đạt được: {score} / 40 điểm ({percentage}%)\n"
-                f"✔ Số câu đúng: {correct_count}/{total_questions} câu (+{score}đ)\n"
-                f"❌ Số câu sai: {wrong_count}/{total_questions} câu (0đ)\n"
-                f"⚠️ Số câu bỏ trống: {blank_count}/{total_questions} câu (0đ - trừ điểm)\n"
-                f"==================================================\n\n"
-                f"CHI TIẾT 25 CÂU HỎI & ĐỐI SOÁT ĐÁP ÁN:\n"
-                f"--------------------------------------------------\n" +
-                "\n\n".join(text_log_items)
-            )
-            tl_mcq, _ = CauTraLoi.objects.update_or_create(
-                phien_lam_bai=phien_obj,
-                cau_hoi=cau_mcq,
-                defaults={
-                    'noi_dung_tra_loi': summary_mcq_text,
-                    'diem_tu_dong': score
-                }
-            )
-
-            # Lưu / Cập nhật ChamDiemAI cho trắc nghiệm
-            ChamDiemAI.objects.update_or_create(
-                cau_tra_loi=tl_mcq,
-                defaults={
+                # Lưu / Cập nhật ChamDiemAI cho trắc nghiệm
+                ai_payload = {
                     'mo_hinh_ai': 'Hệ thống Đối soát Tự động CEFR',
                     'phien_ban_prompt': 'v2.5',
                     'diem_tong': score,
@@ -1051,7 +1065,16 @@ def submit_mcq(request):
                         'listening': {'criterion_name': 'Nghe hiểu (Listening - 10%)', 'score': round(score * 0.1, 1)},
                     }
                 }
-            )
+                cd_ai = ChamDiemAI.objects.filter(cau_tra_loi=tl_mcq).first()
+                if cd_ai:
+                    for k, v in ai_payload.items():
+                        setattr(cd_ai, k, v)
+                    cd_ai.save()
+                else:
+                    ChamDiemAI.objects.create(cau_tra_loi=tl_mcq, **ai_payload)
+        except Exception as db_err:
+            import logging
+            logging.getLogger(__name__).warning("Lỗi lưu DB bài trắc nghiệm (vẫn trả điểm cho học viên): %s", db_err)
 
     return JsonResponse({
         'status': 'success',
@@ -1222,17 +1245,27 @@ def submit_writing_speaking(request):
     phien_obj = None
 
     if student_email:
-        kh = KhachHang.objects.filter(email=student_email).first()
-        if kh:
-            hstv, _ = HoSoTuVan.objects.get_or_create(
-                khach_hang=kh,
-                defaults={'trang_thai': HoSoTuVan.TrangThai.CHO_TEST}
-            )
+        try:
+            kh = KhachHang.objects.filter(email__iexact=student_email).first()
+            if not kh and request.session.get('student_id'):
+                kh = KhachHang.objects.filter(id=request.session['student_id']).first()
 
-            bai_test, _ = BaiKiemTra.objects.get_or_create(
-                ten_bai=f"Placement Test ({goal_type} - {target_detail})",
-                defaults={'thoi_gian_phut': 105, 'trang_thai': BaiKiemTra.TrangThai.KICH_HOAT}
-            )
+            if kh:
+                hstv = HoSoTuVan.objects.filter(khach_hang=kh).order_by('-id').first()
+                if not hstv:
+                    hstv = HoSoTuVan.objects.create(
+                        khach_hang=kh,
+                        trang_thai=HoSoTuVan.TrangThai.CHO_TEST
+                    )
+
+                test_title = f"Placement Test ({goal_type} - {target_detail})"
+                bai_test = BaiKiemTra.objects.filter(ten_bai=test_title).order_by('-id').first()
+                if not bai_test:
+                    bai_test = BaiKiemTra.objects.create(
+                        ten_bai=test_title,
+                        thoi_gian_phut=105,
+                        trang_thai=BaiKiemTra.TrangThai.KICH_HOAT
+                    )
 
             phien_id_session = request.session.get('current_phien_id')
             if phien_id_session:
@@ -1349,14 +1382,22 @@ def submit_writing_speaking(request):
                         )
 
             # Khởi tạo bản ghi Kết quả kiểm tra phiên mới nhất chờ GV phê duyệt
-            KetQuaKiemTra.objects.update_or_create(
-                phien_lam_bai=phien_obj,
-                defaults={
-                    'tong_diem': total_exam_score,
-                    'trinh_do': cefr_overall,
-                    'trang_thai': KetQuaKiemTra.TrangThai.CHO_DUYET,
-                }
-            )
+            kq_obj = KetQuaKiemTra.objects.filter(phien_lam_bai=phien_obj).first()
+            if kq_obj:
+                kq_obj.tong_diem = total_exam_score
+                kq_obj.trinh_do = cefr_overall
+                kq_obj.trang_thai = KetQuaKiemTra.TrangThai.CHO_DUYET
+                kq_obj.save(update_fields=['tong_diem', 'trinh_do', 'trang_thai'])
+            else:
+                KetQuaKiemTra.objects.create(
+                    phien_lam_bai=phien_obj,
+                    tong_diem=total_exam_score,
+                    trinh_do=cefr_overall,
+                    trang_thai=KetQuaKiemTra.TrangThai.CHO_DUYET,
+                )
+        except Exception as ws_db_err:
+            import logging
+            logging.getLogger(__name__).warning("Lỗi lưu DB bài WS: %s", ws_db_err)
 
     goal_score = calculate_goal_based_score(
         mcq_score=mcq_score,
