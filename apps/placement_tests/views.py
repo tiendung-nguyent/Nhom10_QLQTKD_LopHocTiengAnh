@@ -1118,7 +1118,10 @@ def reset_mcq(request):
     request.session['placement_retake_in_progress'] = True
     if 'placement_timer_mcq' in request.session:
         del request.session['placement_timer_mcq']
-    return redirect('placement_tests:test_room')
+    target_url = reverse('placement_tests:test_room')
+    if request.GET.get('auto_start_mcq') == '1' or 'auto_start_mcq' in request.GET:
+        target_url += '?auto_start_mcq=1'
+    return redirect(target_url)
 
 
 def reset_full_test(request):
@@ -1151,7 +1154,10 @@ def reset_full_test(request):
         del request.session['placement_timer_mcq']
     if 'placement_timer_ws' in request.session:
         del request.session['placement_timer_ws']
-    return redirect('placement_tests:test_room')
+    target_url = reverse('placement_tests:test_room')
+    if request.GET.get('auto_start_mcq') == '1' or 'auto_start_mcq' in request.GET:
+        target_url += '?auto_start_mcq=1'
+    return redirect(target_url)
 
 
 def submit_writing_speaking(request):

@@ -1110,9 +1110,9 @@
             <button type="button" class="btn btn-primary" onclick="unlockAndSwitchToWS()" style="font-weight: 600; font-size: 13.5px; padding: 8px 18px;">
               Tiếp tục: Phần 2 (Viết &amp; Nói) <i class="fa-solid fa-arrow-right" style="margin-left: 4px;"></i>
             </button>
-            <a href="javascript:void(0)" onclick="handleResetMCQClick(event)" style="font-size: 12px; color: var(--text-muted); text-decoration: none;" onmouseover="this.style.color='var(--accent-orange)'" onmouseout="this.style.color='var(--text-muted)'">
-              Làm lại bài Trắc nghiệm
-            </a>
+            <button type="button" class="btn btn-outline" onclick="handleResetMCQClick(event)" style="font-size: 13px; font-weight: 600; padding: 8px 14px; border-color: #CBD5E1; color: #475569; background: #FFFFFF; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-rotate-left"></i> Làm lại bài Trắc nghiệm
+            </button>
           </div>
         </div>
       </div>
@@ -1713,7 +1713,7 @@
       <button type="button" class="btn btn-outline" onclick="closeModal('reset-confirm-modal')" style="font-size: 13px;">
         Hủy bỏ
       </button>
-      <a href="{% url 'placement_tests:reset_full_test' %}" class="btn btn-primary" style="font-size: 13px; font-weight: 600;">
+      <a href="{% url 'placement_tests:reset_full_test' %}?auto_start_mcq=1" onclick="sessionStorage.setItem('mcq_started', 'true'); sessionStorage.removeItem('placement_mcq_draft_answers'); localStorage.removeItem('placement_mcq_draft_answers'); localStorage.removeItem('placement_draft');" class="btn btn-primary" style="font-size: 13px; font-weight: 600;">
         Xác nhận làm lại
       </a>
     </div>
@@ -2057,41 +2057,43 @@
   }
 
   function handleResetAllClick(e) {
+    if (e) e.preventDefault();
     const confirmed = confirm(
       '⚠️ CẢNH BÁO QUAN TRỌNG:\n\n' +
       '• Nếu bạn chọn "Làm lại bài kiểm tra từ đầu", kết quả điểm số phiên hiện tại sẽ bị xóa khỏi bài làm để bạn thi lại từ đầu.\n' +
-      '• Bộ đề thi sẽ được reset và bạn bắt buộc phải bấm nút [Bắt đầu làm bài] để mở đề và bắt đầu đếm ngược 45 phút.\n' +
-      '• Nếu bạn muốn BẢO LƯU ĐIỂM VỪA LÀM ĐƯỢC, hãy chọn "Hủy" (Cancel).\n\n' +
+      '• Bộ đề thi sẽ được reset và hệ thống sẽ mở ngay bài thi mới để bạn bắt đầu làm bài.\n\n' +
       'Bạn có chắc chắn muốn làm lại bài kiểm tra từ đầu không?'
     );
     if (!confirmed) {
-      if (e) e.preventDefault();
       return false;
     }
-    sessionStorage.removeItem('mcq_started');
-    sessionStorage.removeItem('ws_started');
-    sessionStorage.removeItem('placement_timer_mcq');
-    sessionStorage.removeItem('placement_timer_ws');
     sessionStorage.removeItem('placement_mcq_draft_answers');
     localStorage.removeItem('placement_mcq_draft_answers');
     localStorage.removeItem('placement_draft');
+    sessionStorage.removeItem('mcq_submitted');
+    sessionStorage.removeItem('ws_started');
+    sessionStorage.removeItem('placement_timer_mcq');
+    sessionStorage.removeItem('placement_timer_ws');
+    sessionStorage.setItem('mcq_started', 'true');
+    window.location.href = "{% url 'placement_tests:reset_full_test' %}?auto_start_mcq=1";
     return true;
   }
 
   function handleResetMCQClick(e) {
+    if (e) e.preventDefault();
     const confirmed = confirm(
       '⚠️ Bạn có chắc chắn muốn làm lại bài Trắc nghiệm với bộ câu hỏi mới không?\n\n' +
-      'Điểm số phần trắc nghiệm vừa làm sẽ được làm mới về 0. Bạn sẽ phải bấm [Bắt đầu làm bài] để làm lại.'
+      'Toàn bộ điểm và câu trả lời cũ sẽ được làm mới về 0 và hệ thống sẽ mở ngay 25 câu hỏi trắc nghiệm mới để bạn làm bài.'
     );
     if (!confirmed) {
-      if (e) e.preventDefault();
       return false;
     }
-    sessionStorage.removeItem('mcq_started');
-    sessionStorage.removeItem('placement_timer_mcq');
-    sessionStorage.removeItem('mcq_submitted');
     sessionStorage.removeItem('placement_mcq_draft_answers');
     localStorage.removeItem('placement_mcq_draft_answers');
+    sessionStorage.removeItem('mcq_submitted');
+    sessionStorage.removeItem('placement_timer_mcq');
+    sessionStorage.setItem('mcq_started', 'true');
+    window.location.href = "{% url 'placement_tests:reset_mcq' %}?auto_start_mcq=1";
     return true;
   }
 
@@ -2114,6 +2116,8 @@
     if (startBanner) startBanner.style.display = 'none';
     const qContainer = document.getElementById('mcq-questions-container');
     if (qContainer) qContainer.style.display = 'block';
+    const reviewBox = document.getElementById('mcq-review-detail-box');
+    if (reviewBox) reviewBox.style.display = 'none';
     restoreMCQDraft();
     updateMCQProgress();
 
@@ -2206,7 +2210,9 @@
     if (lockIcon) lockIcon.innerHTML = '';
   }
 
-  const shouldStartMCQ = (sessionStorage.getItem('mcq_started') === 'true');
+  const urlParams = new URLSearchParams(window.location.search);
+  const autoStartFromUrl = (urlParams.get('auto_start_mcq') === '1');
+  const shouldStartMCQ = autoStartFromUrl || (sessionStorage.getItem('mcq_started') === 'true');
   if (shouldStartMCQ && canTakeTest && !mcqSubmitted && !testAlreadyCompleted) {
     startMCQTest();
   }
