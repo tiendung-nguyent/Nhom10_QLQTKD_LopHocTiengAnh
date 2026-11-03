@@ -34,6 +34,13 @@ class RequireLoginMiddleware:
     COMMON_AUTHENTICATED_PATHS = [
         r'^/users/redirect-by-role/?$',
         r'^/users/logout/?$',
+        r'^/tests/room/?$',
+        r'^/tests/result/?$',
+        r'^/tests/submit/',
+        r'^/tests/reset/',
+        r'^/tests/request-review/',
+        r'^/placement/',
+        r'^/users/api/quick-profile/?$',
     ]
 
     # Danh mục quyền truy cập URLs của từng vai trò

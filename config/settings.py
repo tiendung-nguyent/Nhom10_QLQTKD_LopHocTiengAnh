@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 import dj_database_url
+from dotenv import load_dotenv
+
+# Load file .env ngay từ đầu
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -27,6 +31,17 @@ SECRET_KEY = 'django-insecure-8j8ea8m&c5(oa91o#85-yvkchitg99z9#pi07ktf(g2ul5pdnn
 DEBUG = True
 
 ALLOWED_HOSTS = ['nhom10-qlqtkd-lophoctienganh.onrender.com', 'localhost', '127.0.0.1', '*']
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://localhost',
+    'http://127.0.0.1',
+    'https://*.onrender.com',
+    'https://nhom10-qlqtkd-lophoctienganh.onrender.com',
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
 
@@ -158,6 +173,7 @@ ACCOUNT_UNIQUE_EMAIL = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_ADAPTER = 'apps.users.adapters.CustomSocialAccountAdapter'
 
 # Đường dẫn trang đăng nhập mặc định khi chưa xác thực
 LOGIN_URL = '/login/'
@@ -179,10 +195,6 @@ DEFAULT_FROM_EMAIL = 'Academix English Center <academixenglishcenter@gmail.com>'
 import os
 from pathlib import Path
 import dj_database_url
-from dotenv import load_dotenv  # Thêm dòng này
-
-# Load biến môi trường từ file .env
-load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 

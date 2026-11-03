@@ -426,6 +426,7 @@ def lead_care(request):
             'email': kh.email,
             'so_dien_thoai': kh.so_dien_thoai or 'Chưa có SĐT',
             'ngay_tiep_nhan': h.ngay_tiep_nhan,
+            'timestamp': int((latest_c.thoi_gian if latest_c else h.ngay_tiep_nhan).timestamp()),
             'trang_thai': h.trang_thai,
             'trang_thai_label': badge_label,
             'trang_thai_badge': badge_class,

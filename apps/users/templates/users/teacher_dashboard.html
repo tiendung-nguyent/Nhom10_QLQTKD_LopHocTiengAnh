@@ -1,111 +1,187 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}Dashboard Giáo viên{% endblock %}
-{% block page_heading %}Dashboard Giáo viên{% endblock %}
+{% block title %}Dashboard Giáo viên Thẩm định AI{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <div class="page-breadcrumb">🏫 <span>Giáo viên</span> / Dashboard Thẩm định AI</div>
+  <div class="page-breadcrumb">🧑‍🏫 <span>Giáo viên</span> / Dashboard Thẩm định AI</div>
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
-      <h1 class="page-title">Dashboard Giáo viên 📚</h1>
-      <p class="page-subtitle">Quản lý và thẩm định kết quả chấm điểm AI — {{ today|date:"l, d/m/Y" }}</p>
+      <h1 class="page-title">Dashboard Giáo viên 🧑‍🏫</h1>
+      <p class="page-subtitle">Quản lý và thẩm định kết quả chấm điểm AI — Thứ 3, 03/11/2026</p>
     </div>
-    <a href="{% url 'placement_tests:teacher_review' %}" class="btn btn-purple btn-lg">
-      🤖 Vào trang Duyệt bài AI →
-    </a>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <a href="{% url 'placement_tests:teacher_review' %}" class="btn btn-purple">
+        <i class="fa-solid fa-robot"></i> Vào trang Duyệt bài AI →
+      </a>
+    </div>
   </div>
 </div>
 
-<!-- ─── THẺ THỐNG KÊ KPI GIÁO VIÊN (3 THẺ CỐT LÕI) ────────── -->
-<div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%; max-width: 100%; box-sizing: border-box;">
-  <!-- 1. Bài chờ duyệt hôm nay -->
-  <div class="stat-card">
-    <div class="stat-icon coral">⏳</div>
+<!-- ─── STAT CARDS (3 THẺ CHỈ SỐ XẾP NGANG GỌN GÀNG) ─── -->
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px;">
+  <!-- Card 1 -->
+  <div class="stat-card" style="padding: 14px 18px; gap: 12px; margin-bottom: 0;">
+    <div class="stat-icon" style="background: #FFF0E6; color: var(--accent-orange); width: 42px; height: 42px; font-size: 18px; border-radius: 12px; flex-shrink: 0;">⏳</div>
     <div class="stat-info">
-      <div class="stat-value">{{ pending_today_count|default:10 }}</div>
-      <div class="stat-label">Bài thi chờ duyệt hôm nay</div>
-      <div class="stat-delta down">↑ {{ recent_count|default:3 }} bài mới nộp gần đây</div>
+      <div class="stat-value" style="font-size: 24px; font-weight: 800; line-height: 1;">{{ pending_reviews_count }}</div>
+      <div class="stat-label" style="font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 600;">Bài thi chờ duyệt hôm nay</div>
+      <div class="stat-delta" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">↑ {{ total_reviews_count }} bài mới nộp gần đây</div>
     </div>
   </div>
 
-  <!-- 2. Bài đã phê duyệt tháng này -->
-  <div class="stat-card">
-    <div class="stat-icon emerald">✅</div>
+  <!-- Card 2 -->
+  <div class="stat-card" style="padding: 14px 18px; gap: 12px; margin-bottom: 0;">
+    <div class="stat-icon" style="background: #EBF8F2; color: var(--accent-emerald); width: 42px; height: 42px; font-size: 18px; border-radius: 12px; flex-shrink: 0;">✅</div>
     <div class="stat-info">
-      <div class="stat-value">{{ approved_count|default:12 }}</div>
-      <div class="stat-label">Bài đã phê duyệt tháng này</div>
-      <div class="stat-delta up">↑ 100% hồ sơ chuyển tuyển sinh</div>
+      <div class="stat-value" style="font-size: 24px; font-weight: 800; line-height: 1;">{{ approved_month_count }}</div>
+      <div class="stat-label" style="font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 600;">Bài đã phê duyệt tháng này</div>
+      <div class="stat-delta" style="font-size: 11px; color: var(--accent-emerald); margin-top: 2px;">↑ 100% hồ sơ chuyển tuyển sinh</div>
     </div>
   </div>
 
-  <!-- 3. Độ chính xác & Tương đồng điểm AI -->
-  <div class="stat-card">
-    <div class="stat-icon purple">✦</div>
+  <!-- Card 3 -->
+  <div class="stat-card" style="padding: 14px 18px; gap: 12px; margin-bottom: 0;">
+    <div class="stat-icon" style="background: #FAF5FF; color: var(--accent-purple); width: 42px; height: 42px; font-size: 18px; border-radius: 12px; flex-shrink: 0;">✦</div>
     <div class="stat-info">
-      <div class="stat-value">{{ ai_accuracy|default:92 }}<span style="font-size:14px">%</span></div>
-      <div class="stat-label">Độ tương đồng điểm AI &amp; GV</div>
-      <div class="stat-delta up">↑ Sai số trung bình &lt; {{ avg_diff|default:"1.2" }}đ</div>
+      <div class="stat-value" style="font-size: 24px; font-weight: 800; line-height: 1;">{{ ai_accuracy_rate }}</div>
+      <div class="stat-label" style="font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 600;">Độ tương đồng điểm AI &amp; GV</div>
+      <div class="stat-delta" style="font-size: 11px; color: var(--accent-purple); margin-top: 2px;">↑ Sai số trung bình &lt; 0,4đ</div>
     </div>
   </div>
 </div>
 
 <!-- ─── BẢNG DANH SÁCH BÀI THI AI ĐÃ CHẤM SƠ BỘ TỪ CSDL THỰC TẾ ─── -->
 <div class="card rounded-2xl shadow-sm">
-  <div class="card-header" style="flex-wrap: wrap; gap: 12px; justify-content: space-between;">
+  <div class="card-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
     <div>
-      <div class="card-title">🤖 Danh sách bài thi AI đã chấm sơ bộ – Chờ Giáo viên duyệt</div>
-      <div class="card-subtitle">Dữ liệu thực tế từ bài thi của học viên. Hồ sơ sau khi duyệt sẽ tự động đồng bộ sang bộ phận Tư vấn Tuyển sinh để xếp lớp</div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, rgba(255, 107, 74, 0.15), rgba(144, 97, 249, 0.15)); color: var(--accent-coral, #FF6B4A); display: inline-flex; align-items: center; justify-content: center; font-size: 14px;">
+          <i class="fa-solid fa-robot"></i>
+        </span>
+        <span style="font-size: 16px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.2px;">
+          Danh sách bài thi AI đã chấm sơ bộ – Chờ Giáo viên duyệt
+        </span>
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-top: 3px; margin-left: 38px;">
+        Dữ liệu thực tế từ bài thi của học viên · Hồ sơ sau khi duyệt sẽ tự động đồng bộ sang bộ phận Tuyển sinh
+      </div>
     </div>
-    <a href="{% url 'placement_tests:teacher_review' %}" class="btn btn-outline btn-sm">
-      Xem toàn bộ danh sách →
-    </a>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <button type="button" class="btn btn-outline btn-sm" id="btn-sort-teacher"
+              onclick="toggleTableSortTime('teacher-reviews-table', this, 3)"
+              title="Đảo chiều sắp xếp theo thời gian"
+              style="border-radius: 8px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+        <i class="fa-solid fa-arrow-down-wide-short" style="color: var(--accent-coral);"></i>
+        <span class="sort-text">Gần nhất trước</span>
+      </button>
+      <a href="{% url 'placement_tests:teacher_review' %}" class="btn btn-outline btn-sm" style="border-radius: 8px; font-size: 12px; font-weight: 600;">
+        Xem toàn bộ danh sách →
+      </a>
+    </div>
   </div>
-  <div class="table-wrapper">
-    <table style="min-width: 760px;">
+
+  <div class="table-wrapper" style="overflow-x: auto;">
+    <table id="teacher-reviews-table" style="width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed;">
+      <colgroup>
+        <col style="width: 5%;">    <!-- STT -->
+        <col style="width: 23%;">   <!-- Học viên -->
+        <col style="width: 18%;">   <!-- Đề kiểm tra -->
+        <col style="width: 13%;">   <!-- Ngày thi -->
+        <col style="width: 8.5%;">  <!-- Speaking -->
+        <col style="width: 8.5%;">  <!-- Writing -->
+        <col style="width: 9%;">    <!-- Trắc nghiệm -->
+        <col style="width: 11%;">   <!-- Trạng thái -->
+        <col style="width: 10%;">   <!-- Thao tác -->
+      </colgroup>
       <thead>
-        <tr>
-          <th>Mã phiên</th>
-          <th>Học viên</th>
-          <th>Đề kiểm tra</th>
-          <th>Ngày thi</th>
-          <th>Speaking</th>
-          <th>Writing</th>
-          <th>Trắc nghiệm</th>
-          <th>Trạng thái</th>
-          <th style="text-align: center;">Thao tác</th>
+        <tr style="border-bottom: 2px solid var(--border-color); background: #FAFBFD; color: #475569; font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+          <th style="padding: 11px 6px; text-align: center;">STT</th>
+          <th style="padding: 11px 10px; text-align: left;">Học viên</th>
+          <th style="padding: 11px 8px; text-align: left;">Đề kiểm tra</th>
+          <th style="padding: 11px 8px; text-align: left; cursor: pointer; user-select: none;"
+              onclick="toggleTableSortTime('teacher-reviews-table', document.getElementById('btn-sort-teacher'), 3)"
+              title="Bấm để đổi chiều sắp xếp">
+            Ngày thi <i class="fa-solid fa-sort" style="font-size: 10px; opacity: 0.6; margin-left: 2px; color: var(--accent-coral);"></i>
+          </th>
+          <th style="padding: 11px 4px; text-align: center;">Speaking</th>
+          <th style="padding: 11px 4px; text-align: center;">Writing</th>
+          <th style="padding: 11px 4px; text-align: center;">Trắc nghiệm</th>
+          <th style="padding: 11px 6px; text-align: center;">Trạng thái</th>
+          <th style="padding: 11px 6px; text-align: center;">Thao tác</th>
         </tr>
       </thead>
       <tbody>
         {% for item in review_list %}
-        <tr>
-          <td style="font-weight: 700; color: var(--text-muted);">#{{ item.ma_phien }}</td>
-          <td>
-            <div style="font-weight: 700; font-size: 13.5px; color: var(--text-primary);">{{ item.ten_hoc_vien }}</div>
-            <div style="font-size: 11.5px; color: var(--text-muted);">{{ item.email }}</div>
+        <tr data-timestamp="{{ item.timestamp }}" style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease;">
+          <td class="stt-cell" style="padding: 12px 6px; text-align: center; font-weight: 700; color: var(--text-muted); font-size: 12.5px; vertical-align: middle;">
+            {{ forloop.counter }}
           </td>
-          <td>
-            <span class="badge badge-purple" style="font-size: 11.5px; font-weight: 700;">{{ item.ten_bai }}</span>
+          <td style="padding: 10px 8px; vertical-align: middle;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-weight: 700; font-size: 13px; color: var(--text-primary); white-space: nowrap;">{{ item.ten_hoc_vien }}</span>
+                <span class="badge badge-gray" style="font-size: 10px; padding: 1px 5px; font-weight: 600; flex-shrink: 0;">#{{ item.ma_phien }}</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 1px; white-space: nowrap;" title="{{ item.email }}">
+                {{ item.email }}
+              </div>
+            </div>
           </td>
-          <td>{{ item.ngay_thi|date:"d/m/Y H:i" }}</td>
-          <td><span class="badge badge-purple">{{ item.speaking_score }}/30</span></td>
-          <td><span class="badge badge-purple">{{ item.writing_score }}/30</span></td>
-          <td><span class="badge badge-emerald">{{ item.mcq_score }}/40</span></td>
-          <td>
+          <td style="padding: 12px 8px; vertical-align: middle;">
+            <span class="badge badge-purple" style="font-size: 11.5px; padding: 4px 9px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ item.ten_bai }}">
+              <i class="fa-solid fa-graduation-cap"></i> Entrance Test (105')
+            </span>
+          </td>
+          <td style="padding: 12px 8px; vertical-align: middle;">
+            <div style="font-weight: 600; font-size: 12.5px; color: var(--text-primary); white-space: nowrap;">
+              {{ item.ngay_thi|date:"d/m/Y" }}
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px; white-space: nowrap;">
+              <i class="fa-regular fa-clock" style="font-size: 10px;"></i> {{ item.ngay_thi|date:"H:i" }}
+            </div>
+          </td>
+          <td style="padding: 12px 4px; text-align: center; vertical-align: middle;">
+            <span class="badge badge-purple" style="padding: 3px 8px; font-size: 12px; font-weight: 700; white-space: nowrap;">
+              {{ item.speaking_score }} <small style="font-size: 10px; opacity: 0.7; font-weight: 400;">/30</small>
+            </span>
+          </td>
+          <td style="padding: 12px 4px; text-align: center; vertical-align: middle;">
+            <span class="badge badge-purple" style="padding: 3px 8px; font-size: 12px; font-weight: 700; white-space: nowrap;">
+              {{ item.writing_score }} <small style="font-size: 10px; opacity: 0.7; font-weight: 400;">/30</small>
+            </span>
+          </td>
+          <td style="padding: 12px 4px; text-align: center; vertical-align: middle;">
+            <span class="badge badge-emerald" style="padding: 3px 8px; font-size: 12px; font-weight: 700; white-space: nowrap;">
+              {{ item.mcq_score }} <small style="font-size: 10px; opacity: 0.7; font-weight: 400;">/40</small>
+            </span>
+          </td>
+          <td style="padding: 12px 6px; text-align: center; vertical-align: middle;">
             {% if item.trang_thai == 'DA_DUYET' %}
-              <span class="badge badge-emerald"><i class="fa-solid fa-circle-check"></i> Đã duyệt</span>
+              <span class="badge badge-emerald" style="padding: 4px 9px; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
+                <i class="fa-solid fa-check"></i> Đã duyệt
+              </span>
             {% else %}
-              <span class="badge badge-coral"><i class="fa-regular fa-clock"></i> Chờ GV duyệt</span>
+              <span class="badge badge-coral" style="padding: 4px 9px; font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
+                <i class="fa-regular fa-clock"></i> Chờ duyệt
+              </span>
             {% endif %}
           </td>
-          <td style="text-align: center;">
+          <td style="padding: 12px 6px; text-align: center; vertical-align: middle;">
             {% if item.trang_thai != 'DA_DUYET' %}
-            <a href="{% url 'placement_tests:teacher_review' %}?session={{ item.id }}&skill=SPEAKING" class="btn btn-primary btn-sm" style="font-weight: 700; padding: 6px 14px;">
-              Duyệt chi tiết ✏️
+            <a href="{% url 'placement_tests:teacher_review' %}?session={{ item.id }}&skill=SPEAKING"
+               class="btn btn-primary btn-sm"
+               style="font-weight: 700; padding: 6px 14px; font-size: 12px; border-radius: 8px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px;">
+              <span>Duyệt</span> <i class="fa-solid fa-pen-to-square"></i>
             </a>
             {% else %}
-            <span class="badge badge-gray" style="font-size: 11px;"><i class="fa-solid fa-lock"></i> Đã duyệt</span>
+            <a href="{% url 'placement_tests:teacher_review' %}?session={{ item.id }}&skill=SPEAKING"
+               class="btn btn-outline btn-sm"
+               style="font-weight: 600; padding: 5px 12px; font-size: 11.5px; border-radius: 8px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; color: var(--accent-orange); border-color: #FDBA74; background: #FFF7ED;"
+               title="Xem lại chi tiết bài thi đã duyệt">
+              <i class="fa-solid fa-eye"></i> Xem lại
+            </a>
             {% endif %}
           </td>
         </tr>

@@ -21,8 +21,8 @@
       </p>
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
-      <a href="{% url 'users:student_login' %}" class="btn btn-outline btn-sm" style="font-size: 13px; font-weight: 500;">
-        <i class="fa-solid fa-arrow-right-to-bracket"></i> Đổi tài khoản
+      <a href="{% url 'users:student_logout' %}?switch_account=1" onclick="try{sessionStorage.clear(); localStorage.clear();}catch(e){}" class="btn btn-outline btn-sm" style="font-size: 13px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i> Đổi tài khoản
       </a>
     </div>
   </div>
@@ -425,14 +425,22 @@
 
 <!-- ─── 5. TIMELINE LỊCH SỬ TƯ VẤN ────────────────────────── -->
 <div class="card" id="consultation-history" style="scroll-margin-top: 80px;">
-  <div class="card-header">
+  <div class="card-header" style="flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center;">
     <div>
       <div class="card-title">Lịch sử tư vấn &amp; tiếp nhận</div>
       <div class="card-subtitle">Nhân viên phụ trách: <strong>{{ advisor_name }}</strong> · Hotline hỗ trợ: 1900 6868</div>
     </div>
-    <span class="badge badge-gray">
-      {% if lan_lien_hes %}{{ lan_lien_hes|length }} lượt trao đổi{% else %}Chưa có liên hệ{% endif %}
-    </span>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <button type="button" class="btn btn-outline btn-sm" id="btn-sort-timeline"
+              onclick="toggleTimelineSort('consultation-timeline', this)"
+              title="Đảo chiều sắp xếp theo thời gian">
+        <i class="fa-solid fa-arrow-down-wide-short"></i>
+        <span class="sort-text">Gần nhất trước</span>
+      </button>
+      <span class="badge badge-gray">
+        {% if lan_lien_hes %}{{ lan_lien_hes|length }} lượt trao đổi{% else %}Chưa có liên hệ{% endif %}
+      </span>
+    </div>
   </div>
   <div class="card-body">
     {% if appointment_time %}
@@ -452,13 +460,16 @@
     {% endif %}
 
     {% if lan_lien_hes %}
-    <div class="timeline">
+    <div class="timeline" id="consultation-timeline">
       {% for llh in lan_lien_hes %}
-      <div class="timeline-item">
+      <div class="timeline-item" data-timestamp="{{ llh.thoi_gian|date:'U' }}">
         <div class="timeline-dot" {% if forloop.first %}style="background: var(--accent-orange); border-color: var(--accent-orange);"{% endif %}></div>
         <div class="timeline-time" style="font-size: 12.5px; color: var(--text-muted);">{{ llh.thoi_gian|date:"d/m/Y H:i" }}</div>
         <div class="timeline-title" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-          <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);">{{ llh.kenh_lien_he }} – Tư vấn tuyển sinh</span>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="badge badge-gray timeline-stt-badge" style="font-size: 11px; padding: 1px 6px; font-weight: 700;">#{{ forloop.counter }}</span>
+            <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);">{{ llh.kenh_lien_he }} – Tư vấn tuyển sinh</span>
+          </div>
           {% if llh.nhan_vien %}
           <span style="font-size: 12px; color: var(--text-secondary); background: var(--bg-app); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-color);">
             {{ llh.nhan_vien.ho_ten }}

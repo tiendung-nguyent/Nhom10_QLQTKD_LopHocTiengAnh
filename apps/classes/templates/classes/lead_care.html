@@ -239,16 +239,20 @@
   <div class="card-header">
     <div class="card-title">Danh sách Khách hàng Tiềm năng & Hồ sơ Tư vấn</div>
   </div>
-  <div class="table-wrapper">
-    <table id="leads-table">
+  <div class="table-wrapper" style="overflow-x: auto;">
+    <table id="leads-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
       <thead>
-        <tr>
-          <th>#</th>
+        <tr style="border-bottom: 1.5px solid var(--border-color); background: var(--bg-app); color: var(--text-secondary); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px;">
+          <th style="width: 44px; text-align: center;">STT</th>
           <th>Học viên</th>
           <th>Mục tiêu / Điểm test</th>
           <th>Trạng thái hồ sơ</th>
           <th>Chuyên viên phụ trách</th>
-          <th>Tương tác gần nhất</th>
+          <th style="cursor: pointer; user-select: none;"
+              onclick="toggleTableSortTime('leads-table', document.getElementById('btn-sort-leads'), 5)"
+              title="Bấm để đổi chiều sắp xếp">
+            Tương tác gần nhất <i class="fa-solid fa-sort" style="font-size: 11px; opacity: 0.6;"></i>
+          </th>
           <th style="text-align: center; width: 100px; min-width: 100px;">Thao tác</th>
         </tr>
       </thead>

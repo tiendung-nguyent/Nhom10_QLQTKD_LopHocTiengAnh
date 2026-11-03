@@ -318,7 +318,7 @@
     </div>
     <div class="social-account-info">
       <div class="social-account-name">
-        <span>{{ account.extra_data.name|default:account.user.username|default:"Tài khoản Google" }}</span>
+        <span>{% if account.extra_data.name %}{{ account.extra_data.name }}{% elif account.user.username %}{{ account.user.username }}{% else %}Tài khoản Google{% endif %}</span>
         <span class="badge-verified"><i class="fa-solid fa-check"></i> Google</span>
       </div>
       <div class="social-account-email">
