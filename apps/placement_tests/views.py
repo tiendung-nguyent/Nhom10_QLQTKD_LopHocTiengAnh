@@ -1848,6 +1848,7 @@ def teacher_review(request):
     skill_param = request.GET.get('skill', 'SPEAKING').upper()
     filter_type = request.GET.get('filter', 'all').lower()
     search_query = request.GET.get('q', '').strip()
+    sort_order = request.GET.get('sort', 'desc').lower()
     page_num = request.GET.get('page', 1)
     is_approved_now = (request.GET.get('approved') == '1')
 
@@ -1947,6 +1948,7 @@ def teacher_review(request):
             'so_dien_thoai': kh.so_dien_thoai if kh else 'Chưa có SĐT',
             'ten_bai': p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else 'Placement Test',
             'thoi_gian': p.hoan_thanh or p.bat_dau or now,
+            'timestamp': int((p.hoan_thanh or p.bat_dau or now).timestamp()),
             'speaking_score': eff_spk,
             'writing_score': eff_wri,
             'mcq_score': eff_mcq,
@@ -1991,6 +1993,12 @@ def teacher_review(request):
         filtered_tests = [x for x in formatted_tests if x['trang_thai'] == 'approved']
     else:
         filtered_tests = formatted_tests
+
+    # Sắp xếp theo thời gian nộp bài: 'asc' (xa nhất -> gần nhất) hoặc 'desc' (gần nhất -> xa nhất)
+    if sort_order == 'asc':
+        filtered_tests.sort(key=lambda x: x.get('timestamp', 0))
+    else:
+        filtered_tests.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
 
     # Phân trang: 20 bài / trang
     paginator = Paginator(filtered_tests, 20)
@@ -2270,6 +2278,7 @@ def teacher_review(request):
         'detail': detail_data,
         'page_obj': page_obj,
         'current_filter': filter_type,
+        'current_sort': sort_order,
         'search_query': search_query,
         'total_tests_count': total_tests_count,
         'pending_tests_count': pending_tests_count,

@@ -386,3 +386,111 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+
+/**
+ * Sap xep danh sach bang theo thoi gian (Toggle: Moi nhat <-> Cu nhat)
+ * Tu dong dao chieu va cap nhat lai cot STT (1, 2, 3...)
+ */
+function toggleTableSortTime(tableId, btnElement, timeColIndex) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+  const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.querySelector('td[colspan]'));
+  if (rows.length < 2) return;
+
+  const isDesc = table.dataset.sortOrder !== 'asc';
+  const newOrder = isDesc ? 'asc' : 'desc';
+  table.dataset.sortOrder = newOrder;
+
+  rows.sort((a, b) => {
+    let tA = a.dataset.timestamp ? parseFloat(a.dataset.timestamp) : 0;
+    let tB = b.dataset.timestamp ? parseFloat(b.dataset.timestamp) : 0;
+
+    if (!tA || !tB) {
+      const idx = (typeof timeColIndex === 'number') ? timeColIndex : 1;
+      const textA = a.cells[idx] ? a.cells[idx].innerText.trim() : '';
+      const textB = b.cells[idx] ? b.cells[idx].innerText.trim() : '';
+      tA = Date.parse(textA) || 0;
+      tB = Date.parse(textB) || 0;
+    }
+
+    return newOrder === 'asc' ? tA - tB : tB - tA;
+  });
+
+  rows.forEach(r => tbody.appendChild(r));
+
+  rows.forEach((r, idx) => {
+    const sttCell = r.querySelector('.stt-cell');
+    if (sttCell) {
+      sttCell.textContent = idx + 1;
+    }
+  });
+
+  const sortBtn = btnElement || document.querySelector('[data-target-table="' + tableId + '"]');
+  if (sortBtn) {
+    const sortText = sortBtn.querySelector('.sort-text');
+    const sortIcon = sortBtn.querySelector('i');
+    if (newOrder === 'asc') {
+      if (sortText) sortText.textContent = 'Xa nhất trước (Cũ → Mới)';
+      if (sortIcon) sortIcon.className = 'fa-solid fa-arrow-up-wide-short';
+      sortBtn.style.borderColor = 'var(--accent-purple)';
+      sortBtn.style.color = 'var(--accent-purple)';
+      sortBtn.style.background = 'rgba(139, 92, 246, 0.08)';
+    } else {
+      if (sortText) sortText.textContent = 'Gần nhất trước (Mới → Cũ)';
+      if (sortIcon) sortIcon.className = 'fa-solid fa-arrow-down-wide-short';
+      sortBtn.style.borderColor = '';
+      sortBtn.style.color = '';
+      sortBtn.style.background = '';
+    }
+  }
+
+
+}
+window.toggleTableSortTime = toggleTableSortTime;
+
+
+function toggleTimelineSort(timelineId, btnElement) {
+  const container = document.getElementById(timelineId);
+  if (!container) return;
+  const items = Array.from(container.querySelectorAll('.timeline-item'));
+  if (items.length < 2) return;
+
+  const isDesc = container.dataset.sortOrder !== 'asc';
+  const newOrder = isDesc ? 'asc' : 'desc';
+  container.dataset.sortOrder = newOrder;
+
+  items.sort((a, b) => {
+    const tA = parseFloat(a.dataset.timestamp) || 0;
+    const tB = parseFloat(b.dataset.timestamp) || 0;
+    return newOrder === 'asc' ? tA - tB : tB - tA;
+  });
+
+  items.forEach(item => container.appendChild(item));
+
+  items.forEach((item, idx) => {
+    const badge = item.querySelector('.timeline-stt-badge');
+    if (badge) badge.textContent = '#' + (idx + 1);
+  });
+
+  if (btnElement) {
+    const text = btnElement.querySelector('.sort-text');
+    const icon = btnElement.querySelector('i');
+    if (newOrder === 'asc') {
+      if (text) text.textContent = 'Xa nhất trước (Cũ → Mới)';
+      if (icon) icon.className = 'fa-solid fa-arrow-up-wide-short';
+      btnElement.style.borderColor = 'var(--accent-purple)';
+      btnElement.style.color = 'var(--accent-purple)';
+    } else {
+      if (text) text.textContent = 'Gần nhất trước (Mới → Cũ)';
+      if (icon) icon.className = 'fa-solid fa-arrow-down-wide-short';
+      btnElement.style.borderColor = '';
+      btnElement.style.color = '';
+    }
+  }
+
+
+}
+window.toggleTimelineSort = toggleTimelineSort;

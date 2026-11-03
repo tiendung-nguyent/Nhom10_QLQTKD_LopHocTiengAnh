@@ -96,14 +96,24 @@ def get_user_role(request):
     email = get_account_email(request)
     if email:
         email = email.strip().lower()
-        nv = NhanVien.objects.filter(email=email).first()
+        nv = NhanVien.objects.filter(email__iexact=email).first()
         if nv:
+            official_role = 'STUDENT'
             if nv.vai_tro == NhanVien.VaiTro.GIAO_VIEN:
-                return 'TEACHER'
+                official_role = 'TEACHER'
             elif nv.vai_tro == NhanVien.VaiTro.TU_VAN:
-                return 'STAFF'
+                official_role = 'STAFF'
             elif nv.vai_tro == NhanVien.VaiTro.KE_TOAN:
-                return 'ACCOUNTANT'
+                official_role = 'ACCOUNTANT'
+            if hasattr(request, 'session'):
+                request.session['role'] = official_role
+                request.session['user_email'] = nv.email
+                request.session['user_name'] = nv.ho_ten
+            return official_role
+
+    # Giữ vai trò nếu session đã thiết lập vai trò Nhân sự
+    if hasattr(request, 'session') and request.session.get('role') in ['TEACHER', 'STAFF', 'ACCOUNTANT']:
+        return request.session.get('role')
 
     return 'STUDENT'
 
