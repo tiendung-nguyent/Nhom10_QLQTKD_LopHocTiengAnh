@@ -148,18 +148,18 @@
       <!-- Dropdown Filter theo Trạng thái hồ sơ -->
       <select class="form-control" style="max-width: 230px;" id="status-filter" onchange="filterLeads()">
         <option value="">-- Tất cả trạng thái --</option>
-        <option value="MOI" {% if selected_status == 'MOI' %}selected{% endif %}>📥 Mới tiếp nhận</option>
-        <option value="DANG_XU_LY" {% if selected_status == 'DANG_XU_LY' %}selected{% endif %}>⏳ Đang tư vấn lộ trình
+        <option value="MOI" {% if selected_status == 'MOI' %}selected{% endif %}>Mới tiếp nhận</option>
+        <option value="DANG_XU_LY" {% if selected_status == 'DANG_XU_LY' %}selected{% endif %}>Đang tư vấn lộ trình
         </option>
-        <option value="CHO_TEST" {% if selected_status == 'CHO_TEST' %}selected{% endif %}>📝 Hẹn lịch test (105')
+        <option value="CHO_TEST" {% if selected_status == 'CHO_TEST' %}selected{% endif %}>Hẹn lịch test (105')
         </option>
-        <option value="DA_TEST" {% if selected_status == 'DA_TEST' %}selected{% endif %}>✦ Đã test (Chờ tư vấn lớp)
+        <option value="DA_TEST" {% if selected_status == 'DA_TEST' %}selected{% endif %}>Đã test (Chờ tư vấn lớp)
         </option>
-        <option value="DE_XUAT_LOP" {% if selected_status == 'DE_XUAT_LOP' %}selected{% endif %}>🎯 Đã đề xuất lớp
+        <option value="DE_XUAT_LOP" {% if selected_status == 'DE_XUAT_LOP' %}selected{% endif %}>Đã đề xuất lớp
         </option>
-        <option value="TU_CHOI" {% if selected_status == 'TU_CHOI' %}selected{% endif %}>❌ Từ chối / Đổi khung giờ
+        <option value="TU_CHOI" {% if selected_status == 'TU_CHOI' %}selected{% endif %}>Từ chối / Đổi khung giờ
         </option>
-        <option value="HOAN_THANH" {% if selected_status == 'HOAN_THANH' %}selected{% endif %}>✔ Đã nhập học</option>
+        <option value="HOAN_THANH" {% if selected_status == 'HOAN_THANH' %}selected{% endif %}>Đã nhập học</option>
       </select>
 
       <!-- Dropdown Filter theo Chuyên viên tư vấn -->
@@ -348,10 +348,10 @@
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">Kênh liên hệ <span style="color: #EF4444; font-weight: bold;">*</span></label>
           <select name="kenh_lien_he" class="form-control" required style="font-weight: 600;">
-            <option value="Gọi điện thoại">📞 Gọi điện thoại</option>
-            <option value="Nhắn tin Zalo / SMS">💬 Nhắn tin Zalo / SMS</option>
-            <option value="Gửi Email tư vấn">📧 Gửi Email tư vấn</option>
-            <option value="Gặp trực tiếp tại trung tâm">🏫 Gặp trực tiếp</option>
+            <option value="Gọi điện thoại">Gọi điện thoại</option>
+            <option value="Nhắn tin Zalo / SMS">Nhắn tin Zalo / SMS</option>
+            <option value="Gửi Email tư vấn">Gửi Email tư vấn</option>
+            <option value="Gặp trực tiếp tại trung tâm">Gặp trực tiếp</option>
           </select>
         </div>
         <div class="form-group" style="margin-bottom: 0;">
@@ -372,10 +372,10 @@
         </label>
         <select name="trang_thai_moi" class="form-control" id="modal-status-select" onchange="handleStatusChange()"
           style="font-weight: 600;">
-          <option value="DANG_XU_LY">⏳ Đang tư vấn lộ trình & mục tiêu học</option>
-          <option value="DA_TEST">✦ Đã có điểm test – Chờ tư vấn lộ trình & xếp lớp</option>
-          <option value="DE_XUAT_LOP">🎯 Đã tư vấn & Đề xuất lớp học phù hợp (Chờ học phí)</option>
-          <option value="TU_CHOI">❌ Học viên từ chối / Bận không theo học (Hủy bỏ hồ sơ)</option>
+          <option value="DANG_XU_LY">Đang tư vấn lộ trình & mục tiêu học</option>
+          <option value="DA_TEST">Đã có điểm test – Chờ tư vấn lộ trình & xếp lớp</option>
+          <option value="DE_XUAT_LOP">Đã tư vấn & Đề xuất lớp học phù hợp (Chờ học phí)</option>
+          <option value="TU_CHOI">Học viên từ chối / Bận không theo học (Hủy bỏ hồ sơ)</option>
         </select>
       </div>
 
