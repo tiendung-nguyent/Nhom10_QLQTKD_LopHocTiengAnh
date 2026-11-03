@@ -1,3 +1,42 @@
+<style>
+  /* 4 ô stat card kiểu blur hiện đại, không dùng icon thô */
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  }
+  .stat-icon.coral {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(239, 68, 68, 0.08)) !important;
+    border: 1px solid rgba(239, 68, 68, 0.28) !important;
+  }
+  .stat-icon.purple {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(139, 92, 246, 0.08)) !important;
+    border: 1px solid rgba(139, 92, 246, 0.28) !important;
+  }
+  .stat-icon.emerald {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(16, 185, 129, 0.08)) !important;
+    border: 1px solid rgba(16, 185, 129, 0.28) !important;
+  }
+  .stat-icon.blue {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(59, 130, 246, 0.08)) !important;
+    border: 1px solid rgba(59, 130, 246, 0.28) !important;
+  }
+  .stat-blur-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+  }
+  .stat-icon.coral .stat-blur-dot { background: #EF4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.75); }
+  .stat-icon.purple .stat-blur-dot { background: #8B5CF6; box-shadow: 0 0 10px rgba(139, 92, 246, 0.75); }
+  .stat-icon.emerald .stat-blur-dot { background: #10B981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.75); }
+  .stat-icon.blue .stat-blur-dot { background: #3B82F6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.75); }
+</style>
 {% extends 'base.html' %}
 {% load static %}
 
@@ -5,18 +44,18 @@
 
 {% block content %}
 <div class="page-header">
-  <div class="page-breadcrumb">🎯 <span>Tuyển sinh</span> / Dashboard Quản lý Tuyển sinh</div>
+  <div class="page-breadcrumb"><span>Tuyển sinh</span> / Dashboard Quản lý Tuyển sinh</div>
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
-      <h1 class="page-title">Dashboard Tư vấn Tuyển sinh 🎯</h1>
+      <h1 class="page-title">Dashboard Tư vấn Tuyển sinh</h1>
       <p class="page-subtitle">Theo dõi tiến trình hồ sơ và xếp lớp học viên sau khi Kế toán xác nhận học phí — {{ today|date:"l, d/m/Y" }}</p>
     </div>
     <div style="display: flex; gap: 8px;">
       <a href="{% url 'classes:lead_care' %}" class="btn btn-emerald btn-sm">
-        📞 Chăm sóc & Xếp lớp KH Tiềm năng
+        Chăm sóc & Xếp lớp KH Tiềm năng
       </a>
       <a href="{% url 'classes:class_status' %}" class="btn btn-outline btn-sm">
-        🏫 Tình trạng Lớp & Sĩ số
+        Tình trạng Lớp & Sĩ số
       </a>
     </div>
   </div>
@@ -26,9 +65,9 @@
 <div class="stat-grid">
   <!-- 1. Số ca đăng ký mới -->
   <div class="stat-card">
-    <div class="stat-icon coral">📥</div>
+    <div class="stat-icon coral"><span class="stat-blur-dot"></span></div>
     <div class="stat-info">
-      <div class="stat-value">{{ new_registrations|default:8 }}</div>
+      <div class="stat-value">{{ new_registrations|default_if_none:0 }}</div>
       <div class="stat-label">Số ca đăng ký mới hôm nay</div>
       <div class="stat-delta up">↑ +3 ca so với hôm qua</div>
     </div>
@@ -36,19 +75,19 @@
 
   <!-- 2. Số hồ sơ đã có điểm chuẩn -->
   <div class="stat-card">
-    <div class="stat-icon purple">✦</div>
+    <div class="stat-icon purple"><span class="stat-blur-dot"></span></div>
     <div class="stat-info">
-      <div class="stat-value">{{ scored_students|default:11 }}</div>
+      <div class="stat-value">{{ scored_students|default_if_none:0 }}</div>
       <div class="stat-label">Số hồ sơ đã có điểm chuẩn</div>
-      <div class="stat-delta up">↑ {{ waiting_assign_count|default:6 }} hồ sơ chờ xếp lớp ngay</div>
+      <div class="stat-delta up">↑ {{ waiting_assign_count|default_if_none:0 }} hồ sơ chờ xếp lớp ngay</div>
     </div>
   </div>
 
   <!-- 3. Số học viên đã đóng tiền -->
   <div class="stat-card">
-    <div class="stat-icon emerald">💰</div>
+    <div class="stat-icon emerald"><span class="stat-blur-dot"></span></div>
     <div class="stat-info">
-      <div class="stat-value">{{ paid_students|default:9 }}</div>
+      <div class="stat-value">{{ paid_students|default_if_none:0 }}</div>
       <div class="stat-label">Học viên đã đóng học phí</div>
       <div class="stat-delta up">↑ Đã kích hoạt vào lớp</div>
     </div>
@@ -56,9 +95,9 @@
 
   <!-- 4. Doanh thu học phí tháng -->
   <div class="stat-card">
-    <div class="stat-icon blue">📈</div>
+    <div class="stat-icon blue"><span class="stat-blur-dot"></span></div>
     <div class="stat-info">
-      <div class="stat-value">{{ revenue|default:"40.5" }}<span style="font-size:14px">tr</span></div>
+      <div class="stat-value">{{ revenue|default_if_none:"0" }}<span style="font-size:14px">tr</span></div>
       <div class="stat-label">Doanh thu học phí tháng {{ today|date:"m/Y" }}</div>
       <div class="stat-delta up">↑ 12% so với tháng trước</div>
     </div>
@@ -72,10 +111,10 @@
   <div class="card rounded-2xl shadow-sm">
     <div class="card-header">
       <div>
-        <div class="card-title">🔥 Hồ sơ cần xử lý ngay</div>
+        <div class="card-title">Hồ sơ cần xử lý ngay</div>
         <div class="card-subtitle">Học viên đã có điểm chính thức hoặc cần xác nhận thu tiền</div>
       </div>
-      <span class="badge badge-red">{{ urgent_count|default:3 }} trường hợp</span>
+      <span class="badge badge-red">{{ urgent_count|default_if_none:0 }} trường hợp</span>
     </div>
     <div class="card-body" style="padding: 0;">
       <div style="display: flex; flex-direction: column;">
@@ -115,7 +154,7 @@
   <div class="card rounded-2xl shadow-sm">
     <div class="card-header">
       <div>
-        <div class="card-title">📊 Phễu Chuyển đổi Quy trình Tuyển sinh</div>
+        <div class="card-title">Phễu Chuyển đổi Quy trình Tuyển sinh</div>
         <div class="card-subtitle">Theo dõi tỷ lệ chuyển đổi từ Đăng ký → Nhập học chính thức</div>
       </div>
       <span class="badge badge-purple">BPMN Pipeline</span>
@@ -137,7 +176,7 @@
 
       <!-- Highlight tỷ lệ chuyển đổi -->
       <div style="margin-top: 18px; padding: 14px; background: var(--emerald-light); border-radius: var(--radius-md); text-align: center; border: 1px solid #A7F3D0;">
-        <div style="font-size: 24px; font-weight: 800; color: #047857;">{{ conversion_rate|default:"23.7" }}%</div>
+        <div style="font-size: 24px; font-weight: 800; color: #047857;">{{ conversion_rate|default_if_none:"0" }}%</div>
         <div style="font-size: 12px; color: #065F46; font-weight: 600; margin-top: 2px;">
           Tỷ lệ chuyển đổi thành công từ Đăng ký → Đóng tiền vào lớp
         </div>
@@ -150,19 +189,19 @@
 <!-- ─── THAO TÁC NHANH (QUICK ACTIONS 3 Ô) ────────────────── -->
 <div class="three-col" style="margin-bottom: 24px;">
   <a href="{% url 'classes:lead_care' %}" class="card rounded-2xl shadow-sm" style="text-align: center; padding: 22px; text-decoration: none; cursor: pointer;">
-    <div style="font-size: 36px; margin-bottom: 10px;">📞</div>
+    <div style="font-size: 36px; margin-bottom: 10px;"><i class="fa-solid fa-headset" style="color: var(--accent-purple);"></i></div>
     <div style="font-weight: 700; font-size: 15px; color: var(--text-primary);">Chăm sóc & Xếp lớp KH Tiềm năng</div>
-    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">{{ new_registrations|default:27 }} khách hàng trong phễu tư vấn</div>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">{{ new_registrations|default_if_none:0 }} khách hàng trong phễu tư vấn</div>
   </a>
 
   <a href="{% url 'classes:class_status' %}" class="card rounded-2xl shadow-sm" style="text-align: center; padding: 22px; text-decoration: none; cursor: pointer;">
-    <div style="font-size: 36px; margin-bottom: 10px;">🏫</div>
+    <div style="font-size: 36px; margin-bottom: 10px;"><i class="fa-solid fa-chalkboard-user" style="color: var(--accent-coral);"></i></div>
     <div style="font-weight: 700; font-size: 15px; color: var(--text-primary);">Tình trạng Lớp & Sĩ số</div>
-    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">{{ total_classes|default:6 }} lớp đang mở · {{ total_enrolled|default:78 }}/{{ total_seats|default:115 }} học viên</div>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">{{ total_classes|default_if_none:0 }} lớp đang mở · {{ total_enrolled|default_if_none:0 }}/{{ total_seats|default_if_none:0 }} học viên</div>
   </a>
 
   <div class="card rounded-2xl shadow-sm" style="text-align: center; padding: 22px; cursor: pointer;" onclick="Toast.show('Đang xuất báo cáo doanh thu & tuyển sinh Excel!', 'success')">
-    <div style="font-size: 36px; margin-bottom: 10px;">📊</div>
+    <div style="font-size: 36px; margin-bottom: 10px;"><i class="fa-solid fa-chart-pie" style="color: var(--accent-emerald);"></i></div>
     <div style="font-weight: 700; font-size: 15px; color: var(--text-primary);">Xuất Báo cáo Tuyển sinh</div>
     <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Xuất định dạng Excel / PDF</div>
   </div>

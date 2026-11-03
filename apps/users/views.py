@@ -874,17 +874,17 @@ def staff_dashboard(request):
             HoSoTuVan.TrangThai.DE_XUAT_LOP,
             HoSoTuVan.TrangThai.DANG_XU_LY,
         ]
-    ).count() or 27
-    scored_count = KetQuaKiemTra.objects.filter(trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN).count() or 11
+    ).count()
+    scored_count = KetQuaKiemTra.objects.filter(trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN).count()
     paid_count = PhieuHocPhi.objects.filter(trang_thai__in=[PhieuHocPhi.TrangThai.DA_TT, PhieuHocPhi.TrangThai.DU]).count()
 
     rev_sum = PhieuHocPhi.objects.filter(trang_thai__in=[PhieuHocPhi.TrangThai.DA_TT, PhieuHocPhi.TrangThai.DU]).aggregate(s=Sum('so_tien'))['s'] or 0
-    rev_million = round(float(rev_sum) / 1_000_000, 1) if rev_sum else 40.5
+    rev_million = round(float(rev_sum) / 1_000_000, 1)
 
     # Thống kê tình trạng lớp học từ CSDL
-    total_classes = LopHoc.objects.filter(trang_thai__in=[LopHoc.TrangThai.MO, LopHoc.TrangThai.DAY]).count() or 6
-    total_seats = LopHoc.objects.aggregate(s=Sum('si_so_toi_da'))['s'] or 115
-    total_enrolled = GhiDanh.objects.exclude(trang_thai=GhiDanh.TrangThai.HUY).count() or 78
+    total_classes = LopHoc.objects.filter(trang_thai__in=[LopHoc.TrangThai.MO, LopHoc.TrangThai.DAY]).count()
+    total_seats = LopHoc.objects.aggregate(s=Sum('si_so_toi_da'))['s'] or 0
+    total_enrolled = GhiDanh.objects.exclude(trang_thai=GhiDanh.TrangThai.HUY).count()
 
     # Đếm số hồ sơ đã có điểm nhưng chưa được xếp lớp
     assigned_hstv_ids = GhiDanh.objects.exclude(trang_thai=GhiDanh.TrangThai.HUY).values_list('ho_so_tu_van_id', flat=True)
@@ -892,8 +892,6 @@ def staff_dashboard(request):
         phien_lam_bais__ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN
     ).exclude(id__in=assigned_hstv_ids).distinct()
     waiting_assign_count = waiting_assign_qs.count()
-    if waiting_assign_count == 0:
-        waiting_assign_count = 6
 
     # 2. Danh sách hồ sơ cần xử lý ngay từ CSDL
     urgent_cases = []
@@ -909,7 +907,7 @@ def staff_dashboard(request):
             'ho_ten': kh.ho_ten or kh.email,
             'mo_ta': f'Điểm {lvl} ({score}đ) · Chờ phân lớp {lvl} phù hợp',
             'action_type': 'class',
-            'action_label': 'Xếp lớp ngay 🎓',
+            'action_label': 'Xếp lớp ngay',
             'action_url': f'/classes/lead-care/{h.id}/consult/',
         })
 
@@ -919,41 +917,43 @@ def staff_dashboard(request):
     ).select_related('ghi_danh__ho_so_tu_van__khach_hang', 'ghi_danh__lop_hoc')[:4]
 
     for p in pending_phieus:
+        hstv_id = p.ghi_danh.ho_so_tu_van_id if p.ghi_danh else None
         kh = p.ghi_danh.ho_so_tu_van.khach_hang if p.ghi_danh and p.ghi_danh.ho_so_tu_van else None
         name = kh.ho_ten or kh.email if kh else 'Học viên'
         amount_fmt = f"{int(p.so_tien):,}đ".replace(',', '.')
+        consult_url = f'/classes/lead-care/{hstv_id}/consult/' if hstv_id else '/classes/lead-care/'
         if p.trang_thai == PhieuHocPhi.TrangThai.CHO_XAC_NHAN:
             urgent_cases.append({
                 'ho_ten': name,
                 'mo_ta': f'Chờ Kế toán đối soát & xác nhận thu · {amount_fmt} qua VietQR',
                 'action_type': 'waiting_accountant',
-                'action_label': 'Chờ Kế toán duyệt ⏳',
-                'action_url': '#',
+                'action_label': 'Xem chi tiết',
+                'action_url': consult_url,
             })
         else:
             urgent_cases.append({
                 'ho_ten': name,
                 'mo_ta': f'Chưa nộp học phí · {amount_fmt} · Hạn nộp {p.han_thanh_toan.strftime("%d/%m") if p.han_thanh_toan else "sắp tới"}',
                 'action_type': 'remind',
-                'action_label': 'Nhắc nộp 📧',
-                'action_url': '#',
+                'action_label': 'Nhắc nộp & Xem',
+                'action_url': consult_url,
             })
 
-    # 3. Phễu chuyển đổi BPMN
-    funnel_new = total_reg if total_reg > 0 else 27
+    # 3. Phễu chuyển đổi BPMN từ số liệu thực tế
+    funnel_new = total_reg
     funnel_tested = PhienLamBai.objects.filter(trang_thai=PhienLamBai.TrangThai.HOAN_THANH).count()
-    if funnel_tested < scored_count:
-        funnel_tested = max(scored_count + 3, 20)
-    funnel_approved = scored_count if scored_count > 0 else 11
-    funnel_assigned = min(total_enrolled, funnel_new) if total_enrolled else 15
-    funnel_paid = paid_count if paid_count > 0 else 9
+    funnel_approved = scored_count
+    funnel_assigned = GhiDanh.objects.exclude(trang_thai=GhiDanh.TrangThai.HUY).values('ho_so_tu_van').distinct().count()
+    funnel_paid = paid_count
+
+    conversion_rate = str(round((funnel_paid / funnel_new * 100), 1)) if funnel_new > 0 else '0'
 
     context = {
         'today': now,
-        'new_registrations': total_reg if total_reg > 0 else 27,
-        'scored_students': scored_count if scored_count > 0 else 11,
+        'new_registrations': total_reg,
+        'scored_students': scored_count,
         'waiting_assign_count': waiting_assign_count,
-        'paid_students': paid_count if paid_count > 0 else 9,
+        'paid_students': paid_count,
         'revenue': str(rev_million),
         'total_classes': total_classes,
         'total_seats': total_seats,
@@ -961,13 +961,13 @@ def staff_dashboard(request):
         'urgent_count': len(urgent_cases),
         'urgent_cases': urgent_cases,
         'funnel_data': [
-            {'label': '📥 Đăng ký mới', 'count': funnel_new, 'pct': 100, 'color': '#94A3B8'},
-            {'label': '📝 Đã thi kiểm tra', 'count': funnel_tested, 'pct': int((funnel_tested / funnel_new) * 100) if funnel_new else 76, 'color': '#8B5CF6'},
-            {'label': '✅ GV đã duyệt điểm', 'count': funnel_approved, 'pct': int((funnel_approved / funnel_new) * 100) if funnel_new else 58, 'color': '#FF7E5F'},
-            {'label': '🎓 Đã xếp lớp', 'count': funnel_assigned, 'pct': int((funnel_assigned / funnel_new) * 100) if funnel_new else 39, 'color': '#F59E0B'},
-            {'label': '💳 Đã đóng tiền nhập học', 'count': funnel_paid, 'pct': int((funnel_paid / funnel_new) * 100) if funnel_new else 24, 'color': '#10B981'},
+            {'label': 'Đăng ký mới', 'count': funnel_new, 'pct': 100 if funnel_new else 0, 'color': '#94A3B8'},
+            {'label': 'Đã thi kiểm tra', 'count': funnel_tested, 'pct': int((funnel_tested / funnel_new) * 100) if funnel_new else 0, 'color': '#8B5CF6'},
+            {'label': 'GV đã duyệt điểm', 'count': funnel_approved, 'pct': int((funnel_approved / funnel_new) * 100) if funnel_new else 0, 'color': '#FF7E5F'},
+            {'label': 'Đã xếp lớp', 'count': funnel_assigned, 'pct': int((funnel_assigned / funnel_new) * 100) if funnel_new else 0, 'color': '#F59E0B'},
+            {'label': 'Đã đóng tiền nhập học', 'count': funnel_paid, 'pct': int((funnel_paid / funnel_new) * 100) if funnel_new else 0, 'color': '#10B981'},
         ],
-        'conversion_rate': str(round((funnel_paid / funnel_new * 100), 1)) if funnel_new else '23.7',
+        'conversion_rate': conversion_rate,
     }
     return render(request, 'users/staff_dashboard.html', context)
 

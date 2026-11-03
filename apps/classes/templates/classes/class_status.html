@@ -104,29 +104,67 @@
     color: #fff;
     border-color: var(--text-primary);
   }
+  /* 4 ô stat card kiểu blur hiện đại, không dùng icon thô */
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  }
+  .stat-icon.coral {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(239, 68, 68, 0.08)) !important;
+    border: 1px solid rgba(239, 68, 68, 0.28) !important;
+  }
+  .stat-icon.purple {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(139, 92, 246, 0.08)) !important;
+    border: 1px solid rgba(139, 92, 246, 0.28) !important;
+  }
+  .stat-icon.emerald {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(16, 185, 129, 0.08)) !important;
+    border: 1px solid rgba(16, 185, 129, 0.28) !important;
+  }
+  .stat-icon.blue {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(59, 130, 246, 0.08)) !important;
+    border: 1px solid rgba(59, 130, 246, 0.28) !important;
+  }
+  .stat-blur-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+  }
+  .stat-icon.coral .stat-blur-dot { background: #EF4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.75); }
+  .stat-icon.purple .stat-blur-dot { background: #8B5CF6; box-shadow: 0 0 10px rgba(139, 92, 246, 0.75); }
+  .stat-icon.emerald .stat-blur-dot { background: #10B981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.75); }
+  .stat-icon.blue .stat-blur-dot { background: #3B82F6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.75); }
+
 </style>
 {% endblock %}
 
 {% block content %}
 <!-- ─── TIÊU ĐỀ TRANG ─────────────────────────────────────── -->
 <div class="page-header">
-  <div class="page-breadcrumb">🎯 <span>Tuyển sinh</span> / Tình trạng Lớp & Sĩ số</div>
+  <div class="page-breadcrumb"><span>Tuyển sinh</span> / Tình trạng Lớp & Sĩ số</div>
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
     <div>
-      <h1 class="page-title">🏫 Tình trạng các Lớp học đang mở & Sĩ số Tuyển sinh</h1>
+      <h1 class="page-title">Tình trạng các Lớp học đang mở & Sĩ số Tuyển sinh</h1>
       <p class="page-subtitle">Theo dõi thời gian thực tỷ lệ lấp đầy sĩ số, lịch khai giảng và chỉ tiêu tuyển sinh từng lớp</p>
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
       {% if is_staff %}
       <button type="button" class="btn btn-emerald btn-sm" onclick="openModal('add-class-modal')">
-        ➕ Thêm lớp mới
+        Thêm lớp mới
       </button>
       {% endif %}
       <a href="{% url 'classes:lead_care' %}" class="btn btn-purple btn-sm">
-        📞 Chăm sóc & Xếp lớp
+        Chăm sóc & Xếp lớp
       </a>
       <button type="button" class="btn btn-outline btn-sm" onclick="window.location.reload()">
-        🔄 Làm mới
+        Làm mới
       </button>
     </div>
   </div>
@@ -136,9 +174,9 @@
 <div class="stat-grid" style="margin-bottom: 24px;">
   <!-- KPI 1: Số lớp đang mở tuyển sinh -->
   <div class="stat-card">
-    <div class="stat-icon blue">🏫</div>
+    <div class="stat-icon blue"><span class="stat-blur-dot"></span></div>
     <div class="stat-info">
-      <div class="stat-value">{{ stats.total_classes|default:6 }}</div>
+      <div class="stat-value">{{ stats.total_classes|default_if_none:0 }}</div>
       <div class="stat-label">Lớp học đang mở tuyển sinh</div>
       <div class="stat-delta up">↑ Toàn bộ các cấp độ CEFR</div>
     </div>
@@ -146,19 +184,19 @@
 
   <!-- KPI 2: Tổng sĩ số đã tuyển -->
   <div class="stat-card">
-    <div class="stat-icon emerald">👥</div>
+    <div class="stat-icon emerald"><span class="stat-blur-dot"></span></div>
     <div class="stat-info">
-      <div class="stat-value">{{ stats.total_enrolled|default:78 }}<span style="font-size: 15px; color: var(--text-muted); font-weight: 500;"> / {{ stats.total_seats|default:115 }}</span></div>
+      <div class="stat-value">{{ stats.total_enrolled|default_if_none:0 }}<span style="font-size: 15px; color: var(--text-muted); font-weight: 500;"> / {{ stats.total_seats|default_if_none:0 }}</span></div>
       <div class="stat-label">Học viên đã vào lớp chính thức</div>
-      <div class="stat-delta up">↑ Chỉ tiêu tổng: {{ stats.total_seats|default:115 }} HV</div>
+      <div class="stat-delta up">↑ Chỉ tiêu tổng: {{ stats.total_seats|default_if_none:0 }} HV</div>
     </div>
   </div>
 
   <!-- KPI 3: Tỷ lệ lấp đầy toàn trung tâm -->
   <div class="stat-card">
-    <div class="stat-icon purple">📊</div>
+    <div class="stat-icon purple"><span class="stat-blur-dot"></span></div>
     <div class="stat-info">
-      <div class="stat-value">{{ stats.overall_fill_rate|default:68 }}%</div>
+      <div class="stat-value">{{ stats.overall_fill_rate|default_if_none:0 }}%</div>
       <div class="stat-label">Tỷ lệ lấp đầy trung bình</div>
       <div class="stat-delta up">↑ Tăng 8% so với tuần trước</div>
     </div>
@@ -166,9 +204,9 @@
 
   <!-- KPI 4: Chỗ trống còn lại -->
   <div class="stat-card">
-    <div class="stat-icon coral">🎯</div>
+    <div class="stat-icon coral"><span class="stat-blur-dot"></span></div>
     <div class="stat-info">
-      <div class="stat-value">{{ stats.available_seats|default:37 }}</div>
+      <div class="stat-value">{{ stats.available_seats|default_if_none:0 }}</div>
       <div class="stat-label">Chỗ trống còn nhận học viên</div>
       <div class="stat-delta">Phân bổ trên 5 lớp còn slot</div>
     </div>
@@ -182,23 +220,23 @@
       
       <!-- Search Input -->
       <div class="header-search" style="max-width: 320px; flex: 1;">
-        <span class="search-icon">🔍</span>
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
         <input type="text" id="class-search-input" placeholder="Tìm tên lớp, ca học, giáo viên, phòng..." oninput="filterClassGrid()">
       </div>
 
       <!-- Filter Pills Trạng thái -->
       <div class="filter-pills-bar">
         <button type="button" class="filter-pill active" onclick="setStatusFilter('all', this)">
-          Tất cả ({{ stats.total_classes|default:6 }})
+          Tất cả ({{ stats.total_classes|default_if_none:0 }})
         </button>
         <button type="button" class="filter-pill" onclick="setStatusFilter('available', this)">
-          🟢 Còn chỗ ({{ stats.available_count|default:4 }})
+          Còn chỗ ({{ stats.available_count|default:4 }})
         </button>
         <button type="button" class="filter-pill" onclick="setStatusFilter('nearly-full', this)">
-          🟠 Sắp đầy ({{ stats.nearly_full_count|default:1 }})
+          Sắp đầy ({{ stats.nearly_full_count|default:1 }})
         </button>
         <button type="button" class="filter-pill" onclick="setStatusFilter('full', this)">
-          🔴 Đã đầy ({{ stats.full_count|default:1 }})
+          Đã đầy ({{ stats.full_count|default_if_none:0 }})
         </button>
       </div>
 
@@ -256,30 +294,30 @@
         </div>
 
         {% if lop.ty_le >= 100 %}
-          <span class="badge badge-red" style="font-size: 11px; padding: 4px 10px;">🔴 Đã đầy</span>
+          <span class="badge badge-red" style="font-size: 11px; padding: 4px 10px;">Đã đầy</span>
         {% elif lop.ty_le >= 80 %}
-          <span class="badge badge-coral" style="font-size: 11px; padding: 4px 10px;">🟠 Sắp đầy (Còn {{ lop.cho_trong }})</span>
+          <span class="badge badge-coral" style="font-size: 11px; padding: 4px 10px;">Sắp đầy (Còn {{ lop.cho_trong }})</span>
         {% else %}
-          <span class="badge badge-emerald" style="font-size: 11px; padding: 4px 10px;">🟢 Còn {{ lop.cho_trong }} chỗ</span>
+          <span class="badge badge-emerald" style="font-size: 11px; padding: 4px 10px;">Còn {{ lop.cho_trong }} chỗ</span>
         {% endif %}
       </div>
 
       <!-- Thông số chi tiết lớp học -->
       <div class="class-meta-grid">
         <div class="class-meta-item">
-          <span class="class-meta-lbl">⏰ Lịch & Ca học</span>
+          <span class="class-meta-lbl">Lịch & Ca học</span>
           <span class="class-meta-val">{{ lop.lich_hoc }}</span>
         </div>
         <div class="class-meta-item">
-          <span class="class-meta-lbl">🚀 Khai giảng</span>
+          <span class="class-meta-lbl">Khai giảng</span>
           <span class="class-meta-val">{{ lop.ngay_khai_giang }}</span>
         </div>
         <div class="class-meta-item">
-          <span class="class-meta-lbl">📍 Phòng học</span>
+          <span class="class-meta-lbl">Phòng học</span>
           <span class="class-meta-val">{{ lop.phong_hoc }}</span>
         </div>
         <div class="class-meta-item">
-          <span class="class-meta-lbl">👩‍🏫 Giáo viên</span>
+          <span class="class-meta-lbl">Giáo viên</span>
           <span class="class-meta-val">{{ lop.giao_vien }}</span>
         </div>
       </div>
@@ -320,9 +358,14 @@
         {% endif %}
       </span>
       <div style="display: flex; gap: 6px;">
-        <a href="{% url 'classes:lead_care' %}?level={{ lop.trinh_do }}" class="btn btn-outline btn-sm">
-          📋 Xem hồ sơ tuyển sinh
+        <a href="{% url 'classes:lead_care' %}?class_id={{ lop.ma_lop }}&paid_only=1" class="btn btn-outline btn-sm" title="Xem danh sách học viên đã thanh toán vào lớp">
+          Xem hồ sơ tuyển sinh
         </a>
+        {% if is_staff %}
+        <button type="button" class="btn btn-outline btn-sm" style="color: #DC2626; border-color: #FECACA;" onclick="confirmDeleteClass('{{ lop.ma_lop }}', '{{ lop.ten_lop|escapejs }}')" title="Xóa lớp học này">
+          Xóa lớp
+        </button>
+        {% endif %}
       </div>
     </div>
 
@@ -335,7 +378,7 @@
 
 <!-- Thông báo nếu không tìm thấy lớp học -->
 <div id="no-classes-msg" style="display: none; text-align: center; padding: 48px; background: #fff; border-radius: var(--radius-xl); border: 1px dashed var(--border-color); margin-bottom: 24px;">
-  <div style="font-size: 40px; margin-bottom: 10px;">🔍</div>
+  <div style="font-size: 40px; margin-bottom: 10px;"><i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted);"></i></div>
   <div style="font-size: 16px; font-weight: 700; color: var(--text-primary);">Không tìm thấy lớp học phù hợp</div>
   <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Vui lòng thử tìm kiếm bằng từ khóa khác hoặc bỏ các bộ lọc đã chọn.</div>
 </div>
@@ -343,19 +386,19 @@
 <div class="modal-overlay" id="add-class-modal">
   <div class="modal-box" style="max-width: 540px;">
     <h2 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
-      <span>🏫</span> Thêm Lớp học mới
+      Thêm Lớp học mới
     </h2>
     <p class="page-subtitle" style="margin-bottom: 16px;">Tạo lớp mới vào CSDL tuyển sinh để mở đăng ký và phân bổ học viên</p>
     <form method="post" action="{% url 'classes:add_class' %}" id="add-class-form">
       {% csrf_token %}
       <div class="form-group">
-        <label class="form-label">Tên lớp học *</label>
+        <label class="form-label">Tên lớp học <span style="color: #EF4444; font-weight: bold;">*</span></label>
         <input type="text" name="ten_lop" class="form-control" placeholder="Ví dụ: B2-02 · Upper Intermediate Evening" required>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div class="form-group">
-          <label class="form-label">Khóa học & Trình độ *</label>
+          <label class="form-label">Khóa học & Trình độ <span style="color: #EF4444; font-weight: bold;">*</span></label>
           <select name="khoa_hoc_id" class="form-control" required>
             <option value="">-- Chọn khóa học --</option>
             {% for kh in khoa_hocs %}
@@ -365,7 +408,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Ca học *</label>
+          <label class="form-label">Ca học <span style="color: #EF4444; font-weight: bold;">*</span></label>
           <select name="ca_hoc" class="form-control" required>
             <option value="sang">Ca Sáng (07:30–11:30)</option>
             <option value="chieu">Ca Chiều (13:30–17:00)</option>
@@ -375,13 +418,13 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Lịch học cụ thể *</label>
+        <label class="form-label">Lịch học cụ thể <span style="color: #EF4444; font-weight: bold;">*</span></label>
         <input type="text" name="lich_hoc" class="form-control" placeholder="Ví dụ: Tối T2/T4/T6 (18:30–20:30)" required>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div class="form-group">
-          <label class="form-label">Sĩ số tối đa *</label>
+          <label class="form-label">Sĩ số tối đa <span style="color: #EF4444; font-weight: bold;">*</span></label>
           <input type="number" name="si_so_toi_da" class="form-control" min="5" max="50" value="20" required>
         </div>
 
@@ -406,7 +449,7 @@
       <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
         <button type="button" class="btn btn-outline" onclick="closeModal('add-class-modal')">Hủy bỏ</button>
         <button type="submit" class="btn btn-emerald btn-lg" id="btn-submit-add-class">
-          ✔ Lưu & Mở lớp tuyển sinh
+          Lưu & Mở lớp tuyển sinh
         </button>
       </div>
     </form>
@@ -474,7 +517,7 @@
         e.preventDefault();
         const btn = document.getElementById('btn-submit-add-class');
         btn.disabled = true;
-        btn.textContent = '⏳ Đang lưu lớp vào CSDL…';
+        btn.textContent = 'Đang lưu lớp vào CSDL…';
 
         try {
           const fd = new FormData(addClassForm);
@@ -495,7 +538,7 @@
           } else {
             Toast.show(data.message || 'Lỗi khi thêm lớp học', 'error');
             btn.disabled = false;
-            btn.textContent = '✔ Lưu & Mở lớp tuyển sinh';
+            btn.textContent = 'Lưu & Mở lớp tuyển sinh';
           }
         } catch (err) {
           Toast.show('Đã gửi yêu cầu thêm lớp học mới!', 'success');
