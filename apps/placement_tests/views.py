@@ -728,6 +728,38 @@ def test_room(request):
     }
 
     raw_mcq_details = request.session.get('placement_mcq_details', [])
+    mcq_correct = request.session.get('placement_mcq_correct', 0)
+    mcq_wrong = request.session.get('placement_mcq_wrong', 0)
+    mcq_blank = request.session.get('placement_mcq_blank', 0)
+    mcq_total = request.session.get('placement_mcq_total', 25)
+    mcq_percentage = request.session.get('placement_mcq_percentage', 0)
+
+    # NẠP DỮ LIỆU ĐỐI SOÁT TRẮC NGHIỆM TỪ CSDL KHI PHIÊN LÀM BÀI ĐÃ HOÀN TẤT HOẶC ĐÃ ĐƯỢC DUYỆT
+    if (not raw_mcq_details or mcq_correct == 0) and test_already_completed:
+        target_phien = approved_phien
+        if not target_phien and student:
+            hstv = HoSoTuVan.objects.filter(khach_hang=student).first()
+            if hstv:
+                target_phien = PhienLamBai.objects.filter(
+                    ho_so_tu_van=hstv,
+                    trang_thai=PhienLamBai.TrangThai.HOAN_THANH
+                ).order_by('-bat_dau', '-id').first()
+
+        if target_phien:
+            ct_mcq = target_phien.cau_tra_lois.filter(
+                models.Q(noi_dung_tra_loi__icontains='KẾT QUẢ BÀI LÀM TRẮC NGHIỆM') |
+                models.Q(cau_hoi__loai=CauHoi.Loai.TRAC_NGHIEM)
+            ).first()
+            if ct_mcq and ct_mcq.noi_dung_tra_loi:
+                parsed_db_mcq = parse_mcq_summary_structured(ct_mcq.noi_dung_tra_loi, goal_type=goal_type)
+                if parsed_db_mcq.get('questions'):
+                    raw_mcq_details = parsed_db_mcq['questions']
+                    mcq_correct = parsed_db_mcq.get('correct_count', 0)
+                    mcq_wrong = parsed_db_mcq.get('wrong_count', 0)
+                    mcq_blank = parsed_db_mcq.get('blank_count', 0)
+                    mcq_total = parsed_db_mcq.get('total_questions', 25)
+                    mcq_percentage = parsed_db_mcq.get('percentage', 0)
+
     for d in raw_mcq_details:
         idx = d.get('index', 1)
         if not d.get('audio_file') and (d.get('category') == 'Nghe hiểu' or 'LISTENING' in str(d.get('category')).upper() or idx <= 5):
@@ -762,11 +794,11 @@ def test_room(request):
         'mcq_submitted': mcq_submitted,
         'mcq_score': mcq_score,
         'mcq_details': raw_mcq_details,
-        'mcq_correct': request.session.get('placement_mcq_correct', 0),
-        'mcq_wrong': request.session.get('placement_mcq_wrong', 0),
-        'mcq_blank': request.session.get('placement_mcq_blank', 0),
-        'mcq_total': request.session.get('placement_mcq_total', 25),
-        'mcq_percentage': request.session.get('placement_mcq_percentage', 0),
+        'mcq_correct': mcq_correct,
+        'mcq_wrong': mcq_wrong,
+        'mcq_blank': mcq_blank,
+        'mcq_total': mcq_total,
+        'mcq_percentage': mcq_percentage,
         'cau_hoi_mcq': cau_hoi_mcq,
         'goal_type': goal_type,
         'target_detail': target_detail,
