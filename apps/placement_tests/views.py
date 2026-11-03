@@ -1868,7 +1868,7 @@ def test_result(request):
                 teacher_mcq_comment = b.nhan_xet_gv
 
     # ─── BỔ SUNG DỮ LIỆU ĐỐI SOÁT TRẮC NGHIỆM & BÀI LÀM CHO TRANG KẾT QUẢ ───
-    completed_summary = build_completed_summary(selected_phien) if selected_phien else {}
+    completed_summary = _extract_phien_summary(selected_phien) if selected_phien else {}
 
     raw_mcq_details = request.session.get('placement_mcq_details', [])
     mcq_correct = request.session.get('placement_mcq_correct', 0)
@@ -1917,7 +1917,188 @@ def test_result(request):
     else:
         ring_pct = round(min(100.0, max(0.0, float(total))), 1)
 
+    # ─── KIỂM TRA HỒ SƠ XẾP LỚP & THÔNG TIN KHÓA HỌC CHUẨN BPMN ───
+    has_assigned_class = False
+    assigned_lop_hoc = None
+    assigned_khoa_hoc = None
+    assigned_phieu_hp = None
+
+    if kh:
+        from apps.billing.models import PhieuHocPhi
+        from apps.classes.models import GhiDanh
+        ghi_danh = GhiDanh.objects.filter(
+            ho_so_tu_van__khach_hang=kh
+        ).exclude(trang_thai=GhiDanh.TrangThai.HUY).select_related(
+            'lop_hoc', 'lop_hoc__khoa_hoc'
+        ).first()
+
+        if ghi_danh and ghi_danh.lop_hoc:
+            has_assigned_class = True
+            assigned_lop_hoc = ghi_danh.lop_hoc
+            assigned_khoa_hoc = ghi_danh.lop_hoc.khoa_hoc
+            assigned_phieu_hp = PhieuHocPhi.objects.filter(ghi_danh=ghi_danh).first()
+
+    khoa_id = goal_placement.get('khoa_id')
+    khoa_db = KhoaHoc.objects.filter(id=khoa_id).first() if khoa_id else None
+    if not khoa_db and goal_placement.get('khoa_de_xuat'):
+        clean_name = goal_placement['khoa_de_xuat'].split('(')[0].strip()
+        khoa_db = KhoaHoc.objects.filter(ten_khoa__icontains=clean_name).first() or KhoaHoc.objects.first()
+
+    course_fee_vnd = f"{int(khoa_db.hoc_phi):,} ₫".replace(',', '.') if (khoa_db and khoa_db.hoc_phi) else "4.500.000 ₫"
+    course_sessions_text = f"{khoa_db.so_buoi} buổi (khoảng 3 tháng)" if (khoa_db and khoa_db.so_buoi) else "30 buổi (khoảng 3 tháng)"
+    course_name_display = khoa_db.ten_khoa if khoa_db else goal_placement.get('khoa_de_xuat', 'Lớp Pre-IELTS Foundation')
+    course_level_display = khoa_db.trinh_do if khoa_db else goal_placement.get('cefr', 'A2 – B1')
+
+    g_norm = (goal_type or 'IELTS').upper()
+    if 'IELTS' in g_norm:
+        roadmap_phases = [
+            {
+                'phase': 'Giai đoạn 1',
+                'weeks': 'Tuần 1 – 4',
+                'title': 'Củng cố nền tảng ngữ âm & ngữ pháp học thuật',
+                'bullets': [
+                    'Chuẩn hóa ngữ âm IPA 44 âm quốc tế, quy tắc trọng âm và ngữ điệu tự nhiên.',
+                    'Củng cố hệ thống ngữ pháp cốt lõi: 12 thì, câu phức, mệnh đề quan hệ và thể bị động.',
+                    'Nhập môn kỹ năng Nghe Keyword và Đọc hiểu Skimming & Scanning căn bản.'
+                ]
+            },
+            {
+                'phase': 'Giai đoạn 2',
+                'weeks': 'Tuần 5 – 8',
+                'title': 'Mở rộng từ vựng chuyên sâu & Chiến thuật làm bài',
+                'bullets': [
+                    'Xây dựng 600+ từ vựng học thuật theo chủ đề (Education, Tech, Environment, Society).',
+                    'Luyện giải quyết các dạng câu hỏi Nghe Section 1-2 và Đọc Passage 1 trong đề thi.',
+                    'Phương pháp miêu tả số liệu, biểu đồ và bố cục đoạn văn chuẩn mực Task 1.'
+                ]
+            },
+            {
+                'phase': 'Giai đoạn 3',
+                'weeks': 'Tuần 9 – 12',
+                'title': 'Ứng dụng thực chiến Viết - Nói & Luyện đề chuẩn',
+                'bullets': [
+                    'Xây dựng luận điểm sắc bén và cấu trúc 4 đoạn cho bài luận Writing Task 2.',
+                    'Thực hành phản xạ phòng thi Speaking Part 1 & 2 theo Rubric 4 tiêu chí chấm điểm.',
+                    'Thi thử Mock-test cuối khóa, đánh giá bứt phá Band điểm và cấp chứng nhận hoàn thành.'
+                ]
+            }
+        ]
+    elif 'DAU_RA' in g_norm or 'DH' in g_norm or 'VSTEP' in g_norm:
+        roadmap_phases = [
+            {
+                'phase': 'Giai đoạn 1',
+                'weeks': 'Tuần 1 – 4',
+                'title': 'Khôi phục ngữ pháp và từ vựng chuẩn B1/B2',
+                'bullets': [
+                    'Chuẩn hóa cấu trúc câu, từ vựng học thuật theo Khung 6 bậc.',
+                    'Luyện phản xạ nhận diện ý chính bài đọc và câu hỏi bẫy.',
+                    'Nghe hiểu hội thoại đời sống và chỉ dẫn học đường.'
+                ]
+            },
+            {
+                'phase': 'Giai đoạn 2',
+                'weeks': 'Tuần 5 – 8',
+                'title': 'Chiến thuật giải quyết 4 phần thi Nghe & Đọc',
+                'bullets': [
+                    'Kỹ thuật phân bổ thời gian và quét từ khóa bài Đọc hiểu dài.',
+                    'Luyện nghe chọn ý chính Section 2 & 3 của VSTEP.',
+                    'Thực hành viết thư trang trọng/thân mật (Writing Task 1).'
+                ]
+            },
+            {
+                'phase': 'Giai đoạn 3',
+                'weeks': 'Tuần 9 – 12',
+                'title': 'Thực hành Viết luận & Nói theo format Bộ GD&ĐT',
+                'bullets': [
+                    'Kỹ thuật viết luận 250 từ chuẩn bố cục luận điểm VSTEP.',
+                    'Luyện 3 phần thi Nói: Tương tác xã hội, Thảo luận giải pháp, Phát triển chủ đề.',
+                    'Thi thử trên máy tính đúng chuẩn phần mềm thi VSTEP thực tế.'
+                ]
+            }
+        ]
+    elif 'GIAO_TIEP' in g_norm:
+        roadmap_phases = [
+            {
+                'phase': 'Giai đoạn 1',
+                'weeks': 'Tuần 1 – 4',
+                'title': 'Chuẩn hóa phát âm & Phản xạ đời thường',
+                'bullets': [
+                    'Chỉnh khẩu hình miệng, nối âm, nuốt âm chuẩn giọng Mỹ.',
+                    'Phản xạ giao tiếp tự nhiên: Chào hỏi, giới thiệu bản thân và sở thích.',
+                    'Vượt qua rào cản ngại nói, hình thành tư duy nói tiếng Anh trực tiếp.'
+                ]
+            },
+            {
+                'phase': 'Giai đoạn 2',
+                'weeks': 'Tuần 5 – 8',
+                'title': 'Tiếng Anh Công sở & Xử lý công việc',
+                'bullets': [
+                    'Viết email chuyên nghiệp, trao đổi đối tác và báo cáo công việc.',
+                    'Đàm thoại qua điện thoại, họp nhóm và thảo luận kế hoạch.',
+                    'Xử lý tình huống phát sinh và giao tiếp lịch thiệp nơi công sở.'
+                ]
+            },
+            {
+                'phase': 'Giai đoạn 3',
+                'weeks': 'Tuần 9 – 12',
+                'title': 'Thuyết trình dự án & Đàm phán thương lượng',
+                'bullets': [
+                    'Kỹ năng thuyết trình trước đám đông bằng tiếng Anh cuốn hút.',
+                    'Nghệ thuật thương lượng, đàm phán hợp đồng và bảo vệ quan điểm.',
+                    'Thực hành phỏng vấn xin việc và mô phỏng môi trường làm việc quốc tế.'
+                ]
+            }
+        ]
+    else:
+        roadmap_phases = [
+            {
+                'phase': 'Giai đoạn 1',
+                'weeks': 'Tuần 1 – 4',
+                'title': 'Khởi động từ con số 0 & Đập tan sợ hãi',
+                'bullets': [
+                    'Bảng phiên âm quốc tế IPA, đánh vần và đọc chuẩn từng từ.',
+                    'Nạp 300 từ vựng căn bản thông dụng nhất trong cuộc sống.',
+                    'Làm quen cách phát âm chuẩn và các câu chào hỏi căn bản.'
+                ]
+            },
+            {
+                'phase': 'Giai đoạn 2',
+                'weeks': 'Tuần 5 – 8',
+                'title': 'Xây dựng cấu trúc câu & Ngữ pháp căn bản',
+                'bullets': [
+                    'Quy tắc ghép câu đơn: Khẳng định, phủ định và câu hỏi.',
+                    'Cách sử dụng các thì cơ bản trong tiếng Anh mà không bị nhầm lẫn.',
+                    'Luyện nghe các đoạn hội thoại ngắn, tốc độ chậm có phụ đề.'
+                ]
+            },
+            {
+                'phase': 'Giai đoạn 3',
+                'weeks': 'Tuần 9 – 12',
+                'title': 'Tự tin giao tiếp và sẵn sàng bứt phá',
+                'bullets': [
+                    'Ứng dụng hội thoại vào 15 tình huống thực tế thường gặp.',
+                    'Phản xạ đặt và trả lời câu hỏi mượt mà, không cần dịch nhẩm.',
+                    'Tốt nghiệp cấp độ nền tảng, sẵn sàng chuyển tiếp lên lớp luyện thi.'
+                ]
+            }
+        ]
+
+    course_roadmap_info = {
+        'name': course_name_display,
+        'level': course_level_display,
+        'fee': course_fee_vnd,
+        'sessions': course_sessions_text,
+        'schedule_hint': '3 buổi/tuần · 90 - 120 phút/buổi',
+        'target_output': f"Bứt phá lên {target_detail or 'Band 4.5 - 5.5+'}" if 'IELTS' in g_norm else f"Đạt chuẩn {course_level_display}",
+        'phases': roadmap_phases,
+    }
+
     context = {
+        'has_assigned_class': has_assigned_class,
+        'assigned_lop_hoc': assigned_lop_hoc,
+        'assigned_khoa_hoc': assigned_khoa_hoc,
+        'assigned_phieu_hp': assigned_phieu_hp,
+        'course_roadmap_info': course_roadmap_info,
         'completed_summary': completed_summary,
         'mcq_details': raw_mcq_details,
         'mcq_correct': mcq_correct,
