@@ -46,6 +46,31 @@
   .accordion-chevron {
     transition: transform 0.2s ease;
   }
+
+  /* Review Submitted Tabs */
+  .review-tab-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1.5px solid #E2E8F0;
+    background: #FFFFFF;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .review-tab-btn.active {
+    background: #0F172A;
+    color: #FFFFFF;
+    border-color: #0F172A;
+  }
+  .review-tab-btn:hover:not(.active) {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+  }
   @media (max-width: 860px) {
     .result-grid-top,
     .rubric-grid {
@@ -72,7 +97,7 @@
       </p>
     </div>
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-      <a href="{% url 'placement_tests:test_room' %}#review-submitted-area" class="btn btn-outline" style="font-size: 12.5px; font-weight: 600; padding: 6px 14px; border-color: #FDBA74; color: var(--accent-orange); background: #FFF7ED; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+      <a href="#review-answers-section" class="btn btn-outline" style="font-size: 12.5px; font-weight: 600; padding: 6px 14px; border-color: #FDBA74; color: var(--accent-orange); background: #FFF7ED; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
         <i class="fa-solid fa-list-check"></i> Xem lại bài làm &amp; đáp án
       </a>
       {% if is_teacher_approved %}
@@ -398,6 +423,261 @@
   </div>
 </details>
 
+<!-- ─── 4. KHU VỰC ĐỐI SOÁT & XEM LẠI BÀI THI ĐÃ NỘP (READ-ONLY) ─── -->
+  <div class="card" id="review-answers-section" style="padding: 22px 24px; margin-bottom: 24px; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1.5px solid var(--border-color);">
+      <div>
+        <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-list-check" style="color: var(--accent-orange);"></i>
+          Đối soát lại bài làm &amp; đáp án chi tiết
+        </div>
+        <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+          Xem lại toàn bộ câu trả lời trắc nghiệm, bài viết và phần nói đã nộp vào hệ thống.
+        </div>
+      </div>
+
+      <!-- Tab switcher xem lại: 3 Tabs (Trắc nghiệm, Viết, Nói) -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button type="button" class="review-tab-btn active" id="btn-rtab-mcq" onclick="switchReviewTab('mcq')">
+          <i class="fa-solid fa-circle-check"></i> Phần 1 · Trắc nghiệm ({{ completed_summary.mcq_score|default:0 }}/40đ)
+        </button>
+        <button type="button" class="review-tab-btn" id="btn-rtab-writing" onclick="switchReviewTab('writing')">
+          <i class="fa-solid fa-pen-nib"></i> Phần 2 · Viết ({% if completed_summary.writing_status == 'CHUA_LAM' or completed_summary.writing_score is None %}--{% else %}{{ completed_summary.writing_score }}{% endif %}/30đ)
+        </button>
+        <button type="button" class="review-tab-btn" id="btn-rtab-speaking" onclick="switchReviewTab('speaking')">
+          <i class="fa-solid fa-microphone"></i> Phần 3 · Nói ({% if completed_summary.speaking_status == 'CHUA_LAM' or completed_summary.speaking_score is None %}--{% else %}{{ completed_summary.speaking_score }}{% endif %}/30đ)
+        </button>
+      </div>
+    </div>
+
+    <!-- ─── SUB-TAB 1: ĐỐI SOÁT TRẮC NGHIỆM ─── -->
+    <div id="review-panel-mcq" class="review-panel-content">
+      <!-- Thống kê 4 ô ngang gọn gàng, không màu nền lòe loẹt -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;">
+        <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Tổng điểm</div>
+          <div style="font-size: 20px; font-weight: 800; color: #0F172A; margin-top: 2px;">{{ completed_summary.mcq_score|default:0 }}<span style="font-size: 12px; font-weight: 500; color: var(--text-muted);"> / 40đ</span></div>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 600; color: #166534; text-transform: uppercase;">Số câu đúng</div>
+          <div style="font-size: 20px; font-weight: 800; color: #166534; margin-top: 2px;">{{ mcq_correct|default:0 }}<span style="font-size: 12px; font-weight: 500; color: var(--text-muted);"> / 25</span></div>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 600; color: #DC2626; text-transform: uppercase;">Số câu sai</div>
+          <div style="font-size: 20px; font-weight: 800; color: #DC2626; margin-top: 2px;">{{ mcq_wrong|default:0 }}<span style="font-size: 12px; font-weight: 500; color: var(--text-muted);"> / 25</span></div>
+        </div>
+        <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 600; color: #D97706; text-transform: uppercase;">Bỏ trống</div>
+          <div style="font-size: 20px; font-weight: 800; color: #D97706; margin-top: 2px;">{{ mcq_blank|default:0 }}<span style="font-size: 12px; font-weight: 500; color: var(--text-muted);"> / 25</span></div>
+        </div>
+      </div>
+
+      <!-- Dòng mô tả chuẩn và bộ lọc -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+        <div style="font-size: 12.5px; color: var(--text-muted);">
+          <i class="fa-solid fa-circle-info" style="color: var(--accent-orange); margin-right: 4px;"></i>
+          Hệ thống đã tự động chấm điểm. Câu bỏ trống không được tính điểm.
+        </div>
+        
+        <!-- 4 Nút Lọc: Tất cả / Sai / Bỏ trống / Đúng -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="mcq-filter-btn active" data-filter="all" onclick="filterMCQReview('all')" style="background: #0F172A; color: #FFFFFF; border: 1px solid #0F172A; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
+            Tất cả ({{ mcq_total|default:25 }})
+          </button>
+          <button type="button" class="mcq-filter-btn" data-filter="wrong" onclick="filterMCQReview('wrong')" style="background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
+            Sai ({{ mcq_wrong|default:0 }})
+          </button>
+          <button type="button" class="mcq-filter-btn" data-filter="blank" onclick="filterMCQReview('blank')" style="background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
+            Bỏ trống ({{ mcq_blank|default:0 }})
+          </button>
+          <button type="button" class="mcq-filter-btn" data-filter="correct" onclick="filterMCQReview('correct')" style="background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
+            Đúng ({{ mcq_correct|default:0 }})
+          </button>
+        </div>
+      </div>
+
+      <!-- Danh sách 25 câu hỏi (Trải tự nhiên theo trang, KHÔNG cuộn lồng) -->
+      <div id="mcq-review-items-container" style="display: flex; flex-direction: column; gap: 12px;">
+        {% for item in mcq_details %}
+          {% if item.is_correct %}
+            <!-- CÂU ĐÚNG: DETAILS GẬP GỌN -->
+            <details class="mcq-review-item" data-status="correct" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; transition: all 0.2s ease;">
+              <summary style="padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; background: #FFFFFF; list-style: none;">
+                <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 600; color: #0F172A;">
+                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span>
+                  <span>CÂU {{ item.index }} · {{ item.category }}</span>
+                  <span style="font-size: 12px; font-weight: 400; color: #64748B;">(Bấm để xem chi tiết)</span>
+                </div>
+                <span class="badge" style="background: #ECFDF5; color: #15803D; border: 1px solid #A7F3D0; font-size: 11.5px; font-weight: 600; padding: 3px 8px;">
+                  ✓ ĐÚNG (+1.6đ)
+                </span>
+              </summary>
+              <div style="padding: 14px 16px; border-top: 1px solid #F1F5F9; background: #FAFAFA;">
+                <p style="font-size: 13.5px; font-weight: 600; color: #0F172A; margin: 0 0 10px 0; line-height: 1.5;">
+                  {{ item.question_text }}
+                </p>
+
+                {% if item.audio_file %}
+                <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 12px; color: #64748B; font-weight: 500;">🎧 Nghe lại audio:</span>
+                  <audio controls preload="none" style="height: 32px; max-width: 320px;">
+                    <source src="{% static item.audio_file %}" type="audio/wav">
+                  </audio>
+                </div>
+                {% endif %}
+
+                <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px; font-size: 13px; color: #166534; font-weight: 500;">
+                  <strong>Đáp án bạn chọn &amp; chính xác:</strong> {{ item.correct_opt_text|default:item.correct_ans }}
+                </div>
+
+                {% if item.explanation %}
+                <div style="background: #FFFFFF; border-left: 3px solid #10B981; border: 1px solid #E2E8F0; border-left-width: 3px; border-radius: 4px; padding: 8px 12px; font-size: 12.5px; color: #334155; line-height: 1.55;">
+                  <span style="font-weight: 600; color: #065F46;">💡 Giải thích:</span> {{ item.explanation }}
+                </div>
+                {% endif %}
+              </div>
+            </details>
+          {% else %}
+            <!-- CÂU SAI HOẶC BỎ TRỐNG: MỞ SẴN -->
+            <div class="mcq-review-item" data-status="{% if item.is_blank %}blank{% else %}wrong{% endif %}" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);">
+                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {% if item.is_blank %}#D97706{% else %}#EF4444{% endif %}; margin-right: 6px;"></span>
+                  CÂU {{ item.index }} · {{ item.category }}
+                </div>
+                <span class="badge" style="{% if item.is_blank %}background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A;{% else %}background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA;{% endif %} font-size: 11.5px; font-weight: 600; padding: 3px 8px;">
+                  {% if item.is_blank %}BỎ TRỐNG{% else %}SAI{% endif %}
+                </span>
+              </div>
+
+              <p style="font-size: 13.5px; font-weight: 600; color: #0F172A; margin: 0 0 10px 0; line-height: 1.5;">
+                {{ item.question_text }}
+              </p>
+
+              {% if item.audio_file %}
+              <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 12px; color: #64748B; font-weight: 500;">🎧 Nghe lại audio:</span>
+                <audio controls preload="none" style="height: 32px; max-width: 320px;">
+                  <source src="{% static item.audio_file %}" type="audio/wav">
+                </audio>
+              </div>
+              {% endif %}
+
+              <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;">
+                <div style="background: {% if item.is_blank %}#FFFBEB{% else %}#FEF2F2{% endif %}; border: 1px solid {% if item.is_blank %}#FDE68A{% else %}#FECACA{% endif %}; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: {% if item.is_blank %}#92400E{% else %}#991B1B{% endif %};">
+                  <strong>Đáp án bạn chọn:</strong> {% if item.is_blank %}Bạn chưa trả lời{% else %}{{ item.user_opt_text|default:item.user_ans }}{% endif %}
+                </div>
+                <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #166534; font-weight: 500;">
+                  <strong>Đáp án chính xác:</strong> {{ item.correct_opt_text|default:item.correct_ans }}
+                </div>
+              </div>
+
+              {% if item.explanation %}
+              <div style="background: #F8FAFC; border-left: 3px solid #CBD5E1; border-radius: 0 4px 4px 0; padding: 8px 12px; font-size: 12.5px; color: #475569; line-height: 1.55;">
+                <span style="font-weight: 600; color: #334155;">💡 Giải thích:</span> {{ item.explanation }}
+              </div>
+              {% endif %}
+            </div>
+          {% endif %}
+        {% empty %}
+          <div style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 13.5px;">
+            <i class="fa-solid fa-list-check" style="font-size: 24px; color: #CBD5E1; margin-bottom: 8px;"></i>
+            <div>Không có dữ liệu câu hỏi trắc nghiệm đối soát.</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ─── SUB-TAB 2: XEM LẠI BÀI VIẾT (WRITING) ─── -->
+    <div id="review-panel-writing" class="review-panel-content" style="display: none;">
+      <!-- Task 1 Review -->
+      <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div style="font-size: 14.5px; font-weight: 700; color: var(--text-primary);">
+            <i class="fa-solid fa-chart-line" style="color: #EA580C; margin-right: 6px;"></i> Task 1: Báo cáo số liệu biểu đồ học thuật (Academic Report on Chart)
+          </div>
+          <span class="badge" style="background: #F8FAFC; border: 1px solid #E2E8F0; color: #475569; font-weight: 600;">
+            Yêu cầu: Tối thiểu 150 từ
+          </span>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-bottom: 14px; font-size: 13.5px; line-height: 1.6; color: #1E293B;">
+          <strong>Đề bài:</strong> The chart below shows the number of films produced by five countries in three years. Summarize the information by selecting and reporting the main features, and make comparisons where relevant.
+          <div style="margin-top: 10px; text-align: center;">
+            <img src="{% static 'images/ielts_task1_films_chart.png' %}" alt="Films Chart" style="max-width: 100%; height: auto; max-height: 320px; border-radius: 6px; border: 1px solid #E2E8F0;">
+          </div>
+        </div>
+
+        <div style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+          Bài làm của bạn:
+        </div>
+        {% if completed_summary.task1_submitted %}
+          <div style="background: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.7; color: #0F172A; white-space: pre-wrap;">{{ completed_summary.task1_submitted }}</div>
+        {% else %}
+          <div style="background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 8px; padding: 16px; font-size: 13px; color: #64748B; text-align: center;">
+            <i class="fa-regular fa-file-lines" style="margin-right: 6px;"></i> Học viên chưa nhập bài viết Task 1.
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Task 2 Review -->
+      <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 10px; padding: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div style="font-size: 14.5px; font-weight: 700; color: var(--text-primary);">
+            <i class="fa-solid fa-pen-nib" style="color: #EA580C; margin-right: 6px;"></i> Task 2: Viết bài luận Academic Essay
+          </div>
+          <span class="badge" style="background: #F8FAFC; border: 1px solid #E2E8F0; color: #475569; font-weight: 600;">
+            Yêu cầu: 180 – 220 từ
+          </span>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-bottom: 14px; font-size: 13.5px; line-height: 1.6; color: #1E293B;">
+          <strong>Đề bài:</strong> In recent years, remote learning and hybrid working have become widespread across many countries. Some people believe this shift offers greater flexibility, while others argue that face-to-face interaction is indispensable for quality education and collaboration. Present your view on this topic and support your reasoning with examples. Write between <strong>180 and 220 words</strong>.
+        </div>
+
+        <div style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+          Bài làm của bạn:
+        </div>
+        {% if completed_summary.task2_submitted %}
+          <div style="background: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.7; color: #0F172A; white-space: pre-wrap;">{{ completed_summary.task2_submitted }}</div>
+        {% else %}
+          <div style="background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 8px; padding: 16px; font-size: 13px; color: #64748B; text-align: center;">
+            <i class="fa-regular fa-file-lines" style="margin-right: 6px;"></i> Học viên chưa nhập bài viết Task 2.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ─── SUB-TAB 3: XEM LẠI PHẦN NÓI (SPEAKING) ─── -->
+    <div id="review-panel-speaking" class="review-panel-content" style="display: none;">
+      {% if completed_summary.has_speaking %}
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #065F46; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-circle-check" style="color: #10B981; font-size: 16px;"></i>
+            <span>Đã ghi nhận dữ liệu thu âm Speaking của học viên. Nội dung trích xuất tự động qua Speech-to-Text:</span>
+          </div>
+          <div style="background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 16px; font-size: 13.5px; line-height: 1.7; color: #0F172A; white-space: pre-wrap;">{{ completed_summary.speaking_submitted }}</div>
+        </div>
+      {% else %}
+        <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 18px 20px; color: #92400E; display: flex; align-items: flex-start; gap: 14px;">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; margin-top: 2px;">
+            <i class="fa-solid fa-microphone-slash"></i>
+          </div>
+          <div>
+            <div style="font-weight: 700; font-size: 14.5px; color: #B45309; margin-bottom: 4px;">
+              Chưa thực hiện thu âm Speaking
+            </div>
+            <div style="font-size: 13px; color: #92400E; line-height: 1.5;">
+              Học viên chưa thực hiện thu âm phần Speaking trong bài kiểm tra này. Giảng viên sẽ trao đổi trực tiếp trong buổi phỏng vấn xếp lớp nếu cần đánh giá phát âm chi tiết.
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+
 {% else %}
 <!-- ─── EMPTY STATE: CHƯA CÓ KẾT QUẢ KIỂM TRA ──────────────── -->
 <div class="page-header" style="margin-bottom: 24px;">
@@ -432,6 +712,46 @@
 
 {% block extra_js %}
 <script>
+
+  // ─── ĐIỀU HƯỚNG TAB XEM LẠI BÀI ĐÃ NỘP (TRẮC NGHIỆM / VIẾT / NÓI) ───
+  function switchReviewTab(tab) {
+    document.querySelectorAll('.review-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.review-panel-content').forEach(p => p.style.display = 'none');
+    const activeBtn = document.getElementById(`btn-rtab-${tab}`);
+    if (activeBtn) activeBtn.classList.add('active');
+    const activePanel = document.getElementById(`review-panel-${tab}`);
+    if (activePanel) activePanel.style.display = 'block';
+  }
+
+  // ─── BỘ LỌC CÂU HỎI TRẮC NGHIỆM (TẤT CẢ / SAI / BỎ TRỐNG / ĐÚNG) ───
+  function filterMCQReview(filterType) {
+    document.querySelectorAll('.mcq-filter-btn').forEach(btn => {
+      if (btn.getAttribute('data-filter') === filterType) {
+        btn.style.background = '#0F172A';
+        btn.style.color = '#FFFFFF';
+        btn.style.borderColor = '#0F172A';
+        btn.classList.add('active');
+      } else {
+        btn.style.background = '#FFFFFF';
+        btn.style.color = '#475569';
+        btn.style.borderColor = '#CBD5E1';
+        btn.classList.remove('active');
+      }
+    });
+
+    const items = document.querySelectorAll('#mcq-review-items-container .mcq-review-item');
+    items.forEach(el => {
+      const status = el.getAttribute('data-status');
+      if (filterType === 'all') {
+        el.style.display = 'block';
+      } else if (filterType === status) {
+        el.style.display = 'block';
+      } else {
+        el.style.display = 'none';
+      }
+    });
+  }
+
   async function requestTeacherReview(phienId) {
     if (!confirm('Bạn có muốn gửi phiên làm bài #' + phienId + ' sang cho Giảng viên chuyên môn thẩm định không?')) {
       return;

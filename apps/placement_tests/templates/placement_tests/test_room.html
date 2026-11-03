@@ -415,6 +415,36 @@
     font-weight: 700;
   }
 
+  /* Nút nộp bài Writing & Speaking: Cam đặc khi hoạt động, xám rõ ràng khi bị khóa */
+  #btn-submit-combined {
+    background: #EA580C !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    padding: 10px 28px !important;
+    border-radius: 8px !important;
+    font-size: 14.5px !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25) !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    opacity: 1 !important;
+    transition: all 0.2s ease !important;
+  }
+  #btn-submit-combined:hover:not(:disabled) {
+    background: #C2410C !important;
+    box-shadow: 0 4px 14px rgba(194, 65, 12, 0.35) !important;
+  }
+  #btn-submit-combined:disabled {
+    background: #94A3B8 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+  }
+
 </style>
 {% endblock %}
 
@@ -517,8 +547,8 @@
 
       <!-- Nút xem chi tiết bảng điểm -->
       <div>
-        <a href="{% url 'placement_tests:test_result' %}" class="btn btn-primary" style="font-size: 13.5px; font-weight: 600; padding: 9px 18px;">
-          <i class="fa-solid fa-chart-column"></i> Xem chi tiết bảng điểm
+        <a href="{% url 'placement_tests:test_result' %}#review-answers-section" class="btn" style="font-size: 13.5px; font-weight: 700; padding: 9px 20px; background: #EA580C; color: #FFFFFF; border: none; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25);">
+          <i class="fa-solid fa-chart-pie"></i> Xem chi tiết bảng điểm &amp; đáp án &rarr;
         </a>
       </div>
     </div>
@@ -702,259 +732,26 @@
     </div>
   </div>
 
-  <!-- ─── 4. KHU VỰC ĐỐI SOÁT & XEM LẠI BÀI THI ĐÃ NỘP (READ-ONLY) ─── -->
-  <div class="card" id="review-submitted-area" style="padding: 22px 24px; margin-bottom: 24px; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
-    
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1.5px solid var(--border-color);">
-      <div>
-        <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-          <i class="fa-solid fa-list-check" style="color: var(--accent-orange);"></i>
-          Đối soát lại bài làm đã nộp
-        </div>
-        <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
-          Xem lại toàn bộ câu trả lời trắc nghiệm, bài viết và phần nói đã nộp vào hệ thống.
-        </div>
+  <!-- ─── 4. ĐIỀU HƯỚNG SANG TRANG KẾT QUẢ ĐỂ XEM CHI TIẾT BẢNG ĐIỂM & ĐÁP ÁN ─── -->
+  <div class="card" style="padding: 24px 28px; margin-bottom: 24px; background: linear-gradient(135deg, #FFFDFB 0%, #FFF7ED 100%); border: 1.5px solid #FED7AA; border-radius: var(--radius-lg); box-shadow: 0 4px 16px rgba(234, 88, 12, 0.08); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+    <div style="max-width: 560px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 800; color: #9A3412; margin-bottom: 4px;">
+        <i class="fa-solid fa-clipboard-check" style="color: #EA580C; font-size: 18px;"></i>
+        <span>Xem toàn bộ Bảng điểm &amp; Chi tiết Đáp án bài làm</span>
       </div>
-
-      <!-- Tab switcher xem lại: 3 Tabs (Trắc nghiệm, Viết, Nói) -->
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <button type="button" class="review-tab-btn active" id="btn-rtab-mcq" onclick="switchReviewTab('mcq')">
-          <i class="fa-solid fa-circle-check"></i> Phần 1 · Trắc nghiệm ({{ completed_summary.mcq_score|default:0 }}/40đ)
-        </button>
-        <button type="button" class="review-tab-btn" id="btn-rtab-writing" onclick="switchReviewTab('writing')">
-          <i class="fa-solid fa-pen-nib"></i> Phần 2 · Viết ({% if completed_summary.writing_status == 'CHUA_LAM' or completed_summary.writing_score is None %}--{% else %}{{ completed_summary.writing_score }}{% endif %}/30đ)
-        </button>
-        <button type="button" class="review-tab-btn" id="btn-rtab-speaking" onclick="switchReviewTab('speaking')">
-          <i class="fa-solid fa-microphone"></i> Phần 3 · Nói ({% if completed_summary.speaking_status == 'CHUA_LAM' or completed_summary.speaking_score is None %}--{% else %}{{ completed_summary.speaking_score }}{% endif %}/30đ)
-        </button>
-      </div>
+      <p style="font-size: 13.5px; color: #475569; margin: 0; line-height: 1.6;">
+        Hệ thống đã lưu bài thi của bạn. Bấm để chuyển sang trang <strong>Kết quả</strong> tra cứu bảng điểm chi tiết, giải thích 25 câu trắc nghiệm, bài viết và phần nói.
+      </p>
     </div>
-
-    <!-- ─── SUB-TAB 1: ĐỐI SOÁT TRẮC NGHIỆM ─── -->
-    <div id="review-panel-mcq" class="review-panel-content">
-      <!-- Thống kê 4 ô ngang gọn gàng, không màu nền lòe loẹt -->
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;">
-        <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; text-align: center;">
-          <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Tổng điểm</div>
-          <div style="font-size: 20px; font-weight: 800; color: #0F172A; margin-top: 2px;">{{ completed_summary.mcq_score|default:0 }}<span style="font-size: 12px; font-weight: 500; color: var(--text-muted);"> / 40đ</span></div>
-        </div>
-        <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; text-align: center;">
-          <div style="font-size: 11px; font-weight: 600; color: #166534; text-transform: uppercase;">Số câu đúng</div>
-          <div style="font-size: 20px; font-weight: 800; color: #166534; margin-top: 2px;">{{ mcq_correct|default:0 }}<span style="font-size: 12px; font-weight: 500; color: var(--text-muted);"> / 25</span></div>
-        </div>
-        <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; text-align: center;">
-          <div style="font-size: 11px; font-weight: 600; color: #DC2626; text-transform: uppercase;">Số câu sai</div>
-          <div style="font-size: 20px; font-weight: 800; color: #DC2626; margin-top: 2px;">{{ mcq_wrong|default:0 }}<span style="font-size: 12px; font-weight: 500; color: var(--text-muted);"> / 25</span></div>
-        </div>
-        <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; text-align: center;">
-          <div style="font-size: 11px; font-weight: 600; color: #D97706; text-transform: uppercase;">Bỏ trống</div>
-          <div style="font-size: 20px; font-weight: 800; color: #D97706; margin-top: 2px;">{{ mcq_blank|default:0 }}<span style="font-size: 12px; font-weight: 500; color: var(--text-muted);"> / 25</span></div>
-        </div>
-      </div>
-
-      <!-- Dòng mô tả chuẩn và bộ lọc -->
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
-        <div style="font-size: 12.5px; color: var(--text-muted);">
-          <i class="fa-solid fa-circle-info" style="color: var(--accent-orange); margin-right: 4px;"></i>
-          Hệ thống đã tự động chấm điểm. Câu bỏ trống không được tính điểm.
-        </div>
-        
-        <!-- 4 Nút Lọc: Tất cả / Sai / Bỏ trống / Đúng -->
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" class="mcq-filter-btn active" data-filter="all" onclick="filterMCQReview('all')" style="background: #0F172A; color: #FFFFFF; border: 1px solid #0F172A; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
-            Tất cả ({{ mcq_total|default:25 }})
-          </button>
-          <button type="button" class="mcq-filter-btn" data-filter="wrong" onclick="filterMCQReview('wrong')" style="background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
-            Sai ({{ mcq_wrong|default:0 }})
-          </button>
-          <button type="button" class="mcq-filter-btn" data-filter="blank" onclick="filterMCQReview('blank')" style="background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
-            Bỏ trống ({{ mcq_blank|default:0 }})
-          </button>
-          <button type="button" class="mcq-filter-btn" data-filter="correct" onclick="filterMCQReview('correct')" style="background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
-            Đúng ({{ mcq_correct|default:0 }})
-          </button>
-        </div>
-      </div>
-
-      <!-- Danh sách 25 câu hỏi (Trải tự nhiên theo trang, KHÔNG cuộn lồng) -->
-      <div id="mcq-review-items-container" style="display: flex; flex-direction: column; gap: 12px;">
-        {% for item in mcq_details %}
-          {% if item.is_correct %}
-            <!-- CÂU ĐÚNG: DETAILS GẬP GỌN -->
-            <details class="mcq-review-item" data-status="correct" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; transition: all 0.2s ease;">
-              <summary style="padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; background: #FFFFFF; list-style: none;">
-                <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 600; color: #0F172A;">
-                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span>
-                  <span>CÂU {{ item.index }} · {{ item.category }}</span>
-                  <span style="font-size: 12px; font-weight: 400; color: #64748B;">(Bấm để xem chi tiết)</span>
-                </div>
-                <span class="badge" style="background: #ECFDF5; color: #15803D; border: 1px solid #A7F3D0; font-size: 11.5px; font-weight: 600; padding: 3px 8px;">
-                  ✓ ĐÚNG (+1.6đ)
-                </span>
-              </summary>
-              <div style="padding: 14px 16px; border-top: 1px solid #F1F5F9; background: #FAFAFA;">
-                <p style="font-size: 13.5px; font-weight: 600; color: #0F172A; margin: 0 0 10px 0; line-height: 1.5;">
-                  {{ item.question_text }}
-                </p>
-
-                {% if item.audio_file %}
-                <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 12px; color: #64748B; font-weight: 500;">🎧 Nghe lại audio:</span>
-                  <audio controls preload="none" style="height: 32px; max-width: 320px;">
-                    <source src="{% static item.audio_file %}" type="audio/wav">
-                  </audio>
-                </div>
-                {% endif %}
-
-                <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px; font-size: 13px; color: #166534; font-weight: 500;">
-                  <strong>Đáp án bạn chọn &amp; chính xác:</strong> {{ item.correct_opt_text|default:item.correct_ans }}
-                </div>
-
-                {% if item.explanation %}
-                <div style="background: #FFFFFF; border-left: 3px solid #10B981; border: 1px solid #E2E8F0; border-left-width: 3px; border-radius: 4px; padding: 8px 12px; font-size: 12.5px; color: #334155; line-height: 1.55;">
-                  <span style="font-weight: 600; color: #065F46;">💡 Giải thích:</span> {{ item.explanation }}
-                </div>
-                {% endif %}
-              </div>
-            </details>
-          {% else %}
-            <!-- CÂU SAI HOẶC BỎ TRỐNG: MỞ SẴN -->
-            <div class="mcq-review-item" data-status="{% if item.is_blank %}blank{% else %}wrong{% endif %}" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 16px;">
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);">
-                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {% if item.is_blank %}#D97706{% else %}#EF4444{% endif %}; margin-right: 6px;"></span>
-                  CÂU {{ item.index }} · {{ item.category }}
-                </div>
-                <span class="badge" style="{% if item.is_blank %}background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A;{% else %}background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA;{% endif %} font-size: 11.5px; font-weight: 600; padding: 3px 8px;">
-                  {% if item.is_blank %}BỎ TRỐNG{% else %}SAI{% endif %}
-                </span>
-              </div>
-
-              <p style="font-size: 13.5px; font-weight: 600; color: #0F172A; margin: 0 0 10px 0; line-height: 1.5;">
-                {{ item.question_text }}
-              </p>
-
-              {% if item.audio_file %}
-              <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 12px; color: #64748B; font-weight: 500;">🎧 Nghe lại audio:</span>
-                <audio controls preload="none" style="height: 32px; max-width: 320px;">
-                  <source src="{% static item.audio_file %}" type="audio/wav">
-                </audio>
-              </div>
-              {% endif %}
-
-              <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;">
-                <div style="background: {% if item.is_blank %}#FFFBEB{% else %}#FEF2F2{% endif %}; border: 1px solid {% if item.is_blank %}#FDE68A{% else %}#FECACA{% endif %}; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: {% if item.is_blank %}#92400E{% else %}#991B1B{% endif %};">
-                  <strong>Đáp án bạn chọn:</strong> {% if item.is_blank %}Bạn chưa trả lời{% else %}{{ item.user_opt_text|default:item.user_ans }}{% endif %}
-                </div>
-                <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #166534; font-weight: 500;">
-                  <strong>Đáp án chính xác:</strong> {{ item.correct_opt_text|default:item.correct_ans }}
-                </div>
-              </div>
-
-              {% if item.explanation %}
-              <div style="background: #F8FAFC; border-left: 3px solid #CBD5E1; border-radius: 0 4px 4px 0; padding: 8px 12px; font-size: 12.5px; color: #475569; line-height: 1.55;">
-                <span style="font-weight: 600; color: #334155;">💡 Giải thích:</span> {{ item.explanation }}
-              </div>
-              {% endif %}
-            </div>
-          {% endif %}
-        {% empty %}
-          <div style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 13.5px;">
-            <i class="fa-solid fa-list-check" style="font-size: 24px; color: #CBD5E1; margin-bottom: 8px;"></i>
-            <div>Không có dữ liệu câu hỏi trắc nghiệm đối soát.</div>
-          </div>
-        {% endfor %}
-      </div>
+    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+      <a href="{% url 'placement_tests:test_result' %}#review-answers-section" class="btn" style="background: #EA580C; color: #FFFFFF; font-weight: 700; padding: 11px 22px; border-radius: 8px; font-size: 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25);">
+        <span>Xem bảng điểm &amp; đáp án chi tiết</span>
+        <i class="fa-solid fa-arrow-right"></i>
+      </a>
+      <a href="{% url 'users:student_dashboard' %}" class="btn btn-outline" style="background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; font-weight: 600; padding: 11px 18px; border-radius: 8px; font-size: 13.5px; text-decoration: none;">
+        Về Dashboard
+      </a>
     </div>
-
-    <!-- ─── SUB-TAB 2: XEM LẠI BÀI VIẾT (WRITING) ─── -->
-    <div id="review-panel-writing" class="review-panel-content" style="display: none;">
-      <!-- Task 1 Review -->
-      <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <div style="font-size: 14.5px; font-weight: 700; color: var(--text-primary);">
-            ✍️ Task 1: Báo cáo số liệu biểu đồ học thuật (Academic Report on Chart)
-          </div>
-          <span class="badge" style="background: #F8FAFC; border: 1px solid #E2E8F0; color: #475569; font-weight: 600;">
-            Yêu cầu: Tối thiểu 150 từ
-          </span>
-        </div>
-
-        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-bottom: 14px; font-size: 13.5px; line-height: 1.6; color: #1E293B;">
-          <strong>Đề bài:</strong> The chart below shows the number of films produced by five countries in three years. Summarize the information by selecting and reporting the main features, and make comparisons where relevant.
-          <div style="margin-top: 10px; text-align: center;">
-            <img src="{% static 'images/ielts_task1_films_chart.png' %}" alt="Films Chart" style="max-width: 100%; height: auto; max-height: 320px; border-radius: 6px; border: 1px solid #E2E8F0;">
-          </div>
-        </div>
-
-        <div style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
-          Bài làm của bạn:
-        </div>
-        {% if completed_summary.task1_submitted %}
-          <div style="background: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.7; color: #0F172A; white-space: pre-wrap;">{{ completed_summary.task1_submitted }}</div>
-        {% else %}
-          <div style="background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 8px; padding: 16px; font-size: 13px; color: #64748B; text-align: center;">
-            <i class="fa-regular fa-file-lines" style="margin-right: 6px;"></i> Học viên chưa nhập bài viết Task 1.
-          </div>
-        {% endif %}
-      </div>
-
-      <!-- Task 2 Review -->
-      <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 10px; padding: 18px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <div style="font-size: 14.5px; font-weight: 700; color: var(--text-primary);">
-            ✍️ Task 2: Viết bài luận Academic Essay
-          </div>
-          <span class="badge" style="background: #F8FAFC; border: 1px solid #E2E8F0; color: #475569; font-weight: 600;">
-            Yêu cầu: 180 – 220 từ
-          </span>
-        </div>
-
-        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-bottom: 14px; font-size: 13.5px; line-height: 1.6; color: #1E293B;">
-          <strong>Đề bài:</strong> In recent years, remote learning and hybrid working have become widespread across many countries. Some people believe this shift offers greater flexibility, while others argue that face-to-face interaction is indispensable for quality education and collaboration. Present your view on this topic and support your reasoning with examples. Write between <strong>180 and 220 words</strong>.
-        </div>
-
-        <div style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
-          Bài làm của bạn:
-        </div>
-        {% if completed_summary.task2_submitted %}
-          <div style="background: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.7; color: #0F172A; white-space: pre-wrap;">{{ completed_summary.task2_submitted }}</div>
-        {% else %}
-          <div style="background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 8px; padding: 16px; font-size: 13px; color: #64748B; text-align: center;">
-            <i class="fa-regular fa-file-lines" style="margin-right: 6px;"></i> Học viên chưa nhập bài viết Task 2.
-          </div>
-        {% endif %}
-      </div>
-    </div>
-
-    <!-- ─── SUB-TAB 3: XEM LẠI PHẦN NÓI (SPEAKING) ─── -->
-    <div id="review-panel-speaking" class="review-panel-content" style="display: none;">
-      {% if completed_summary.has_speaking %}
-        <div style="display: flex; flex-direction: column; gap: 14px;">
-          <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #065F46; display: flex; align-items: center; gap: 10px;">
-            <i class="fa-solid fa-circle-check" style="color: #10B981; font-size: 16px;"></i>
-            <span>Đã ghi nhận dữ liệu thu âm Speaking của học viên. Nội dung trích xuất tự động qua Speech-to-Text:</span>
-          </div>
-          <div style="background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 16px; font-size: 13.5px; line-height: 1.7; color: #0F172A; white-space: pre-wrap;">{{ completed_summary.speaking_submitted }}</div>
-        </div>
-      {% else %}
-        <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 18px 20px; color: #92400E; display: flex; align-items: flex-start; gap: 14px;">
-          <div style="width: 36px; height: 36px; border-radius: 50%; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; margin-top: 2px;">
-            <i class="fa-solid fa-microphone-slash"></i>
-          </div>
-          <div>
-            <div style="font-weight: 700; font-size: 14.5px; color: #B45309; margin-bottom: 4px;">
-              Chưa thực hiện thu âm Speaking
-            </div>
-            <div style="font-size: 13px; color: #92400E; line-height: 1.5;">
-              Học viên chưa thực hiện thu âm phần Speaking trong bài kiểm tra này. Giảng viên sẽ trao đổi trực tiếp trong buổi phỏng vấn xếp lớp nếu cần đánh giá phát âm chi tiết.
-            </div>
-          </div>
-        </div>
-      {% endif %}
-    </div>
-
   </div>
 
 {% else %}
@@ -1449,7 +1246,7 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #F1F5F9;">
             <div>
               <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">
-                ✍️ Task 1: Báo cáo số liệu biểu đồ học thuật (Academic Report on Chart)
+                <i class="fa-solid fa-chart-line" style="color: #EA580C; margin-right: 6px;"></i> Task 1: Báo cáo số liệu biểu đồ học thuật (Academic Report on Chart)
               </div>
               <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
                 Độ dài tiêu chuẩn: <strong>Tối thiểu 150 từ (150 – 180 từ)</strong> · Gợi ý: 3' phân tích biểu đồ → 14' gõ bài → 3' soát lỗi
@@ -1497,7 +1294,7 @@
               </div>
               {% endif %}
 
-              <div style="background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #475569;">
+              <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #475569;">
                 <strong style="color: #334155;">Gợi ý cấu trúc:</strong> 1. Mở bài (Paraphrase đề bài) → 2. Tổng quan (Overview 2 đặc điểm nổi bật nhất) → 3. Chi tiết (So sánh các số liệu cụ thể).
               </div>
             </div>
@@ -1506,14 +1303,16 @@
             <div style="display: flex; flex-direction: column;">
               <textarea class="form-control" id="w1-textarea" rows="12" placeholder="Nhập nội dung bài viết của bạn tại đây..." style="font-size: 14px; line-height: 1.6; min-height: 320px; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 14px;"></textarea>
               
-              <!-- Bộ đếm từ ngay dưới ô nhập -->
-              <div id="w1-word-counter" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12.5px; color: #64748B;">
-                <div>
-                  Độ dài: <strong id="w1-words-cnt" style="color: #64748B; font-size: 14px;">0</strong> / {% if goal_type == 'IELTS' or not goal_type %}150-180 từ{% else %}80-120 từ{% endif %}
-                </div>
-                <div id="w1-status-hint" style="font-weight: 500; color: #64748B;">
+              <!-- Bộ đếm từ gộp 1 dòng duy nhất -->
+              <div id="w1-word-counter-wrap" style="margin-top: 9px; font-size: 13px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span id="w1-word-count-badge" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #EA580C;">
+                  <i class="fa-solid fa-triangle-exclamation" id="w1-word-icon" style="font-size: 13px;"></i>
+                  <span>Độ dài: <strong id="w1-words-cnt" style="font-size: 13.5px;">0</strong> / {% if goal_type == 'IELTS' or not goal_type %}150 – 180 từ{% else %}80 – 120 từ{% endif %}</span>
+                </span>
+                <span style="color: #CBD5E1;">·</span>
+                <span id="w1-status-hint" style="font-size: 12.5px; font-weight: 500; color: #EA580C;">
                   {% if goal_type == 'IELTS' or not goal_type %}Cần tối thiểu 150 từ{% else %}Cần tối thiểu 80 từ{% endif %}
-                </div>
+                </span>
               </div>
             </div>
           </div>
@@ -1524,7 +1323,7 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #F1F5F9;">
             <div>
               <div style="font-size: 15px; font-weight: 700; color: var(--text-primary);">
-                ✍️ Task 2: Viết bài luận Academic Essay (25 phút)
+                <i class="fa-solid fa-pen-nib" style="color: #EA580C; margin-right: 6px;"></i> Task 2: Viết bài luận Academic Essay (25 phút)
               </div>
               <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
                 Độ dài tiêu chuẩn: <strong>180 – 220 từ</strong> · Gợi ý: 4' dàn ý → 18' gõ bài → 3' soát lỗi
@@ -1556,7 +1355,7 @@
                 </p>
               </div>
 
-              <div style="background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 6px; padding: 10px 12px; font-size: 12px; color: #475569;">
+              <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 10px 12px; font-size: 12px; color: #475569;">
                 <strong style="color: #334155;">Gợi ý bố cục 4 đoạn:</strong>
                 <br>1. <strong>Mở bài:</strong> Paraphrase vấn đề &amp; Nêu quan điểm cá nhân.
                 <br>2. <strong>Thân bài 1:</strong> Luận điểm thứ nhất + Ví dụ minh họa.
@@ -1569,17 +1368,25 @@
             <div style="display: flex; flex-direction: column;">
               <textarea class="form-control" id="w2-textarea" rows="14" placeholder="Nhập nội dung bài luận của bạn tại đây..." style="font-size: 14px; line-height: 1.6; min-height: 380px; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 14px;"></textarea>
               
-              <!-- Bộ đếm từ ngay dưới ô nhập -->
-              <div id="w2-word-counter" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12.5px; color: #64748B;">
-                <div>
-                  Độ dài: <strong id="w2-words-cnt" style="color: #64748B; font-size: 14px;">0</strong> / 180-220 từ
-                </div>
-                <div id="w2-status-hint" style="font-weight: 500; color: #64748B;">
-                  Cần tối thiểu 180 từ
-                </div>
+              <!-- Bộ đếm từ gộp 1 dòng duy nhất -->
+              <div id="w2-word-counter-wrap" style="margin-top: 9px; font-size: 13px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span id="w2-word-count-badge" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #EA580C;">
+                  <i class="fa-solid fa-triangle-exclamation" id="w2-word-icon" style="font-size: 13px;"></i>
+                  <span>Độ dài: <strong id="w2-words-cnt" style="font-size: 13.5px;">0</strong> / 180 – 220 từ</span>
+                </span>
+                <span style="color: #CBD5E1;">·</span>
+                <span id="w2-status-hint" style="font-size: 12.5px; font-weight: 500; color: #EA580C;">Cần tối thiểu 180 từ</span>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Chuyển tiếp cụ thể sang phần Nói (Speaking) -->
+        <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+          <button type="button" class="btn" onclick="switchWSSubtab('speaking')" style="background: #FFF7ED; color: #EA580C; border: 1.5px solid #FFEDD5; font-weight: 600; font-size: 13.5px; padding: 9px 18px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s ease;">
+            <span>Sang phần Nói (Speaking)</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
         </div>
 
       </div><!-- #ws-section-writing -->
@@ -1589,6 +1396,14 @@
            ═══════════════════════════════════════════════════════ -->
       <div id="ws-section-speaking" style="margin-bottom: 24px; display: none;">
         
+        <!-- Quay lại phần Viết -->
+        <div style="margin-bottom: 14px;">
+          <button type="button" class="btn btn-outline" onclick="switchWSSubtab('writing')" style="font-size: 13px; font-weight: 500; color: #475569; border: 1px solid #CBD5E1; padding: 7px 14px; border-radius: 6px; background: #FFFFFF; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Quay lại phần Viết (Writing)</span>
+          </button>
+        </div>
+
         <!-- Header phần nói -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color);">
           <div style="display: flex; align-items: center; gap: 10px;">
@@ -1759,20 +1574,22 @@
 
       </div><!-- #ws-section-speaking -->
 
-      <!-- ─── ACTION FOOTER NỘP BÀI WRITING & SPEAKING (MÀU CAM THƯƠNG HIỆU, KHÔNG MÀU TÍM) ─── -->
-      <div class="card" style="padding: 18px 22px; background: #FFFFFF; border: 1.5px solid var(--border-color); border-radius: 12px; margin-top: 20px; box-shadow: var(--shadow-sm);">
+      <!-- ─── ACTION FOOTER: LƯU NHÁP & NỘP BÀI ─── -->
+      <div class="card" style="padding: 16px 22px; background: #FFFFFF; border: 1.5px solid var(--border-color); border-radius: 12px; margin-top: 20px; box-shadow: var(--shadow-sm);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <button type="button" class="btn btn-outline" onclick="autoSaveDraft()">
+          <!-- Bên trái: Nút Lưu nháp viền nhẹ + Trạng thái đã lưu -->
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-outline" onclick="autoSaveDraft(false)" style="font-size: 13px; color: #475569; border: 1px solid #CBD5E1; padding: 7px 14px; border-radius: 6px; background: #FFFFFF; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
               <i class="fa-regular fa-floppy-disk"></i> Lưu nháp bài làm
             </button>
-            <button type="button" class="btn btn-outline" id="btn-toggle-subtab" onclick="toggleBetweenWAndS()">
-              <i class="fa-solid fa-arrow-right-arrow-left"></i> Chuyển sang phần còn lại
-            </button>
+            <span id="ws-autosave-footer-status" style="font-size: 12.5px; color: #15803D; display: inline-flex; align-items: center; gap: 5px;">
+              <i class="fa-solid fa-circle-check"></i> <span id="ws-autosave-footer-text">Đã lưu bài làm</span>
+            </span>
           </div>
 
-          <button type="button" class="btn" id="btn-submit-combined" onclick="confirmAndSubmitCombined()" style="background: #EA580C; color: #FFFFFF; font-weight: 700; padding: 11px 26px; border-radius: 8px; font-size: 14.5px; border: none; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25); cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
-            <i class="fa-solid fa-paper-plane"></i> Nộp bài &amp; Nhận kết quả đánh giá
+          <!-- Bên phải: CHỈ DUY NHẤT một nút cam Nộp bài đặc trưng -->
+          <button type="button" class="btn" id="btn-submit-combined" onclick="confirmAndSubmitCombined()">
+            <i class="fa-solid fa-paper-plane"></i> Nộp bài
           </button>
         </div>
       </div>
@@ -1787,30 +1604,30 @@
 
 <!-- ─── MODAL XÁC NHẬN NỘP BÀI WRITING & SPEAKING ─── -->
 <div class="modal-overlay" id="ws-submit-confirm-modal" onclick="if(event.target === this) closeModal('ws-submit-confirm-modal')">
-  <div class="modal-box" style="max-width: 480px; padding: 24px; border-radius: 14px; text-align: left;">
+  <div class="modal-box" style="max-width: 500px; padding: 24px; border-radius: 14px; text-align: left;">
     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
       <div style="width: 42px; height: 42px; border-radius: 50%; background: #FFF7ED; color: #EA580C; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
         <i class="fa-solid fa-paper-plane"></i>
       </div>
       <div>
-        <h3 style="font-size: 17px; font-weight: 700; color: #0F172A; margin: 0;">Xác nhận nộp bài kiểm tra</h3>
+        <h3 style="font-size: 17px; font-weight: 700; color: #0F172A; margin: 0;">Xác nhận nộp bài</h3>
         <div style="font-size: 12.5px; color: #64748B; margin-top: 2px;">Vui lòng kiểm tra lại tình trạng hoàn thành bài làm</div>
       </div>
     </div>
 
-    <!-- Status checklist -->
-    <div id="ws-confirm-checklist" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-bottom: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 8px;">
-      <div id="chk-w1" style="display: flex; align-items: center; gap: 8px;"></div>
-      <div id="chk-w2" style="display: flex; align-items: center; gap: 8px;"></div>
-      <div id="chk-spk" style="display: flex; align-items: center; gap: 8px;"></div>
+    <!-- Cảnh báo nếu còn phần chưa hoàn thành -->
+    <div id="ws-confirm-warning-box"></div>
+
+    <!-- Bảng đối soát từng Task -->
+    <div id="ws-confirm-checklist" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-bottom: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 10px;">
     </div>
 
     <div style="display: flex; gap: 10px; justify-content: flex-end;">
-      <button type="button" class="btn btn-outline" onclick="closeModal('ws-submit-confirm-modal')" style="font-size: 13px;">
+      <button type="button" class="btn btn-outline" onclick="closeModal('ws-submit-confirm-modal')" style="font-size: 13px; padding: 8px 16px;">
         Quay lại làm tiếp
       </button>
-      <button type="button" class="btn" onclick="closeModal('ws-submit-confirm-modal'); submitCombinedWritingSpeaking();" style="background: #EA580C; color: #FFFFFF; font-weight: 700; font-size: 13.5px; padding: 9px 20px; border-radius: 8px; border: none; cursor: pointer;">
-        Xác nhận nộp bài ngay
+      <button type="button" class="btn" id="modal-btn-confirm-submit" onclick="closeModal('ws-submit-confirm-modal'); submitCombinedWritingSpeaking();" style="background: #EA580C; color: #FFFFFF; font-weight: 700; font-size: 13.5px; padding: 9px 20px; border-radius: 8px; border: none; cursor: pointer;">
+        Xác nhận nộp bài
       </button>
     </div>
   </div>
@@ -2654,67 +2471,118 @@
   const w1Ta = document.getElementById('w1-textarea');
   const w1WordsCnt = document.getElementById('w1-words-cnt');
   const w1StatusHint = document.getElementById('w1-status-hint');
+  const w1Badge = document.getElementById('w1-word-count-badge');
+  const w1Icon = document.getElementById('w1-word-icon');
   const isIeltsGoal = '{{ goal_type }}' === 'IELTS' || '{{ goal_type }}' === '';
   const minW1Words = isIeltsGoal ? 150 : 80;
+  const maxW1Words = isIeltsGoal ? 180 : 120;
+
+  function updateW1WordCount() {
+    if (!w1Ta) return;
+    const words = countWords(w1Ta.value);
+    if (w1WordsCnt) w1WordsCnt.textContent = words;
+
+    if (words < minW1Words) {
+      // Chưa đủ: Màu cam
+      if (w1Badge) w1Badge.style.color = '#EA580C';
+      if (w1StatusHint) {
+        w1StatusHint.style.color = '#EA580C';
+        w1StatusHint.textContent = words === 0 ? `Cần tối thiểu ${minW1Words} từ` : `Chưa đủ độ dài (còn thiếu ${minW1Words - words} từ)`;
+      }
+      if (w1Icon) w1Icon.className = 'fa-solid fa-triangle-exclamation';
+    } else if (words <= maxW1Words) {
+      // Đạt chuẩn: Màu xanh lá
+      if (w1Badge) w1Badge.style.color = '#15803D';
+      if (w1StatusHint) {
+        w1StatusHint.style.color = '#15803D';
+        w1StatusHint.innerHTML = '<i class="fa-solid fa-circle-check"></i> Đạt chuẩn độ dài yêu cầu';
+      }
+      if (w1Icon) w1Icon.className = 'fa-solid fa-circle-check';
+    } else {
+      // Vượt quá: Màu đỏ
+      if (w1Badge) w1Badge.style.color = '#DC2626';
+      if (w1StatusHint) {
+        w1StatusHint.style.color = '#DC2626';
+        w1StatusHint.textContent = `Vượt quá giới hạn (${words - maxW1Words} từ vượt chuẩn)`;
+      }
+      if (w1Icon) w1Icon.className = 'fa-solid fa-circle-exclamation';
+    }
+  }
 
   if (w1Ta) {
     w1Ta.addEventListener('input', () => {
-      const words = countWords(w1Ta.value);
-      if (w1WordsCnt) {
-        w1WordsCnt.textContent = words;
-        if (words >= minW1Words) {
-          w1WordsCnt.style.color = '#15803D';
-        } else {
-          w1WordsCnt.style.color = '#64748B';
-        }
-      }
-      if (w1StatusHint) {
-        if (words >= minW1Words) {
-          w1StatusHint.style.color = '#15803D';
-          w1StatusHint.innerHTML = `<i class="fa-solid fa-check"></i> Đạt chuẩn độ dài (${words} từ)`;
-        } else {
-          w1StatusHint.style.color = '#64748B';
-          w1StatusHint.textContent = `Cần tối thiểu ${minW1Words} từ`;
-        }
-      }
+      updateW1WordCount();
+      scheduleDraftSave();
     });
   }
 
   const w2Ta = document.getElementById('w2-textarea');
   const w2WordsCnt = document.getElementById('w2-words-cnt');
   const w2StatusHint = document.getElementById('w2-status-hint');
+  const w2Badge = document.getElementById('w2-word-count-badge');
+  const w2Icon = document.getElementById('w2-word-icon');
   const minW2Words = 180;
+  const maxW2Words = 220;
+
+  function updateW2WordCount() {
+    if (!w2Ta) return;
+    const words = countWords(w2Ta.value);
+    if (w2WordsCnt) w2WordsCnt.textContent = words;
+
+    if (words < minW2Words) {
+      // Chưa đủ: Màu cam
+      if (w2Badge) w2Badge.style.color = '#EA580C';
+      if (w2StatusHint) {
+        w2StatusHint.style.color = '#EA580C';
+        w2StatusHint.textContent = words === 0 ? 'Cần tối thiểu 180 từ' : `Chưa đủ độ dài (còn thiếu ${minW2Words - words} từ)`;
+      }
+      if (w2Icon) w2Icon.className = 'fa-solid fa-triangle-exclamation';
+    } else if (words <= maxW2Words) {
+      // Đạt chuẩn: Màu xanh lá
+      if (w2Badge) w2Badge.style.color = '#15803D';
+      if (w2StatusHint) {
+        w2StatusHint.style.color = '#15803D';
+        w2StatusHint.innerHTML = '<i class="fa-solid fa-circle-check"></i> Đạt chuẩn độ dài yêu cầu';
+      }
+      if (w2Icon) w2Icon.className = 'fa-solid fa-circle-check';
+    } else {
+      // Quá 220 từ: Màu đỏ
+      if (w2Badge) w2Badge.style.color = '#DC2626';
+      if (w2StatusHint) {
+        w2StatusHint.style.color = '#DC2626';
+        w2StatusHint.textContent = `Vượt quá giới hạn (${words - maxW2Words} từ vượt chuẩn)`;
+      }
+      if (w2Icon) w2Icon.className = 'fa-solid fa-circle-exclamation';
+    }
+  }
 
   if (w2Ta) {
     w2Ta.addEventListener('input', () => {
-      const words = countWords(w2Ta.value);
-      if (w2WordsCnt) {
-        w2WordsCnt.textContent = words;
-        if (words >= minW2Words) {
-          w2WordsCnt.style.color = '#15803D';
-        } else {
-          w2WordsCnt.style.color = '#64748B';
-        }
-      }
-      if (w2StatusHint) {
-        if (words >= minW2Words) {
-          w2StatusHint.style.color = '#15803D';
-          w2StatusHint.innerHTML = `<i class="fa-solid fa-check"></i> Đạt chuẩn độ dài (${words} từ)`;
-        } else {
-          w2StatusHint.style.color = '#64748B';
-          w2StatusHint.textContent = `Cần tối thiểu ${minW2Words} từ`;
-        }
-      }
+      updateW2WordCount();
+      scheduleDraftSave();
     });
   }
 
-  function updateAutoSaveTimestamp() {
-    const el = document.getElementById('ws-autosave-indicator');
-    if (!el) return;
+  function formatCurrentHHMM() {
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
-    el.innerHTML = `<i class="fa-solid fa-check"></i> Đã tự động lưu ${hh}:${mm}`;
+    return `${hh}:${mm}`;
+  }
+
+  function updateAutoSaveTimestamp(customTime) {
+    const timeStr = customTime || formatCurrentHHMM();
+    const topEl = document.getElementById('ws-autosave-indicator');
+    if (topEl) {
+      topEl.innerHTML = `<i class="fa-solid fa-check"></i> Đã tự động lưu ${timeStr}`;
+    }
+    const footerEl = document.getElementById('ws-autosave-footer-text');
+    if (footerEl) {
+      footerEl.textContent = `Đã lưu ${timeStr}`;
+    }
+    try {
+      localStorage.setItem('placement_draft_last_saved', timeStr);
+    } catch(e){}
   }
 
   function autoSaveDraft(silent = false) {
@@ -2722,19 +2590,34 @@
       w1: w1Ta?.value || '',
       w2: w2Ta?.value || '',
     };
-    localStorage.setItem('placement_draft', JSON.stringify(draft));
+    try {
+      localStorage.setItem('placement_draft', JSON.stringify(draft));
+    } catch(e){}
     updateAutoSaveTimestamp();
     if (!silent) {
-      Toast.show('Đã lưu nháp bài Writing thành công!', 'success');
+      Toast.show('Đã lưu nháp bài làm thành công!', 'success');
     }
   }
 
   // Tự động lưu nháp mỗi 30 giây
   setInterval(() => {
-    if (wsStarted && !testAlreadyCompleted) {
+    if (!testAlreadyCompleted) {
       autoSaveDraft(true);
     }
   }, 30000);
+
+  // Debounce tự lưu sau 2 giây khi gõ phím
+  let autoSaveTimeout = null;
+  function scheduleDraftSave() {
+    if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+    autoSaveTimeout = setTimeout(() => {
+      autoSaveDraft(true);
+    }, 2000);
+  }
+
+  // Khởi tạo hiển thị thời gian lưu nháp ban đầu
+  const initialSavedTime = localStorage.getItem('placement_draft_last_saved') || formatCurrentHHMM();
+  updateAutoSaveTimestamp(initialSavedTime);
 
   // ─── KIỂM TRA ĐIỀU KIỆN & XÁC NHẬN TRƯỚC KHI NỘP BÀI ─────────
   function confirmAndSubmitCombined() {
@@ -2745,34 +2628,65 @@
     const t1 = document.getElementById('spk-task1-data')?.value?.trim() || '';
     const t2 = document.getElementById('spk-task2-data')?.value?.trim() || '';
     const t3 = document.getElementById('spk-task3-data')?.value?.trim() || '';
-    const spkCount = (t1 ? 1 : 0) + (t2 ? 1 : 0) + (t3 ? 1 : 0);
 
-    const chkW1 = document.getElementById('chk-w1');
-    const chkW2 = document.getElementById('chk-w2');
-    const chkSpk = document.getElementById('chk-spk');
+    const missingTasks = [];
+    if (w1Words === 0) missingTasks.push('Writing Task 1');
+    else if (w1Words < minW1Words) missingTasks.push(`Writing Task 1 (mới viết ${w1Words}/${minW1Words} từ)`);
 
-    if (chkW1) {
-      if (w1Words >= 50) {
-        chkW1.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #10B981; font-size: 14px;"></i> <span>Task 1: Đã viết <strong>${w1Words} từ</strong></span>`;
+    if (w2Words === 0) missingTasks.push('Writing Task 2');
+    else if (w2Words < minW2Words) missingTasks.push(`Writing Task 2 (mới viết ${w2Words}/${minW2Words} từ)`);
+
+    if (!t1) missingTasks.push('Speaking Task 1');
+    if (!t2) missingTasks.push('Speaking Task 2');
+    if (!t3) missingTasks.push('Speaking Task 3');
+
+    const warningBox = document.getElementById('ws-confirm-warning-box');
+    const submitBtn = document.getElementById('modal-btn-confirm-submit');
+
+    if (warningBox) {
+      if (missingTasks.length > 0) {
+        warningBox.innerHTML = `
+          <div style="background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; color: #92400E; font-size: 13px; line-height: 1.5;">
+            <div style="font-weight: 700; display: flex; align-items: center; gap: 7px; margin-bottom: 4px; color: #B45309;">
+              <i class="fa-solid fa-triangle-exclamation" style="color: #D97706; font-size: 14px;"></i>
+              <span>Bạn còn ${missingTasks.join(', ')} chưa hoàn thành!</span>
+            </div>
+            <div>Các phần bỏ trống sẽ tính <strong>0 điểm</strong> khi chuyển sang Giảng viên chấm. Bạn vẫn muốn nộp bài?</div>
+          </div>
+        `;
+        if (submitBtn) submitBtn.textContent = 'Vẫn nộp bài';
       } else {
-        chkW1.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color: #F59E0B; font-size: 14px;"></i> <span style="color: #B45309;">Task 1: Mới viết <strong>${w1Words} từ</strong> (chưa đạt yêu cầu)</span>`;
+        warningBox.innerHTML = `
+          <div style="background: #F0FDF4; border: 1.5px solid #86EFAC; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; color: #166534; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px;">
+            <i class="fa-solid fa-circle-check" style="color: #16A34A; font-size: 14px;"></i>
+            <span>Bạn đã hoàn thành đủ cả 2 bài Viết và 3 câu Nói!</span>
+          </div>
+        `;
+        if (submitBtn) submitBtn.textContent = 'Xác nhận nộp bài';
       }
     }
 
-    if (chkW2) {
-      if (w2Words >= 50) {
-        chkW2.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #10B981; font-size: 14px;"></i> <span>Task 2: Đã viết <strong>${w2Words} từ</strong></span>`;
-      } else {
-        chkW2.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color: #F59E0B; font-size: 14px;"></i> <span style="color: #B45309;">Task 2: Mới viết <strong>${w2Words} từ</strong> (chưa đạt yêu cầu)</span>`;
-      }
-    }
+    const checklistEl = document.getElementById('ws-confirm-checklist');
+    if (checklistEl) {
+      const renderItem = (label, isOk, okText, warnText) => `
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+          <span style="display: inline-flex; align-items: center; gap: 7px; color: #334155;">
+            ${isOk ? '<i class="fa-solid fa-circle-check" style="color: #16A34A;"></i>' : '<i class="fa-solid fa-circle-exclamation" style="color: #EA580C;"></i>'}
+            <span>${label}:</span>
+          </span>
+          <span style="font-weight: 600; color: ${isOk ? '#16A34A' : '#DC2626'};">
+            ${isOk ? okText : warnText}
+          </span>
+        </div>
+      `;
 
-    if (chkSpk) {
-      if (spkCount > 0) {
-        chkSpk.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #10B981; font-size: 14px;"></i> <span>Speaking: Đã thu âm <strong>${spkCount}/3 câu</strong></span>`;
-      } else {
-        chkSpk.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color: #F59E0B; font-size: 14px;"></i> <span style="color: #B45309;">Speaking: Chưa thu âm câu nào (sẽ tính 0đ phần nói)</span>`;
-      }
+      checklistEl.innerHTML = [
+        renderItem('Writing Task 1', w1Words >= minW1Words, `${w1Words} từ (Đạt chuẩn)`, w1Words === 0 ? 'Chưa làm' : `${w1Words}/${minW1Words} từ`),
+        renderItem('Writing Task 2', w2Words >= minW2Words && w2Words <= maxW2Words, `${w2Words} từ (Đạt chuẩn)`, w2Words === 0 ? 'Chưa làm' : `${w2Words} từ`),
+        renderItem('Speaking Task 1', !!t1, 'Đã thu âm', 'Chưa thu âm'),
+        renderItem('Speaking Task 2', !!t2, 'Đã thu âm', 'Chưa thu âm'),
+        renderItem('Speaking Task 3', !!t3, 'Đã thu âm', 'Chưa thu âm'),
+      ].join('');
     }
 
     openModal('ws-submit-confirm-modal');
@@ -2781,12 +2695,12 @@
   const savedDraft = JSON.parse(localStorage.getItem('placement_draft') || '{}');
   if (savedDraft.w1 && w1Ta) {
     w1Ta.value = savedDraft.w1;
-    w1Ta.dispatchEvent(new Event('input'));
   }
   if (savedDraft.w2 && w2Ta) {
     w2Ta.value = savedDraft.w2;
-    w2Ta.dispatchEvent(new Event('input'));
   }
+  updateW1WordCount();
+  updateW2WordCount();
 
   // ─── BỘ LỌC CÂU HỎI TRẮC NGHIỆM (TẤT CẢ / SAI / BỎ TRỐNG / ĐÚNG) ───
   function filterMCQReview(filterType) {
@@ -3018,8 +2932,10 @@
   // ─── NỘP TOÀN BỘ WRITING & SPEAKING GỘP CHO GEMINI AI ───────
   async function submitCombinedWritingSpeaking() {
     const btn = document.getElementById('btn-submit-combined');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gemini AI đang phân tích và chuyển sang Lane Giảng viên...';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang nộp bài…';
+    }
 
     const w1 = w1Ta?.value.trim() || '';
     const w2 = w2Ta?.value.trim() || '';
@@ -3053,7 +2969,7 @@
       });
       const data = await res.json();
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Nộp bài & Nhận kết quả đánh giá';
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Nộp bài';
 
       if (data.status === 'success') {
         const sum = data.exam_summary || {};
@@ -3126,7 +3042,7 @@
       }
     } catch (err) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Nộp bài & Nhận kết quả đánh giá';
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Nộp bài';
       Toast.show('Đã gửi bài thi cho AI Gemini phân tích.', 'info');
     }
   }

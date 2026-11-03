@@ -98,16 +98,10 @@
     text-overflow: ellipsis;
   }
 
-  /* Card chờ duyệt nổi bật */
+  /* Card chờ duyệt nổi bật (hiển thị trực quan) */
   .stat-card-acc.highlight-pending {
     border: 1.5px solid #FDBA74;
     background: #FFF7ED;
-    cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  }
-  .stat-card-acc.highlight-pending:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.12);
   }
 
   /* 3. Thanh Tab nhanh */
@@ -397,7 +391,7 @@
   </div>
 
   <!-- 2. Chờ Kế toán duyệt (NỔI BẬT NHẤT) -->
-  <div class="stat-card-acc highlight-pending" onclick="applyTabFilter('CHO_DUYET')" title="Bấm để lọc nhanh danh sách chờ duyệt">
+  <div class="stat-card-acc highlight-pending">
     <div class="card-label" style="color: #C2410C;">
       <span>Chờ Kế toán duyệt</span>
       <i class="fa-solid fa-clock-rotate-left" style="color: #EA580C; font-size: 13px;"></i>

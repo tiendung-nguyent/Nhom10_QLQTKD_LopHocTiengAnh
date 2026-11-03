@@ -289,7 +289,10 @@
                 </div>
               </div>
               <div style="border-top: 1px solid var(--border-color); margin: 6px 0;"></div>
-              <a href="{% url 'users:student_logout' %}" class="user-dropdown-link" style="color: #EF4444;">
+              <a href="{% url 'users:student_logout' %}?switch_account=1" onclick="try{sessionStorage.clear(); localStorage.clear();}catch(e){}" class="user-dropdown-link" style="color: var(--text-primary); font-size: 13px;">
+                <i class="fa-solid fa-arrows-rotate" style="color: var(--accent-orange);"></i> Đổi tài khoản khác
+              </a>
+              <a href="{% url 'users:student_logout' %}" onclick="try{sessionStorage.clear(); localStorage.clear();}catch(e){}" class="user-dropdown-link" style="color: #EF4444; font-size: 13px;">
                 <i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất
               </a>
             </div>
