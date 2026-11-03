@@ -391,6 +391,30 @@
     gap: 12px;
   }
 
+
+  /* Hieu ung noi bat lua chon trac nghiem khi duoc click chon */
+  .option-item {
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease-in-out;
+  }
+  .option-item:hover {
+    border-color: #CBD5E1;
+    background-color: #F8FAFC;
+  }
+  .option-item:has(input[type="radio"]:checked),
+  .option-item.selected {
+    border-color: var(--accent-orange, #EA580C) !important;
+    background-color: rgba(234, 88, 12, 0.08) !important;
+    font-weight: 600 !important;
+    box-shadow: 0 0 0 1.5px var(--accent-orange, #EA580C) !important;
+  }
+  #answered-count {
+    color: var(--accent-orange, #EA580C);
+    font-size: 15px;
+    font-weight: 700;
+  }
+
 </style>
 {% endblock %}
 
@@ -1157,8 +1181,8 @@
 
               <div class="options-list" style="display: flex; flex-direction: column; gap: 8px;">
                 {% for lua_chon in cau.lua_chons.all %}
-                  <label class="option-item" for="lc_{{ cau.ma_cau_hoi }}_{{ lua_chon.ma_lua_chon }}" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); transition: all var(--transition);">
-                    <input type="radio" name="q_{{ cau.ma_cau_hoi }}" value="{{ lua_chon.ma_lua_chon }}" id="lc_{{ cau.ma_cau_hoi }}_{{ lua_chon.ma_lua_chon }}" style="accent-color: var(--accent-orange); width: 16px; height: 16px;">
+                  <label class="option-item" for="lc_{{ cau.ma_cau_hoi }}_{{ lua_chon.ma_lua_chon }}" onclick="setTimeout(updateMCQProgress, 10)" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); transition: all var(--transition);">
+                    <input type="radio" name="q_{{ cau.ma_cau_hoi }}" value="{{ lua_chon.ma_lua_chon }}" id="lc_{{ cau.ma_cau_hoi }}_{{ lua_chon.ma_lua_chon }}" onchange="updateMCQProgress()" onclick="updateMCQProgress()" style="accent-color: var(--accent-orange); width: 16px; height: 16px;">
                     <span style="font-size: 13.5px; color: var(--text-primary);">{{ lua_chon.noi_dung }}</span>
                   </label>
                 {% endfor %}
@@ -1890,6 +1914,91 @@
   let wsTimeRemaining = parseInt(sessionStorage.getItem('placement_timer_ws')) || WS_TOTAL_SECS;
 
   let currentActiveTab = 'mcq';
+
+  // ─── THEO DÕI TIẾN ĐỘ & TỰ ĐỘNG LƯU BÀI LÀM TRẮC NGHIỆM (TOÀN CỤC) ─────
+  window.updateMCQProgress = function() {
+    const checkedRadios = document.querySelectorAll('#mcq-form input[type=radio]:checked, input[type=radio][name^="q_"]:checked');
+    const answeredIds = new Set();
+    const draft = {};
+
+    checkedRadios.forEach(radio => {
+      const qId = radio.name.replace(/^q_/, '');
+      if (qId) {
+        answeredIds.add(qId);
+        draft[qId] = radio.value;
+      }
+      const label = radio.closest('.option-item');
+      if (label) {
+        label.classList.add('selected');
+        label.style.borderColor = 'var(--accent-orange, #EA580C)';
+        label.style.background = 'rgba(234, 88, 12, 0.08)';
+        label.style.fontWeight = '600';
+      }
+    });
+
+    const allRadios = document.querySelectorAll('#mcq-form input[type=radio], input[type=radio][name^="q_"]');
+    allRadios.forEach(radio => {
+      if (!radio.checked) {
+        const label = radio.closest('.option-item');
+        if (label) {
+          label.classList.remove('selected');
+          label.style.borderColor = '';
+          label.style.background = '';
+          label.style.fontWeight = '';
+        }
+      }
+    });
+
+    const count = answeredIds.size;
+    const countEl = document.getElementById('answered-count');
+    if (countEl) {
+      countEl.textContent = count;
+    }
+
+    try {
+      const draftJson = JSON.stringify(draft);
+      sessionStorage.setItem('placement_mcq_draft_answers', draftJson);
+      localStorage.setItem('placement_mcq_draft_answers', draftJson);
+    } catch (e) {
+      console.warn('Storage error:', e);
+    }
+  };
+
+  window.restoreMCQDraft = function() {
+    try {
+      let raw = sessionStorage.getItem('placement_mcq_draft_answers');
+      if (!raw) {
+        raw = localStorage.getItem('placement_mcq_draft_answers');
+      }
+      if (raw) {
+        const draft = JSON.parse(raw);
+        Object.entries(draft).forEach(([qId, val]) => {
+          const input = document.querySelector(`input[name="q_${qId}"][value="${val}"]`);
+          if (input) {
+            input.checked = true;
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('Error restoring MCQ draft:', err);
+    }
+    updateMCQProgress();
+  };
+
+  // Lắng nghe sự kiện toàn cục ở cấp độ document
+  document.addEventListener('change', function(e) {
+    if (e.target && e.target.type === 'radio' && e.target.name && e.target.name.startsWith('q_')) {
+      updateMCQProgress();
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    const opt = e.target.closest('.option-item');
+    if (opt || (e.target && e.target.type === 'radio' && e.target.name && e.target.name.startsWith('q_'))) {
+      setTimeout(updateMCQProgress, 10);
+    }
+  });
+
   let activeTimerInterval = null;
 
   const cdEl = document.getElementById('countdown');
@@ -1964,6 +2073,7 @@
     sessionStorage.removeItem('placement_timer_mcq');
     sessionStorage.removeItem('placement_timer_ws');
     sessionStorage.removeItem('placement_mcq_draft_answers');
+    localStorage.removeItem('placement_mcq_draft_answers');
     localStorage.removeItem('placement_draft');
     return true;
   }
@@ -1981,6 +2091,7 @@
     sessionStorage.removeItem('placement_timer_mcq');
     sessionStorage.removeItem('mcq_submitted');
     sessionStorage.removeItem('placement_mcq_draft_answers');
+    localStorage.removeItem('placement_mcq_draft_answers');
     return true;
   }
 
@@ -2003,6 +2114,8 @@
     if (startBanner) startBanner.style.display = 'none';
     const qContainer = document.getElementById('mcq-questions-container');
     if (qContainer) qContainer.style.display = 'block';
+    restoreMCQDraft();
+    updateMCQProgress();
 
     if (activeTimerInterval) clearInterval(activeTimerInterval);
     activeTimerInterval = setInterval(() => {
@@ -2508,64 +2621,6 @@
     box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // ─── THEO DÕI TIẾN ĐỘ & TỰ ĐỘNG LƯU BÀI LÀM TRẮC NGHIỆM ─────
-  function updateMCQProgress() {
-    const allRadios = document.querySelectorAll('#mcq-form input[type=radio]');
-    const checkedRadios = document.querySelectorAll('#mcq-form input[type=radio]:checked');
-    const count = checkedRadios.length;
-    const countEl = document.getElementById('answered-count');
-    if (countEl) {
-      countEl.textContent = count;
-    }
-
-    allRadios.forEach(radio => {
-      const label = radio.closest('.option-item');
-      if (label) {
-        if (radio.checked) {
-          label.style.borderColor = 'var(--accent-orange)';
-          label.style.background = 'rgba(234, 88, 12, 0.06)';
-          label.style.fontWeight = '600';
-        } else {
-          label.style.borderColor = 'var(--border-color)';
-          label.style.background = '';
-          label.style.fontWeight = 'normal';
-        }
-      }
-    });
-
-    // Lưu nháp câu trả lời vào sessionStorage để không bao giờ bị mất khi tải lại trang
-    const draft = {};
-    checkedRadios.forEach(r => {
-      const qId = r.name.replace('q_', '');
-      draft[qId] = r.value;
-    });
-    sessionStorage.setItem('placement_mcq_draft_answers', JSON.stringify(draft));
-  }
-
-  function restoreMCQDraft() {
-    try {
-      const raw = sessionStorage.getItem('placement_mcq_draft_answers');
-      if (raw) {
-        const draft = JSON.parse(raw);
-        Object.entries(draft).forEach(([qId, val]) => {
-          const input = document.querySelector(`#mcq-form input[name="q_${qId}"][value="${val}"]`);
-          if (input) {
-            input.checked = true;
-          }
-        });
-      }
-    } catch (err) {
-      console.warn('Error restoring MCQ draft:', err);
-    }
-    updateMCQProgress();
-  }
-
-  const mcqForm = document.getElementById('mcq-form');
-  if (mcqForm) {
-    mcqForm.addEventListener('change', updateMCQProgress);
-  }
-  // Khôi phục nháp các câu đã chọn ngay khi tải trang
-  restoreMCQDraft();
 
   // ─── NỘP BÀI TRẮC NGHIỆM QUA FETCH API ─────────────────────
   if (mcqForm) {
@@ -2607,6 +2662,7 @@
           mcqSubmitted = true;
           sessionStorage.setItem('mcq_submitted', 'true');
           sessionStorage.removeItem('placement_mcq_draft_answers');
+    localStorage.removeItem('placement_mcq_draft_answers');
           unlockTabWS();
 
           // Ẩn khung câu hỏi trắc nghiệm
@@ -3067,5 +3123,13 @@
     }
   });
 
+
+  // Chạy khôi phục tiến độ trắc nghiệm ngay khi tài liệu sẵn sàng
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', restoreMCQDraft);
+  } else {
+    restoreMCQDraft();
+  }
+  window.addEventListener('load', restoreMCQDraft);
 </script>
 {% endblock %}
