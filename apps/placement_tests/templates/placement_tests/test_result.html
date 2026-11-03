@@ -288,26 +288,53 @@
 
 </div>
 
-<!-- ─── KHỐI KHÓA HỌC PHÙ HỢP ĐỀ XUẤT ──────────────────────── -->
+<!-- ─── KHỐI KHÓA HỌC PHÙ HỢP ĐỀ XUẤT & XẾP LỚP (BPMN ADAPTIVE) ─── -->
 <div class="card" style="background: #FFFDFB; border: 1.5px solid #FED7AA; border-radius: 8px; padding: 18px 22px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-  <div>
-    <div style="font-size: 11.5px; font-weight: 700; color: #C2410C; text-transform: uppercase; letter-spacing: 0.5px;">
-      Khóa học phù hợp đề xuất
-    </div>
-    <div style="font-size: 17px; font-weight: 800; color: #0F172A; margin-top: 3px;">
-      {{ khoa_de_xuat|default:"Lớp Pre-IELTS Foundation" }}
-    </div>
-    <div style="font-size: 13px; color: #64748B; margin-top: 2px;">
-      Lộ trình đào tạo được cá nhân hóa theo trình độ kiểm tra và mục tiêu của học viên.
-    </div>
+  <div style="flex: 1; min-width: 280px;">
+    {% if has_assigned_class and assigned_lop_hoc %}
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+        <span class="badge" style="background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; font-size: 11px; padding: 2px 8px; font-weight: 700; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+          <i class="fa-solid fa-circle-check"></i> ĐÃ XẾP LỚP CHÍNH THỨC
+        </span>
+        <span style="font-size: 12px; color: #64748B;">Tư vấn tuyển sinh đã áp lớp thành công</span>
+      </div>
+      <div style="font-size: 18px; font-weight: 800; color: #0F172A;">
+        {{ assigned_lop_hoc.ten_lop }} <span style="font-size: 14.5px; font-weight: 600; color: #475569;">· {{ assigned_khoa_hoc.ten_khoa|default:course_roadmap_info.name }}</span>
+      </div>
+      <div style="font-size: 13px; color: #475569; margin-top: 5px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+        <span><i class="fa-regular fa-calendar-days" style="color: #EA580C; margin-right: 4px;"></i> Lịch học: <strong>{{ assigned_lop_hoc.lich_hoc }}</strong></span>
+        <span><i class="fa-regular fa-clock" style="color: #EA580C; margin-right: 4px;"></i> Khai giảng: <strong>{{ assigned_lop_hoc.ngay_khai_giang|date:"d/m/Y" }}</strong></span>
+        <span><i class="fa-solid fa-money-bill-wave" style="color: #047857; margin-right: 4px;"></i> Học phí: <strong style="color: #EA580C;">{% if assigned_phieu_hp %}{{ assigned_phieu_hp.so_tien_vnd }}{% else %}{{ course_roadmap_info.fee }}{% endif %}</strong></span>
+      </div>
+    {% else %}
+      <div style="font-size: 11.5px; font-weight: 700; color: #C2410C; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-graduation-cap"></i> Khóa học phù hợp đề xuất
+      </div>
+      <div style="font-size: 17.5px; font-weight: 800; color: #0F172A; margin-top: 3px;">
+        {{ course_roadmap_info.name|default:khoa_de_xuat|default:"Lớp Pre-IELTS Foundation" }}
+      </div>
+      <div style="font-size: 13px; color: #64748B; margin-top: 2px;">
+        Lộ trình đào tạo được cá nhân hóa theo trình độ kiểm tra · Học phí niêm yết: <strong style="color: #EA580C;">{{ course_roadmap_info.fee }}</strong> ({{ course_roadmap_info.sessions }})
+      </div>
+    {% endif %}
   </div>
-  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-    <a href="{% url 'billing:payment_detail' %}" class="btn" style="background: #EA580C; color: #FFFFFF; font-weight: 600; padding: 9px 18px; border-radius: 6px; font-size: 13.5px; text-decoration: none;">
-      Xem học phí & lộ trình
-    </a>
-    <a href="{% url 'users:student_dashboard' %}" class="btn" style="background: #FFFFFF; color: #334155; border: 1px solid #CBD5E1; font-weight: 600; padding: 9px 16px; border-radius: 6px; font-size: 13.5px; text-decoration: none;">
-      Về Dashboard
-    </a>
+
+  <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+    {% if has_assigned_class and assigned_lop_hoc %}
+      <button type="button" class="btn" onclick="openRoadmapModal()" style="background: #FFFFFF; color: #334155; border: 1.5px solid #CBD5E1; font-weight: 600; padding: 9px 16px; border-radius: 6px; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+        <i class="fa-solid fa-map-location-dot" style="color: #64748B;"></i> Xem lộ trình học
+      </button>
+      <a href="{% url 'billing:payment_detail' %}" class="btn" style="background: #EA580C; color: #FFFFFF; font-weight: 700; padding: 9px 18px; border-radius: 6px; font-size: 13.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);">
+        <i class="fa-solid fa-qrcode"></i> Thanh toán học phí ngay ({% if assigned_phieu_hp %}{{ assigned_phieu_hp.so_tien_vnd }}{% else %}{{ course_roadmap_info.fee }}{% endif %}) →
+      </a>
+    {% else %}
+      <button type="button" class="btn" onclick="openRoadmapModal()" style="background: #EA580C; color: #FFFFFF; font-weight: 600; padding: 9px 18px; border-radius: 6px; font-size: 13.5px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25); transition: all 0.2s ease;">
+        <i class="fa-solid fa-map-location-dot"></i> Xem chi tiết khóa học & lộ trình
+      </button>
+      <a href="{% url 'users:student_dashboard' %}" class="btn" style="background: #FFFFFF; color: #334155; border: 1px solid #CBD5E1; font-weight: 600; padding: 9px 16px; border-radius: 6px; font-size: 13.5px; text-decoration: none;">
+        Về Dashboard
+      </a>
+    {% endif %}
   </div>
 </div>
 
@@ -777,5 +804,160 @@
       setTimeout(() => window.location.href = `?session=${phienId}`, 1000);
     }
   }
+
+  function openRoadmapModal() {
+    const m = document.getElementById('roadmapModal');
+    if (m) {
+      m.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function closeRoadmapModal() {
+    const m = document.getElementById('roadmapModal');
+    if (m) {
+      m.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+  }
+
+  // Backdrop click to close
+  document.addEventListener('click', function(e) {
+    const m = document.getElementById('roadmapModal');
+    if (m && e.target === m) {
+      closeRoadmapModal();
+    }
+  });
+
+  // ESC key to close
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeRoadmapModal();
+    }
+  });
 </script>
+
+<!-- ─── MODAL: THÔNG TIN KHÓA HỌC & LỘ TRÌNH ĐÀO TẠO ──────────── -->
+<div id="roadmapModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 99999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px; overflow-y: auto;">
+  <div style="background: #FFFFFF; border-radius: 14px; max-width: 760px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.2); border: 1px solid #E2E8F0; position: relative; margin: auto;">
+    
+    <!-- Modal Header -->
+    <div style="padding: 20px 24px 16px; border-bottom: 1px solid #F1F5F9; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; position: sticky; top: 0; background: #FFFFFF; z-index: 2; border-top-left-radius: 14px; border-top-right-radius: 14px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 44px; height: 44px; border-radius: 10px; background: #FFF7ED; color: #EA580C; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; border: 1px solid #FFEDD5;">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div>
+          <div style="font-size: 11.5px; font-weight: 700; color: #C2410C; text-transform: uppercase; letter-spacing: 0.5px;">
+            Lộ trình đào tạo cá nhân hóa
+          </div>
+          <h2 style="font-size: 19px; font-weight: 800; color: #0F172A; margin: 2px 0 0 0; line-height: 1.25;">
+            {{ course_roadmap_info.name }}
+          </h2>
+        </div>
+      </div>
+      <button type="button" onclick="closeRoadmapModal()" style="background: #F8FAFC; border: 1px solid #E2E8F0; width: 34px; height: 34px; border-radius: 8px; color: #64748B; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.2s ease;">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div style="padding: 20px 24px;">
+      
+      <!-- 4 Highlight Cards -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 22px;">
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 14px;">
+          <div style="font-size: 11px; color: #64748B; font-weight: 600; text-transform: uppercase;">Trình độ đầu vào</div>
+          <div style="font-size: 14px; font-weight: 700; color: #0F172A; margin-top: 3px;">{{ course_roadmap_info.level }}</div>
+        </div>
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 14px;">
+          <div style="font-size: 11px; color: #64748B; font-weight: 600; text-transform: uppercase;">Mục tiêu đầu ra</div>
+          <div style="font-size: 14px; font-weight: 700; color: #047857; margin-top: 3px;">{{ course_roadmap_info.target_output }}</div>
+        </div>
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 14px;">
+          <div style="font-size: 11px; color: #64748B; font-weight: 600; text-transform: uppercase;">Thời lượng</div>
+          <div style="font-size: 14px; font-weight: 700; color: #0F172A; margin-top: 3px;">{{ course_roadmap_info.sessions }}</div>
+        </div>
+        <div style="background: #FFF7ED; border: 1px solid #FFEDD5; border-radius: 8px; padding: 12px 14px;">
+          <div style="font-size: 11px; color: #9A3412; font-weight: 600; text-transform: uppercase;">Học phí niêm yết</div>
+          <div style="font-size: 15px; font-weight: 800; color: #EA580C; margin-top: 3px;">{{ course_roadmap_info.fee }}</div>
+        </div>
+      </div>
+
+      <!-- Roadmap Timeline 3 Phases -->
+      <div style="margin-bottom: 22px;">
+        <div style="font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-timeline" style="color: #EA580C;"></i>
+          <span>Chi tiết Lộ trình đào tạo 3 Giai đoạn</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          {% for p in course_roadmap_info.phases %}
+          <div style="border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px; background: #FFFFFF; transition: all 0.2s ease;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
+                  {{ p.phase }}
+                </span>
+                <strong style="font-size: 14.5px; color: #0F172A;">{{ p.title }}</strong>
+              </div>
+              <span style="font-size: 12px; font-weight: 600; color: #64748B; background: #F1F5F9; padding: 2px 8px; border-radius: 4px;">
+                <i class="fa-regular fa-clock" style="margin-right: 4px;"></i>{{ p.weeks }}
+              </span>
+            </div>
+            <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #475569; line-height: 1.6;">
+              {% for b in p.bullets %}
+              <li>{{ b }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Cam kết đào tạo & Quyền lợi -->
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;">
+        <div style="font-size: 12.5px; font-weight: 700; color: #0F172A; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-shield-halved" style="color: #047857;"></i> Cam kết chất lượng & Hỗ trợ học vụ
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; font-size: 12px; color: #475569;">
+          <div><i class="fa-solid fa-check" style="color: #047857; margin-right: 6px;"></i> Cam kết đạt chuẩn đầu ra bằng văn bản.</div>
+          <div><i class="fa-solid fa-check" style="color: #047857; margin-right: 6px;"></i> Giảng viên 8.0+ IELTS / Thạc sĩ sư phạm.</div>
+          <div><i class="fa-solid fa-check" style="color: #047857; margin-right: 6px;"></i> Miễn phí tài liệu & phần mềm học bổ trợ.</div>
+          <div><i class="fa-solid fa-check" style="color: #047857; margin-right: 6px;"></i> Hỗ trợ bảo lưu học phí tối đa 06 tháng.</div>
+        </div>
+      </div>
+
+      <!-- BPMN Flow Notice Box -->
+      <div style="background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: 10px; padding: 14px 18px; display: flex; align-items: flex-start; gap: 12px;">
+        <div style="color: #D97706; font-size: 18px; margin-top: 1px; flex-shrink: 0;">
+          <i class="fa-solid fa-circle-info"></i>
+        </div>
+        <div style="font-size: 12.5px; color: #92400E; line-height: 1.55;">
+          <strong style="display: block; font-size: 13px; margin-bottom: 2px;">Quy trình xếp lớp & Đóng học phí:</strong>
+          {% if has_assigned_class and assigned_lop_hoc %}
+            Hồ sơ của bạn đã được Tư vấn viên hoàn tất ghi danh vào <strong>{{ assigned_lop_hoc.ten_lop }}</strong>. Bạn có thể tiến hành quét mã VietQR để thanh toán giữ chỗ chính thức.
+          {% else %}
+            Kết quả bài thi của bạn đã được chuyển đến <strong>Bộ phận Tư vấn Tuyển sinh</strong>. Chuyên viên sẽ chủ động liên hệ qua Số điện thoại / Zalo trong vòng 24 giờ để trao đổi lịch học phù hợp nhất và xếp lớp chính thức cho bạn trước khi đóng học phí.
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="padding: 14px 24px; border-top: 1px solid #F1F5F9; background: #FAFAFA; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; display: flex; justify-content: flex-end; gap: 10px; align-items: center;">
+      <button type="button" onclick="closeRoadmapModal()" style="background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+        Đóng cửa sổ
+      </button>
+      {% if has_assigned_class and assigned_lop_hoc %}
+      <a href="{% url 'billing:payment_detail' %}" class="btn" style="background: #EA580C; color: #FFFFFF; font-weight: 700; padding: 8px 18px; border-radius: 6px; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-qrcode"></i> Đi đến Thanh toán học phí →
+      </a>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
 {% endblock %}
