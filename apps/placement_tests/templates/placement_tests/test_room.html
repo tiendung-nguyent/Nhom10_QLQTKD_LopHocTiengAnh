@@ -481,8 +481,8 @@
         <button type="button" class="btn btn-primary btn-lg" onclick="openModal('student-gate-modal')">
           <i class="fa-solid fa-user-pen"></i> Điền thông tin học viên mới ngay
         </button>
-        <a href="{% url 'users:student_login' %}?tab=login&next={% url 'placement_tests:test_room' %}" class="btn btn-outline btn-lg">
-          <i class="fa-solid fa-arrow-right-to-bracket"></i> Đăng nhập học viên cũ
+        <a href="{% url 'users:student_logout' %}?switch_account=1" onclick="try{sessionStorage.clear(); localStorage.removeItem('placement_mcq_draft_answers'); localStorage.removeItem('placement_draft');}catch(e){}" class="btn btn-outline btn-lg">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng nhập tài khoản khác
         </a>
       </div>
     </div>
@@ -1270,7 +1270,7 @@
 
     <!-- Danh sách câu hỏi thi trắc nghiệm (ẩn trước khi bắt đầu) -->
     <div id="mcq-questions-container" style="display:none;">
-      <form method="post" action="{% url 'placement_tests:submit_mcq' %}" id="mcq-form">
+      <form method="post" action="{% url 'placement_tests:submit_mcq' %}" id="mcq-form" onsubmit="event.preventDefault(); handleMCQSubmit(event); return false;">
         {% csrf_token %}
         <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px;">
           {% for cau in cau_hoi_mcq %}
@@ -1301,7 +1301,7 @@
               </div>
 
               <div class="options-list" style="display: flex; flex-direction: column; gap: 8px;">
-                {% for lua_chon in cau.lua_chons.all %}
+                {% for lua_chon in cau.lua_chons.all|default:cau.lua_chons %}
                   <label class="option-item" for="lc_{{ cau.ma_cau_hoi }}_{{ lua_chon.ma_lua_chon }}" onclick="setTimeout(updateMCQProgress, 10)" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); transition: all var(--transition);">
                     <input type="radio" name="q_{{ cau.ma_cau_hoi }}" value="{{ lua_chon.ma_lua_chon }}" id="lc_{{ cau.ma_cau_hoi }}_{{ lua_chon.ma_lua_chon }}" onchange="updateMCQProgress()" onclick="updateMCQProgress()" style="accent-color: var(--accent-orange); width: 16px; height: 16px;">
                     <span style="font-size: 13.5px; color: var(--text-primary);">{{ lua_chon.noi_dung }}</span>
@@ -1935,8 +1935,8 @@
         <button type="button" class="btn btn-outline" id="gate-close-btn" onclick="closeModal('student-gate-modal')" style="font-size: 12.5px; padding: 7px 12px; display: none;">
           Đóng cửa sổ
         </button>
-        <a href="{% url 'users:student_login' %}" class="btn btn-outline" id="gate-switch-btn" style="font-size: 12.5px; padding: 7px 12px;">
-          Đăng nhập tài khoản khác
+        <a href="{% url 'users:student_logout' %}?switch_account=1" onclick="try{sessionStorage.clear(); localStorage.removeItem('placement_mcq_draft_answers'); localStorage.removeItem('placement_draft');}catch(e){}" class="btn btn-outline" id="gate-switch-btn" style="font-size: 12.5px; padding: 7px 12px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng nhập tài khoản khác
         </a>
         <button type="submit" class="btn btn-primary" id="gate-submit-btn" style="font-size: 12.5px; font-weight: 700; padding: 8px 16px;">
           <i class="fa-solid fa-bolt"></i> Kích hoạt đề thi & Bắt đầu làm bài
@@ -2825,10 +2825,12 @@
   }
 
 
-  // ─── NỘP BÀI TRẮC NGHIỆM QUA FETCH API ─────────────────────
-  if (mcqForm) {
-    mcqForm.addEventListener('submit', async e => {
+  // ─── NỘP BÀI TRẮC NGHIỆM QUA FETCH API (TOÀN CỤC) ─────────
+  window.handleMCQSubmit = async function(e) {
+    if (e) {
       e.preventDefault();
+      e.stopPropagation();
+    }
       const btn = document.getElementById('mcq-submit-btn');
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang đối soát đáp án…';
@@ -3005,8 +3007,13 @@
         btn.innerHTML = '<i class="fa-solid fa-check-to-slot"></i> Nộp bài Trắc nghiệm';
         Toast.show('Lỗi xử lý kết quả: ' + (err.message || 'Vui lòng thử lại!'), 'error');
       }
-    });
-  }
+      return false;
+    };
+
+    const mcqFormEl = document.getElementById('mcq-form');
+    if (mcqFormEl) {
+      mcqFormEl.addEventListener('submit', window.handleMCQSubmit);
+    }
 
   // ─── NỘP TOÀN BỘ WRITING & SPEAKING GỘP CHO GEMINI AI ───────
   async function submitCombinedWritingSpeaking() {

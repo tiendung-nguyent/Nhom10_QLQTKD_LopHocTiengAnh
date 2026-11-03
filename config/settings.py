@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 import dj_database_url
+from dotenv import load_dotenv
+
+# Load file .env ngay từ đầu
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -191,10 +195,6 @@ DEFAULT_FROM_EMAIL = 'Academix English Center <academixenglishcenter@gmail.com>'
 import os
 from pathlib import Path
 import dj_database_url
-from dotenv import load_dotenv  # Thêm dòng này
-
-# Load biến môi trường từ file .env
-load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 

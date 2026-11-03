@@ -1076,6 +1076,10 @@ def submit_mcq(request):
             import logging
             logging.getLogger(__name__).warning("Lỗi lưu DB bài trắc nghiệm (vẫn trả điểm cho học viên): %s", db_err)
 
+    # Nếu người dùng submit qua form thông thường (không phải AJAX/Fetch), chuyển hướng về phòng thi thay vì xuất JSON thô
+    if request.headers.get('x-requested-with') != 'XMLHttpRequest' and request.content_type != 'application/json' and 'text/html' in request.headers.get('accept', ''):
+        return redirect(reverse('placement_tests:test_room') + '?mcq_submitted=1')
+
     return JsonResponse({
         'status': 'success',
         'message': f'Hoàn thành Trắc nghiệm! Đạt {score}/40 điểm (Đúng {correct_count}/{total_questions} câu, Bỏ trống {blank_count} câu). Phần thi Writing & Speaking đã mở khóa.',
