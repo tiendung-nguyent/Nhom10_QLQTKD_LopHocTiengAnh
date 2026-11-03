@@ -27,8 +27,15 @@ def student_auth(request, default_tab='login'):
     prefill_email = request.GET.get('email', '')
     demo = request.GET.get('demo')
 
+    # Nếu người dùng muốn đổi tài khoản hoặc đăng xuất -> xóa toàn bộ phiên cũ
+    is_switch = request.GET.get('switch_account') or request.GET.get('logout') or msg in ('logged_out', 'switch_account', 'sso_failed')
+    if is_switch:
+        from django.contrib.auth import logout as auth_logout
+        auth_logout(request)
+        request.session.flush()
+
     # Nếu người dùng đã đăng nhập (User Django authenticated hoặc có vai trò trong Session) -> Điều hướng thẳng đến Dashboard
-    if request.method == 'GET' and not demo and not request.GET.get('logout') and msg != 'logged_out':
+    if request.method == 'GET' and not demo and not is_switch:
         user_is_auth = (hasattr(request, 'user') and request.user.is_authenticated) or bool(
             request.session.get('role') and (request.session.get('user_email') or request.session.get('student_email'))
         )
@@ -331,7 +338,14 @@ def student_register(request):
 
 def student_logout(request):
     """Đăng xuất khỏi hệ thống và xóa toàn bộ session."""
+    from django.contrib.auth import logout as auth_logout
+    auth_logout(request)
     request.session.flush()
+    if request.GET.get('switch_account'):
+        return redirect('/login/?msg=switch_account')
+    next_url = request.GET.get('next')
+    if next_url:
+        return redirect(next_url)
     return redirect('/login/?msg=logged_out')
 
 

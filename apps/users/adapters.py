@@ -1,6 +1,10 @@
+import logging
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.exceptions import ImmediateHttpResponse
 from django.contrib.auth import get_user_model
+from django.shortcuts import redirect
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
@@ -30,6 +34,17 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             if existing_user:
                 # Automatically connect this social account to the existing user
                 sociallogin.connect(request, existing_user)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Auto connect social account failed: %s", e)
 
+    def on_authentication_error(self, request, provider, error=None, exception=None, extra_context=None):
+        """
+        Bắt toàn bộ lỗi khi đăng nhập Google OAuth (state expired, cancelled, connection error).
+        Thay vì để allauth hiển thị màn hình trắng 'Third-Party Login Failure',
+        tự động chuyển hướng về trang /login/?msg=sso_failed với giao diện thân thiện.
+        """
+        logger.warning(
+            "Google SSO login failure caught: provider=%s, error=%s, exception=%s",
+            provider, error, exception
+        )
+        raise ImmediateHttpResponse(redirect('/login/?msg=sso_failed'))

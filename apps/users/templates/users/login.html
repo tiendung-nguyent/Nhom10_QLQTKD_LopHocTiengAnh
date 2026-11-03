@@ -339,6 +339,20 @@
       </div>
       {% endif %}
 
+      {% if msg == 'switch_account' %}
+      <div class="auth-alert-box info" style="background: #EFF6FF; border: 1.5px solid #93C5FD; color: #1E40AF; padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; font-size: 13.5px;">
+        <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 17px; color: #3B82F6;"></i>
+        <div><strong>Đổi tài khoản:</strong> Đã đăng xuất tài khoản trước đó. Vui lòng bấm bên dưới để đăng nhập bằng tài khoản Google mới.</div>
+      </div>
+      {% endif %}
+
+      {% if msg == 'sso_failed' %}
+      <div class="auth-alert-box error" style="background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #991B1B; padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; font-size: 13.5px;">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size: 17px; color: #DC2626;"></i>
+        <div><strong>Đăng nhập Google gián đoạn:</strong> Phiên xác thực Google đã hết hạn hoặc bị hủy. Vui lòng bấm vào nút bên dưới để chọn tài khoản và thử lại.</div>
+      </div>
+      {% endif %}
+
       <div>
         <div class="auth-badge-pill">
           <i class="fa-brands fa-google"></i> Google SSO 1 Chạm
