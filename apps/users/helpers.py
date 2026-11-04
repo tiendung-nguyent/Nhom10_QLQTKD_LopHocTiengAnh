@@ -154,7 +154,7 @@ def check_student_tuition_paid(student):
         # 4. Kiểm tra Ghi danh đã xếp lớp hoặc đã đóng đủ
         if GhiDanh.objects.filter(
             ho_so_tu_van__khach_hang=student,
-            trang_thai__in=['DA_DONG_DU', 'DANG_HOC', 'DA_XEP_LOP']
+            trang_thai__in=['DA_DONG_DU', 'DANG_HOC']
         ).exists():
             return True
     except Exception:
