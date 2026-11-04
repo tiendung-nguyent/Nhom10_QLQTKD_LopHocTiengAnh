@@ -1,1319 +1,1325 @@
-{% extends 'base.html' %}
-{% load static %}
-
-{% block title %}Duyệt bài Chấm điểm AI – Giáo viên{% endblock %}
-{% block page_heading %}Thẩm định & Duyệt bài AI{% endblock %}
-
-{% block extra_css %}
-<style>
-  .review-grid {
-    min-width: 0;
-    max-width: 100%;
-  }
-  .review-grid > * {
-    min-width: 0;
-    max-width: 100%;
-  }
-  @media (max-width: 1100px) {
-    .review-grid {
-      grid-template-columns: 1fr !important;
-      gap: 16px !important;
-    }
-  }
-  @media (max-width: 768px) {
-    .page-header {
-      margin-bottom: 16px !important;
-    }
-    .page-title {
-      font-size: 18px !important;
-    }
-    .page-subtitle {
-      font-size: 12px !important;
-    }
-    .card-header {
-      padding: 12px 14px !important;
-    }
-    .card-body {
-      padding: 12px 14px !important;
-    }
-    #local-test-search {
-      width: 100% !important;
-    }
-    form#test-search-form > div {
-      width: 100% !important;
-    }
-  }
-</style>
-{% endblock %}
-
-{% block content %}
-
-{# ══════════════════════════════════════════════════════════════ #}
-{# PHẦN 1: GIAO DIỆN CHI TIẾT CHẤM CHỮA (KHI ĐÃ BẤM "DUYỆT" 1 BÀI) #}
-{# ══════════════════════════════════════════════════════════════ #}
-{% if is_detail_view and detail %}
-
-{% if is_approved_now %}
-<div style="background: var(--emerald-light); border: 1.5px solid #A7F3D0; border-radius: var(--radius-xl); padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
-  <i class="fa-solid fa-circle-check" style="font-size: 24px; color: var(--accent-emerald);"></i>
-  <div>
-    <strong>Phê duyệt &amp; Chốt kết quả toàn bài thành công!</strong>
-    <div style="font-size: 13px; margin-top: 2px;">Điểm số chính thức của 3 kỹ năng và Khung năng lực CEFR cho phiên thi #{{ detail.ma_phien }} đã được khóa và tự động đồng bộ sang bộ phận Tuyển sinh để phân lớp và thu học phí.</div>
-  </div>
-</div>
-{% endif %}
-
-{% if request.GET.saved %}
-<div style="background: var(--emerald-light); border: 1.5px solid #A7F3D0; border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
-  <i class="fa-solid fa-circle-check" style="font-size: 20px; color: var(--accent-emerald);"></i>
-  <div>
-    <strong>Đã lưu kết quả thẩm định phần thi {{ detail.current_skill_label }} thành công!</strong>
-    <div style="font-size: 13px; margin-top: 2px;">Điểm số điều chỉnh và nhận xét chính thức của Giáo viên đã được lưu lại trong CSDL.</div>
-  </div>
-</div>
-{% endif %}
-
-{% if request.GET.error == 'unapproved_skills' %}
-<div style="background: #FEF2F2; border: 1.5px solid #FECACA; border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #991B1B;">
-  <i class="fa-solid fa-triangle-exclamation" style="font-size: 22px; color: #DC2626;"></i>
-  <div>
-    <strong>Chưa thể phê duyệt kết quả chung!</strong>
-    <div style="font-size: 13px; margin-top: 2px;">Quy định bắt buộc: Giáo viên phải thẩm định và bấm <em>"Lưu Điểm &amp; Nhận xét"</em> cho toàn bộ cả 3 phần thi (Speaking, Writing, Trắc nghiệm) trước khi chốt kết quả.</div>
-  </div>
-</div>
-{% endif %}
-
-{% if request.GET.error == 'already_finalized' %}
-<div style="background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #92400E;">
-  <i class="fa-solid fa-lock" style="font-size: 22px; color: #D97706;"></i>
-  <div>
-    <strong>Bài thi đã được phê duyệt chính thức (Đã khóa)!</strong>
-    <div style="font-size: 13px; margin-top: 2px;">Phiên thi này đã hoàn tất thẩm định và phân lớp CEFR trước đó. Không được phép chỉnh sửa hoặc phê duyệt lại.</div>
-  </div>
-</div>
-{% endif %}
-
-{% if detail.is_test_finalized and not is_approved_now %}
-<div style="background: #F0FDF4; border: 1.5px solid #86EFAC; border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #166534; flex-wrap: wrap;">
-  <div style="display: flex; align-items: center; gap: 12px;">
-    <i class="fa-solid fa-lock" style="font-size: 22px; color: var(--accent-emerald);"></i>
-    <div>
-      <strong>🔒 Bài thi này đã được Giáo viên phê duyệt chính thức (Đã khóa)</strong>
-      <div style="font-size: 12.5px; margin-top: 2px;">Điểm số 3 kỹ năng và Khung năng lực CEFR đã được chốt và đồng bộ sang bộ phận Tuyển sinh. Không thể chỉnh sửa thêm.</div>
-    </div>
-  </div>
-  <span class="badge badge-emerald" style="font-size: 12px; padding: 4px 12px;"><i class="fa-solid fa-check"></i> Đã phê duyệt</span>
-</div>
-{% endif %}
-
-<div class="page-header">
-  <div class="page-breadcrumb">🤖 <span>Giáo viên</span> / <a href="{% url 'placement_tests:teacher_review' %}?filter={{ current_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" style="color: inherit; text-decoration: underline;">Danh sách bài thi</a> / Thẩm định phiên #{{ detail.ma_phien }}</div>
-  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
-    <div>
-      <h1 class="page-title">Thẩm định bài thi #{{ detail.ma_phien }} — {{ detail.hoc_vien_name }} 🤖</h1>
-      <p class="page-subtitle">
-        Học viên: <strong style="color: var(--text-primary);">{{ detail.hoc_vien_name }}</strong> ({{ detail.email }}) · 
-        SĐT: <strong>{{ detail.so_dien_thoai }}</strong> · 
-        Phiên thi: <strong>#{{ detail.ma_phien }}</strong> · 
-        Thi ngày: {{ detail.ngay_thi|date:"d/m/Y H:i" }} · 
-        Mục tiêu: <span class="badge badge-coral" style="font-size: 11.5px; font-weight: 700;">{{ detail.ten_bai }}</span>
-      </p>
-    </div>
-    <a href="{% url 'placement_tests:teacher_review' %}?filter={{ current_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-outline btn-sm">
-      <i class="fa-solid fa-arrow-left"></i> Quay lại Danh sách bài thi
-    </a>
-  </div>
-</div>
-
-<!-- ─── BỘ CHỌN KỸ NĂNG THẨM ĐỊNH (SPEAKING / WRITING / TRẮC NGHIỆM) ─── -->
-<div class="card rounded-2xl shadow-sm" style="margin-bottom: 20px;">
-  <div class="card-header" style="justify-content: flex-start; gap: 12px; flex-wrap: wrap;">
-    <div class="card-title" style="font-size: 13px; color: var(--text-muted);">Chọn Kỹ năng thẩm định:</div>
-    <a href="?session={{ detail.phien_id }}&skill=SPEAKING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
-       class="btn {% if detail.current_skill == 'SPEAKING' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
-      🎙️ Speaking (Ghi âm)
-      <span class="badge {% if detail.speaking_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 9px; margin-left: 4px;">
-        {% if detail.speaking_status == 'GV_DA_DUYET' %}Đã duyệt{% else %}Chờ duyệt{% endif %}
-      </span>
-    </a>
-    <a href="?session={{ detail.phien_id }}&skill=WRITING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
-       class="btn {% if detail.current_skill == 'WRITING' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
-      ✍️ Writing (Tự luận)
-      <span class="badge {% if detail.writing_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-purple{% endif %}" style="font-size: 9px; margin-left: 4px;">
-        {% if detail.writing_status == 'GV_DA_DUYET' %}Đã duyệt{% else %}AI đã chấm{% endif %}
-      </span>
-    </a>
-    <a href="?session={{ detail.phien_id }}&skill=TRAC_NGHIEM{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
-       class="btn {% if detail.current_skill == 'TRAC_NGHIEM' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
-      📝 Trắc nghiệm (40đ)
-      <span class="badge {% if detail.mcq_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-emerald{% endif %}" style="font-size: 9px; margin-left: 4px;">
-        {% if detail.mcq_status == 'GV_DA_DUYET' %}Đã duyệt{% else %}Tự động{% endif %}
-      </span>
-    </a>
-  </div>
-</div>
-
-<!-- ─── GIAO DIỆN SO SÁNH & ĐIỀU CHỈNH 3 CỘT (SIDE-BY-SIDE) ─── -->
-<div class="review-grid" style="display: grid; grid-template-columns: {% if detail.current_skill == 'TRAC_NGHIEM' %}2.2fr 1fr{% else %}repeat(3, 1fr){% endif %}; gap: 20px; margin-bottom: 24px;">
-
-  <!-- ═══════════════════════════════════════════════════════
-       CỘT 1: CÂU TRẢ LỜI THỰC TẾ CỦA HỌC VIÊN
-       ═══════════════════════════════════════════════════════ -->
-  <div class="card rounded-2xl shadow-sm">
-    <div class="card-header">
-      <div>
-        <div class="card-title">📄 1. Câu trả lời của Học viên</div>
-        <div class="card-subtitle">
-          {% if detail.current_skill == 'WRITING' %}Bài viết tự luận (Task 1 & Task 2)
-          {% elif detail.current_skill == 'TRAC_NGHIEM' %}Chi tiết bài làm Trắc nghiệm & Nghe (40 điểm)
-          {% else %}File ghi âm Speaking thực tế{% endif %}
-        </div>
-      </div>
-      <span class="badge badge-gray">Bản gốc</span>
-    </div>
-    <div class="card-body">
-
-      {% if detail.current_skill == 'WRITING' %}
-      <!-- NỘI DUNG BÀI WRITING -->
-      <div style="margin-bottom: 16px;">
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">✍️ Bài viết Writing tự luận:</div>
-        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text-primary); max-height: 440px; overflow-y: auto; white-space: pre-wrap;">{{ detail.cau_tra_loi.writing_text }}</div>
-      </div>
-
-      {% elif detail.current_skill == 'TRAC_NGHIEM' %}
-      <!-- NỘI DUNG BÀI TRẮC NGHIỆM ĐƯỢC THIẾT KẾ HIỆN ĐẠI (ACADEMIX THEME) -->
-      <div style="margin-bottom: 16px;">
-
-        <!-- 1. BẢNG TỔNG QUAN KẾT QUẢ ĐỐI SOÁT -->
-        <div style="background: linear-gradient(135deg, #F8FAFC 0%, #EEF2F6 100%); border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 14px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-            <div>
-              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
-                Kết quả Đối soát Tự động
-              </div>
-              <div style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-top: 2px;">
-                <span id="mcq-live-total">{{ detail.cau_tra_loi.mcq_parsed.total_score }}</span> <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);">/ 40 điểm</span>
-              </div>
-            </div>
-            <span class="badge badge-purple" style="font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px;">
-              Đạt <span id="mcq-live-pct">{{ detail.cau_tra_loi.mcq_parsed.percentage }}%</span>
-            </span>
-          </div>
-
-          <!-- 3 Thẻ thống kê tỷ lệ Đúng - Sai - Bỏ trống -->
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-            <!-- Đúng -->
-            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: var(--radius-md); padding: 8px 10px; text-align: center;">
-              <div style="font-size: 11px; font-weight: 700; color: #065F46; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                <i class="fa-solid fa-circle-check" style="color: #059669;"></i> Đúng
-              </div>
-              <div style="font-size: 15px; font-weight: 800; color: #065F46; margin-top: 2px;">
-                {{ detail.cau_tra_loi.mcq_parsed.correct_count }}/{{ detail.cau_tra_loi.mcq_parsed.total_questions }}
-              </div>
-              <div style="font-size: 10px; color: #059669; font-weight: 600; margin-top: 1px;">
-                +{{ detail.cau_tra_loi.mcq_parsed.total_score }}đ
-              </div>
-            </div>
-
-            <!-- Sai -->
-            <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: var(--radius-md); padding: 8px 10px; text-align: center;">
-              <div style="font-size: 11px; font-weight: 700; color: #991B1B; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                <i class="fa-solid fa-circle-xmark" style="color: #DC2626;"></i> Sai
-              </div>
-              <div style="font-size: 15px; font-weight: 800; color: #991B1B; margin-top: 2px;">
-                {{ detail.cau_tra_loi.mcq_parsed.wrong_count }}/{{ detail.cau_tra_loi.mcq_parsed.total_questions }}
-              </div>
-              <div style="font-size: 10px; color: #DC2626; font-weight: 600; margin-top: 1px;">
-                0đ
-              </div>
-            </div>
-
-            <!-- Bỏ trống -->
-            <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius-md); padding: 8px 10px; text-align: center;">
-              <div style="font-size: 11px; font-weight: 700; color: #92400E; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                <i class="fa-solid fa-triangle-exclamation" style="color: #D97706;"></i> Bỏ trống
-              </div>
-              <div style="font-size: 15px; font-weight: 800; color: #92400E; margin-top: 2px;">
-                {{ detail.cau_tra_loi.mcq_parsed.blank_count }}/{{ detail.cau_tra_loi.mcq_parsed.total_questions }}
-              </div>
-              <div style="font-size: 10px; color: #D97706; font-weight: 600; margin-top: 1px;">
-                Trừ điểm
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {% if detail.cau_tra_loi.mcq_parsed.questions %}
-        <!-- 2. BỘ LỌC NHANH CÂU HỎI -->
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
-          <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">
-            📋 Danh sách 25 câu &amp; Đáp án đối soát:
-          </div>
-          <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-            <button type="button" class="mcq-filter-btn active" onclick="filterMcqQuestions('ALL', this)" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 999px; border: 1.5px solid var(--accent-purple); background: var(--accent-purple); color: #FFFFFF; cursor: pointer; transition: 0.2s;">
-              Tất cả ({{ detail.cau_tra_loi.mcq_parsed.total_questions }})
-            </button>
-            <button type="button" class="mcq-filter-btn" onclick="filterMcqQuestions('CORRECT', this)" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 999px; border: 1.5px solid #A7F3D0; background: #FFFFFF; color: #065F46; cursor: pointer; transition: 0.2s;">
-              ✔ Đúng ({{ detail.cau_tra_loi.mcq_parsed.correct_count }})
-            </button>
-            <button type="button" class="mcq-filter-btn" onclick="filterMcqQuestions('WRONG', this)" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 999px; border: 1.5px solid #FECACA; background: #FFFFFF; color: #991B1B; cursor: pointer; transition: 0.2s;">
-              ❌ Sai ({{ detail.cau_tra_loi.mcq_parsed.wrong_count }})
-            </button>
-            <button type="button" class="mcq-filter-btn" onclick="filterMcqQuestions('BLANK', this)" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 999px; border: 1.5px solid #FDE68A; background: #FFFFFF; color: #92400E; cursor: pointer; transition: 0.2s;">
-              ⚠️ Trống ({{ detail.cau_tra_loi.mcq_parsed.blank_count }})
-            </button>
-          </div>
-        </div>
-
-        <!-- 3. DANH SÁCH CÂU HỎI THIẾT KẾ DẠNG THẺ TRỰC QUAN -->
-        <div id="mcq-questions-container" style="max-height: 480px; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 8px;">
-          {% for q in detail.cau_tra_loi.mcq_parsed.questions %}
-
-          <div class="mcq-card-item" data-status="{{ q.status }}" style="display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid {% if q.is_correct %}#D1FAE5{% elif q.is_blank %}#FEF3C7{% else %}#FEE2E2{% endif %}; box-shadow: 0 1px 3px rgba(0,0,0,0.03); transition: all 0.2s;">
-
-            
-
-            <!-- HÀNG 1: STT CÂU, PHÂN LOẠI & ĐÁP ÁN ĐỐI SOÁT -->
-
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-
-              <div style="display: flex; align-items: center; gap: 10px;">
-
-                <div style="width: 34px; height: 34px; border-radius: 8px; background: {% if q.is_correct %}#ECFDF5; color: #059669; border: 1px solid #A7F3D0;{% elif q.is_blank %}#FFFBEB; color: #D97706; border: 1px solid #FDE68A;{% else %}#FEF2F2; color: #DC2626; border: 1px solid #FECACA;{% endif %} display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex-shrink: 0;">
-
-                  #{{ q.num_str }}
-
-                </div>
-
-                <div>
-
-                  <div style="font-size: 13px; font-weight: 800; color: var(--text-primary); line-height: 1.2;">
-
-                    Câu {{ q.num }}
-
-                  </div>
-
-                  {% if q.category %}
-
-                  <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">{{ q.category }}</div>
-
-                  {% endif %}
-
-                </div>
-
-              </div>
-
-
-
-              <!-- Thẻ so sánh đáp án Học viên & Hệ thống -->
-
-              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-
-                <div style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px;">
-
-                  <span style="color: var(--text-muted); font-size: 11px;">Học viên chọn:</span>
-
-                  {% if q.is_correct %}
-
-                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 6px; background: #ECFDF5; border: 1.5px solid #10B981; color: #065F46; font-weight: 800;">
-
-                      <i class="fa-solid fa-check" style="font-size: 10px; color: #059669;"></i> {{ q.user_ans }}
-
-                    </span>
-
-                  {% elif q.is_blank %}
-
-                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 6px; background: #F8FAFC; border: 1px dashed #CBD5E1; color: #64748B; font-weight: 600; font-style: italic;">
-
-                      <i class="fa-solid fa-circle-exclamation" style="font-size: 10px; color: #D97706;"></i> Bỏ trống
-
-                    </span>
-
-                  {% else %}
-
-                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 6px; background: #FEF2F2; border: 1.5px solid #EF4444; color: #991B1B; font-weight: 800;">
-
-                      <i class="fa-solid fa-xmark" style="font-size: 10px; color: #DC2626;"></i> {{ q.user_ans }}
-
-                    </span>
-
-                  {% endif %}
-
-                </div>
-
-
-
-                <div style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 6px; background: #F0FDF4; border: 1px solid #BBF7D0; font-size: 12px; color: #166534;">
-
-                  <span style="color: var(--text-muted); font-size: 11px;">Đáp án đúng:</span>
-
-                  <strong style="font-weight: 800; color: #15803D;">{{ q.correct_ans }}</strong>
-
-                </div>
-
-              </div>
-
-            </div>
-
-
-
-            <!-- HÀNG 2: HIỂN THỊ ĐỀ THI (CÂU HỎI TRẮC NGHIỆM) -->
-
-            <div style="margin: 4px 0; background: #F8FAFC; border: 1px solid var(--border-color); border-left: 3.5px solid var(--accent-purple); border-radius: 8px; padding: 9px 12px; font-size: 13px; line-height: 1.55; color: var(--text-primary);">
-
-              <div style="font-weight: 700; color: var(--accent-purple); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">
-
-                📖 Đề thi:
-
-              </div>
-
-              <div>{{ q.question_text }}</div>
-
-            </div>
-
-
-
-            <!-- LỰA CHỌN A, B, C, D (NẾU CÓ) -->
-
-            {% if q.options_list %}
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 6px; margin: 2px 0;">
-
-              {% for opt in q.options_list %}
-
-              <div style="font-size: 12px; padding: 5px 9px; border-radius: 6px; background: {% if opt.key == q.correct_ans %}#ECFDF5; border: 1.5px solid #10B981; color: #065F46; font-weight: 700;{% elif opt.key == q.user_ans %}#FEF2F2; border: 1.5px solid #EF4444; color: #991B1B; font-weight: 700;{% else %}#FFFFFF; border: 1px solid var(--border-color); color: var(--text-secondary);{% endif %}; display: flex; align-items: center; justify-content: space-between;">
-
-                <span><strong>{{ opt.key }}.</strong> {{ opt.text }}</span>
-
-                {% if opt.key == q.correct_ans %}
-
-                  <span style="font-size: 10px; color: #059669; font-weight: 800;">(Đúng)</span>
-
-                {% elif opt.key == q.user_ans %}
-
-                  <span style="font-size: 10px; color: #DC2626; font-weight: 800;">(HV chọn)</span>
-
-                {% endif %}
-
-              </div>
-
-              {% endfor %}
-
-            </div>
-
-            {% endif %}
-
-
-
-            <!-- HÀNG 3: CỘT GIÁO VIÊN ĐIỀU CHỈNH ĐIỂM THEO TỪNG CÂU (TỰ ĐỘNG CỘNG DỒN) -->
-
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 7px 12px; background: #FAF5FF; border: 1px dashed #DDD6FE; border-radius: 8px; margin-top: 4px;">
-
-              <div style="display: flex; align-items: center; gap: 6px;">
-
-                <span style="font-size: 12px; font-weight: 700; color: var(--accent-purple);">
-
-                  ✏️ Điểm câu #{{ q.num }}:
-
-                </span>
-
-                <span style="font-size: 11px; color: var(--text-muted); font-style: italic;">
-
-                  {% if q.is_adjusted %}<span style="color: #059669; font-weight: 700;">(Đã điều chỉnh)</span>{% else %}(Mặc định hệ thống, chỉ sửa khi cần){% endif %}
-
-                </span>
-
-              </div>
-
-
-
-              <div style="display: flex; align-items: center; gap: 8px;">
-
-                <div style="display: flex; align-items: center; gap: 4px;">
-
-                  <input type="number" min="0" max="1.6" step="0.1" 
-
-                         class="mcq-score-input" 
-
-                         data-qnum="{{ q.num }}" 
-
-                         value="{{ q.points }}" 
-
-                         onchange="handleMcqScoreChange(this)"
-
-                         {% if detail.is_test_finalized %}disabled{% endif %}
-
-                         style="width: 65px; padding: 3px 6px; font-size: 13.5px; font-weight: 800; border-radius: 6px; border: 1.5px solid #C084FC; text-align: center; background: #FFFFFF; color: var(--accent-purple);">
-
-                  <span style="font-size: 11.5px; font-weight: 700; color: var(--text-muted);">/1.6đ</span>
-
-                </div>
-
-                {% if not detail.is_test_finalized %}
-
-                <button type="button" class="btn btn-sm" onclick="setQuickMcqScore({{ q.num }}, 1.6)" style="padding: 3px 8px; font-size: 11px; font-weight: 700; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; border-radius: 6px; cursor: pointer;" title="Chấm điểm câu này là Đúng (1.6đ)">
-
-                  ✔ Đúng (+1.6đ)
-
-                </button>
-
-                <button type="button" class="btn btn-sm" onclick="setQuickMcqScore({{ q.num }}, 0.0)" style="padding: 3px 8px; font-size: 11px; font-weight: 700; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 6px; cursor: pointer;" title="Chấm điểm câu này là Sai (0đ)">
-
-                  ❌ Sai (0đ)
-
-                </button>
-
-                {% endif %}
-
-              </div>
-
-            </div>
-
-
-
-          </div>{% endfor %}
-
-          <div id="mcq-filter-empty" style="display: none; text-align: center; padding: 32px 16px; color: var(--text-muted); font-size: 13px; background: #FFFFFF; border-radius: 12px; border: 1px dashed var(--border-color);">
-            <i class="fa-regular fa-folder-open" style="font-size: 26px; margin-bottom: 6px; display: block; color: var(--text-muted);"></i>
-            Không có câu hỏi nào theo bộ lọc đã chọn.
-          </div>
-        </div>
-
-        {% else %}
-        <!-- Fallback nếu không có dữ liệu phân tích cấu trúc -->
-        <div style="background: var(--bg-app); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; font-size: 12.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height: 1.75; color: var(--text-primary); max-height: 520px; overflow-y: auto; white-space: pre-wrap;">{{ detail.cau_tra_loi.mcq_summary }}</div>
-        {% endif %}
-
-      </div>
-
-      {% else %}
-      <!-- NỘI DUNG BÀI GHI ÂM SPEAKING -->
-      <div style="margin-bottom: 18px;">
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
-          🎙️ File Audio ghi âm &amp; Bản dịch Speech-to-Text:
-        </div>
-        <audio controls style="width: 100%; border-radius: 8px; margin-bottom: 10px;">
-          <source src="{{ detail.cau_tra_loi.audio_url|default:'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg' }}" type="audio/ogg">
-          Trình duyệt không hỗ trợ audio.
-        </audio>
-        <div style="font-size: 11px; color: var(--text-muted); font-style: italic;">
-          Bấm play để nghe toàn bộ phần ghi âm câu trả lời Speaking của thí sinh.
-        </div>
-      </div>
-
-      <div>
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
-          📝 Transcript lời nói ghi âm:
-        </div>
-        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text-primary); max-height: 300px; overflow-y: auto; white-space: pre-wrap;">{{ detail.cau_tra_loi.transcript }}</div>
-      </div>
-      {% endif %}
-
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════
-       CỘT 2: PHÂN TÍCH & GỢI Ý TỪ AI AGENT (GEMINI FLASH)
-       (GIỮ NGUYÊN ĐIỂM AI GỢI Ý GỐC, KHÔNG BỊ TĂNG THEO GV SỬA)
-       ═══════════════════════════════════════════════════════ -->
-  <div class="card rounded-2xl shadow-sm">
-    <div class="card-header">
-      <div>
-        <div class="card-title">✦ 2. Phân tích &amp; Gợi ý từ AI</div>
-        <div class="card-subtitle">
-          Mô hình: {{ detail.cham_diem_ai.mo_hinh_ai }} · Phiên bản: {{ detail.cham_diem_ai.phien_ban_prompt }}
-        </div>
-      </div>
-      <span class="badge badge-purple">✦ Độ tin cậy {{ detail.cham_diem_ai.do_tin_cay }}%</span>
-    </div>
-    <div class="card-body">
-
-      <!-- Hộp điểm AI đề xuất (Gốc) -->
-      <div style="background: linear-gradient(135deg, var(--purple-light), #EDE9FE); border-radius: var(--radius-lg); padding: 16px; text-align: center; margin-bottom: 18px;">
-        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-purple); margin-bottom: 4px;">
-          Điểm AI đề xuất (Gốc)
-        </div>
-        <div style="font-size: 38px; font-weight: 800; color: var(--accent-purple); line-height: 1;">
-          {{ detail.current_ai_score }}<span style="font-size: 20px; font-weight: 500; color: var(--text-muted);">/{{ detail.max_skill_score }}</span>
-        </div>
-        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">
-          Kỹ năng: <strong>{{ detail.current_skill_label }}</strong>
-        </div>
-      </div>
-
-      <!-- Chi tiết từng tiêu chí Rubric từ AI -->
-      <div style="margin-bottom: 18px;">
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px;">
-          ✦ Chi tiết Rubric Phân tích
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          {% for crit in detail.ai_criteria %}
-          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px;">
-            <span style="color: var(--text-secondary); flex: 1;">{{ crit.name }}</span>
-            <div style="width: 100px; height: 6px; background: #E2E8F0; border-radius: 999px; margin: 0 10px; overflow: hidden;">
-              <div style="width: {{ crit.pct }}%; height: 100%; background: var(--accent-purple); border-radius: 999px;"></div>
-            </div>
-            <strong style="color: var(--text-primary); min-width: 28px; text-align: right;">{{ crit.score }}</strong>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-
-      <!-- Nhận xét chi tiết từ AI -->
-      <div>
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
-          ✦ Nhận xét phân tích chi tiết từ AI
-        </div>
-        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; font-size: 12.5px; line-height: 1.65; color: var(--text-secondary);">
-          {{ detail.cham_diem_ai.nhan_xet }}
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  {% if detail.current_skill != 'TRAC_NGHIEM' %}
-
-<!-- ═══════════════════════════════════════════════════════
-       CỘT 3: GIÁO VIÊN ĐIỀU CHỈNH & PHÊ DUYỆT CHÍNH THỨC
-       ═══════════════════════════════════════════════════════ -->
-  <div class="card rounded-2xl shadow-sm">
-    <div class="card-header">
-      <div>
-        <div class="card-title">✏️ 3. Thẩm định {{ detail.current_skill_label }}</div>
-        <div class="card-subtitle">Điểm &amp; Nhận xét riêng cho bài thi kỹ năng này</div>
-      </div>
-      <span class="badge {% if detail.bai_lam.trang_thai_cham == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}">
-        {% if detail.bai_lam.trang_thai_cham == 'GV_DA_DUYET' %}✔ Đã chấm kỹ năng{% else %}⏳ Chờ chấm{% endif %}
-      </span>
-    </div>
-    <div class="card-body">
-      <form method="POST" action="{% url 'placement_tests:approve_skill' %}">
-        {% csrf_token %}
-        <input type="hidden" name="phien_id" value="{{ detail.phien_id }}">
-        <input type="hidden" name="ky_nang" value="{{ detail.current_skill }}">
-
-        <!-- Readonly kỹ năng đang duyệt -->
-        <div class="form-group">
-          <label class="form-label">Kỹ năng đang thẩm định</label>
-          <input type="text" class="form-control" value="{{ detail.current_skill_label }}" readonly style="background: #F8FAFC; font-weight: 600;">
-        </div>
-
-        <!-- Readonly điểm AI tham khảo (Điểm AI gốc giữ nguyên) -->
-        <div class="form-group">
-          <label class="form-label">Điểm AI đề xuất (Tham khảo)</label>
-          <input type="text" class="form-control" value="{{ detail.current_ai_score }} / {{ detail.max_skill_score }} điểm" readonly style="background: #F8FAFC; color: var(--accent-purple); font-weight: 700;">
-        </div>
-
-        <!-- Input Giáo viên chỉnh sửa điểm cho kỹ năng này -->
-        <div class="form-group">
-          <label class="form-label" style="color: var(--accent-orange); font-weight: 700;">
-            ⭐ Điểm Giáo viên điều chỉnh chính thức (0–{{ detail.max_skill_score }})
-          </label>
-          <input type="number" name="diem_dieu_chinh" class="form-control" 
-                 min="0" max="{{ detail.max_skill_score }}" step="0.5"
-                 value="{{ detail.current_teacher_score }}"
-                 style="font-size: 16px; font-weight: 700; border-color: var(--accent-coral);"
-                 required>
-          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
-            Giáo viên có quyền giữ nguyên hoặc điều chỉnh tăng/giảm theo đánh giá thực tế.
-          </div>
-        </div>
-
-        <!-- Textarea Giáo viên chỉnh sửa nhận xét riêng cho kỹ năng này -->
-        <div class="form-group">
-          <label class="form-label">💬 Nhận xét chính thức của Giáo viên</label>
-          <textarea name="nhan_xet_gv" class="form-control" rows="4" 
-                    placeholder="Nhập nhận xét chi tiết của bạn cho bài làm kỹ năng {{ detail.current_skill_label }}…">{{ detail.bai_lam.nhan_xet_gv }}</textarea>
-          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
-            Nhận xét này sẽ được lưu riêng vào kết quả phần thi <strong>{{ detail.current_skill_label }}</strong> của học viên.
-          </div>
-        </div>
-
-        <!-- Nút POST lưu điểm kỹ năng -->
-        <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-save-skill-submit" style="font-weight: 700;">
-          💾 Lưu Điểm &amp; Nhận xét kỹ năng {{ detail.current_skill_label }}
-        </button>
-
-        <div style="margin-top: 14px; padding: 10px 12px; background: #F8FAFC; border: 1px dashed var(--border-color); border-radius: var(--radius-md); font-size: 11.5px; color: var(--text-secondary); line-height: 1.45;">
-          💡 Sau khi lưu điểm các phần thi, hãy chuyển xuống <strong>phần Tổng hợp &amp; Xếp loại CEFR ở dưới cùng</strong> để phê duyệt toàn bài thi sang Tuyển sinh.
-        </div>
-      </form>
-    </div>
-  </div>
-
-{% endif %}
-
-
-
-</div><!-- .review-grid -->
-
-<!-- ═══════════════════════════════════════════════════════════════
-     PHẦN RIÊNG BIỆT DƯỚI CÙNG: TỔNG HỢP TOÀN BỘ BÀI THI & KHUNG NĂNG LỰC CEFR
-     ═══════════════════════════════════════════════════════════════ -->
-<div class="card rounded-2xl shadow-sm" style="margin-top: 24px; border: 2px solid #E9D5FF; background: linear-gradient(180deg, #FFFFFF, #FAF8FF);">
-  <div class="card-header" style="background: linear-gradient(135deg, #F5F3FF, #FFF7ED); padding: 18px 24px; border-bottom: 1.5px solid #E9D5FF; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-    <div style="display: flex; align-items: center; gap: 14px;">
-      <div style="width: 46px; height: 46px; border-radius: 14px; background: var(--purple-light); color: var(--accent-purple); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; border: 1.5px solid #DDD6FE;">
-        🎯
-      </div>
-      <div>
-        <h3 style="font-size: 16.5px; font-weight: 800; color: var(--text-primary); margin: 0;">
-          Tổng kết Điểm 3 Kỹ năng &amp; Khung Năng lực CEFR Xếp loại
-        </h3>
-        <p style="font-size: 12.5px; color: var(--text-secondary); margin: 3px 0 0;">
-          Tổng hợp điểm 3 phần thi để xác nhận trình độ chuẩn CEFR và đề xuất khóa học chuyển sang Lane Tuyển sinh.
-        </p>
-      </div>
-    </div>
-    <span class="badge badge-purple" style="font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 999px;">
-      {{ detail.goal_title }}
-    </span>
-  </div>
-
-  <div class="card-body" style="padding: 24px;">
-    <!-- Bảng 3 kỹ năng & Tổng điểm -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 22px;">
-      <!-- Trắc nghiệm -->
-      <div style="background: #FFFFFF; border: 1.5px solid {% if detail.mcq_status == 'GV_DA_DUYET' %}#A7F3D0{% else %}#FECACA{% endif %}; border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-        <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">📖 Trắc nghiệm &amp; Nghe</div>
-        <div style="font-size: 24px; font-weight: 900; color: #10B981; margin: 6px 0;"><span id="bottom-mcq-score">{{ detail.scores.mcq }} / 40đ</span></div>
-        <span class="badge {% if detail.mcq_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 10.5px;">
-          {% if detail.mcq_status == 'GV_DA_DUYET' %}✔ GV đã duyệt{% else %}⏳ Chờ thẩm định{% endif %}
-        </span>
-      </div>
-
-      <!-- Writing -->
-      <div style="background: #FFFFFF; border: 1.5px solid {% if detail.writing_status == 'GV_DA_DUYET' %}#A7F3D0{% else %}#FECACA{% endif %}; border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-        <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">✍️ Writing (Tự luận)</div>
-        <div style="font-size: 24px; font-weight: 900; color: #8B5CF6; margin: 6px 0;">{{ detail.scores.writing }} / 30đ</div>
-        <span class="badge {% if detail.writing_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 10.5px;">
-          {% if detail.writing_status == 'GV_DA_DUYET' %}✔ GV đã duyệt{% else %}⏳ Chờ thẩm định{% endif %}
-        </span>
-      </div>
-
-      <!-- Speaking -->
-      <div style="background: #FFFFFF; border: 1.5px solid {% if detail.speaking_status == 'GV_DA_DUYET' %}#A7F3D0{% else %}#FECACA{% endif %}; border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-        <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">🎙️ Speaking (Ghi âm)</div>
-        <div style="font-size: 24px; font-weight: 900; color: #FF7E5F; margin: 6px 0;">{{ detail.scores.speaking }} / 30đ</div>
-        <span class="badge {% if detail.speaking_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 10.5px;">
-          {% if detail.speaking_status == 'GV_DA_DUYET' %}✔ GV đã duyệt{% else %}⏳ Chờ thẩm định{% endif %}
-        </span>
-      </div>
-
-      <!-- Tổng điểm tích lũy -->
-      <div style="background: linear-gradient(135deg, #FFF4ED, #FFF0EB); border: 2px solid #FFD8C2; border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(234, 88, 12, 0.08);">
-        <div style="font-size: 11.5px; font-weight: 800; color: var(--accent-orange); text-transform: uppercase;">🏆 Tổng điểm tích lũy</div>
-        <div style="font-size: 28px; font-weight: 900; color: var(--accent-orange); margin: 4px 0;"><span id="bottom-total-score">{{ detail.scores.total }} / 100đ</span></div>
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">Trình độ: {{ detail.level_label }}</div>
-      </div>
-    </div>
-
-    <!-- KHỐI THÔNG BÁO TIẾN ĐỘ THẨM ĐỊNH -->
-    {% if not detail.all_skills_approved and not detail.is_test_finalized %}
-    <div style="background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 14px;">
-      <div style="width: 38px; height: 38px; border-radius: 50%; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
-        <i class="fa-solid fa-lock"></i>
-      </div>
-      <div style="flex: 1;">
-        <div style="font-weight: 800; font-size: 13.5px; color: #92400E;">
-          Chưa đủ điều kiện phê duyệt kết quả chung
-        </div>
-        <div style="font-size: 12.5px; color: #78350F; margin-top: 3px; line-height: 1.5;">
-          Quy định bắt buộc: Bạn cần thẩm định và bấm <strong>"Lưu Điểm &amp; Nhận xét"</strong> cho tất cả các phần thi trước khi phê duyệt chốt kết quả và chuyển Tuyển sinh.
-        </div>
-        <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-          <span style="font-size: 12px; font-weight: 700; color: #92400E;">Phần thi còn thiếu:</span>
-          {% for us in detail.unapproved_skills %}
-          <a href="?session={{ detail.phien_id }}&skill={{ us.key }}{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
-             class="btn btn-sm btn-coral" style="padding: 4px 12px; font-size: 11.5px; font-weight: 700; text-decoration: none;">
-            {{ us.name }} → Thẩm định ngay
-          </a>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-    {% elif detail.all_skills_approved and not detail.is_test_finalized %}
-    <div style="background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
-      <i class="fa-solid fa-circle-check" style="font-size: 22px; color: #059669; flex-shrink: 0;"></i>
-      <div style="font-size: 13px; line-height: 1.5;">
-        <strong>✔ Đã hoàn tất thẩm định cả 3 phần thi:</strong> Cả 3 kỹ năng (Speaking, Writing, Trắc nghiệm) đã được Giảng viên xác nhận điểm. Bạn có thể chọn Khung năng lực CEFR và bấm nút bên dưới để chuyển tiếp sang Tuyển sinh.
-      </div>
-    </div>
-    {% elif detail.is_test_finalized %}
-    <div style="background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
-      <i class="fa-solid fa-circle-check" style="font-size: 22px; color: #059669; flex-shrink: 0;"></i>
-      <div style="font-size: 13px; line-height: 1.5;">
-        <strong>Bài thi này đã được phê duyệt chính thức hoàn tất</strong> và chuyển giao kết quả sang bộ phận Tuyển sinh để xếp lớp.
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- Form xác nhận CEFR và phê duyệt chính thức -->
-    <form method="POST" action="{% url 'placement_tests:finalize_test_result' %}">
-      {% csrf_token %}
-      <input type="hidden" name="phien_id" value="{{ detail.phien_id }}">
-
-      <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; align-items: start; margin-bottom: 20px;">
-        <!-- Dropdown CEFR -->
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 13.5px; font-weight: 700; color: var(--text-primary);">🎯 Khung năng lực CEFR xếp loại</span>
-            <span class="badge badge-purple" style="font-size: 10px;">Chuẩn {{ detail.goal_title }}</span>
-          </label>
-          <select name="trinh_do" class="form-control" style="font-weight: 600;" required>
-            {% for lv in levels %}
-            <option value="{{ lv.value }}" {% if lv.value == detail.trinh_do %}selected{% endif %}>{{ lv.label }}</option>
-            {% endfor %}
-          </select>
-          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
-            💡 Đề xuất xếp lớp theo đúng mục tiêu: <strong>{{ detail.khoa_de_xuat }}</strong>
-          </div>
-        </div>
-
-        <!-- Khóa học đề xuất cho Tuyển sinh -->
-        <div style="background: #F8FAFC; border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); padding: 14px 16px;">
-          <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Khóa học Đề xuất Xếp lớp</div>
-          <div style="font-size: 15px; font-weight: 800; color: var(--accent-purple); margin-top: 4px;">
-            {{ detail.khoa_de_xuat }}
-          </div>
-          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.45;">
-            Hệ thống sẽ đồng bộ khóa học này sang hồ sơ tư vấn để Tư vấn viên liên hệ xếp lớp và phát hành học phí.
-          </div>
-        </div>
-      </div>
-
-      <!-- Cảnh báo & Nút xác nhận -->
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; padding-top: 18px; border-top: 1px solid var(--border-color);">
-        <div style="font-size: 12.5px; color: var(--text-secondary); max-width: 550px; line-height: 1.5;">
-          ⚠️ Sau khi nhấn <strong>Phê duyệt kết quả</strong>, điểm số và khung năng lực sẽ được khóa và tự động chuyển sang bộ phận <strong>Tư vấn Tuyển sinh</strong> để phân lớp.
-        </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
-          <a href="{% url 'placement_tests:teacher_review' %}?filter={{ current_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-outline">
-            ← Quay lại Danh sách bài thi
-          </a>
-          {% if detail.is_test_finalized %}
-          <button type="button" class="btn btn-emerald btn-lg" disabled style="font-weight: 800; padding: 10px 22px; opacity: 0.7; cursor: not-allowed;">
-            🔒 Đã phê duyệt chính thức (Đã khóa)
-          </button>
-          {% elif detail.all_skills_approved %}
-          <button type="submit" class="btn btn-emerald btn-lg" style="font-weight: 800; padding: 10px 22px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
-            ✔ Phê duyệt kết quả &amp; Chuyển tuyển sinh
-          </button>
-          {% else %}
-          <button type="button" class="btn btn-lg" disabled style="font-weight: 800; padding: 10px 22px; background: #94A3B8; border-color: #94A3B8; color: #FFFFFF; opacity: 0.65; cursor: not-allowed;" title="Vui lòng thẩm định và lưu điểm cho toàn bộ các phần thi (Speaking, Writing, Trắc nghiệm) trước khi phê duyệt kết quả">
-            🔒 Cần thẩm định đủ 3 phần thi để phê duyệt
-          </button>
-          {% endif %}
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-
-{% endif %}
-
-{# ══════════════════════════════════════════════════════════════ #}
-{# PHẦN 2: BẢNG DANH SÁCH BÀI THI HỌC VIÊN ĐÃ LÀM TEST           #}
-{# (MẶC ĐỊNH HIỂN THỊ DANH SÁCH - ẨN ĐI KHI ĐANG THẨM ĐỊNH CHI TIẾT) #}
-{# ══════════════════════════════════════════════════════════════ #}
-{% if not is_detail_view %}
-<div class="page-header">
-  <div class="page-breadcrumb">🤖 <span>Giáo viên</span> / Duyệt bài AI</div>
-  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
-    <div>
-      <h1 class="page-title">Duyệt bài AI – So sánh &amp; Điều chỉnh điểm 🤖</h1>
-      <p class="page-subtitle">Danh sách các bài kiểm tra đầu vào học viên đã làm test — Thẩm định &amp; Phê duyệt điểm số</p>
-    </div>
-  </div>
-</div>
-
-<div class="card rounded-2xl shadow-sm">
-  <!-- ─── MODERN HEADER: 2 HÀNG RÕ RÀNG, SANG TRỌNG ─── -->
-  <div class="card-header" style="padding: 18px 22px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); display: flex; flex-direction: column; gap: 14px;">
-    <!-- Hàng 1: Tiêu đề + Segmented Tabs -->
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; width: 100%;">
-      <div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, rgba(255, 107, 74, 0.15), rgba(144, 97, 249, 0.15)); color: var(--accent-coral, #FF6B4A); display: inline-flex; align-items: center; justify-content: center; font-size: 15px;">
-            <i class="fa-solid fa-clipboard-check"></i>
-          </span>
-          <span style="font-size: 16px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.2px;">
-            Danh sách bài thi học viên đã nộp
-          </span>
-        </div>
-        <div style="font-size: 12px; color: var(--text-muted); margin-top: 3px; margin-left: 40px;">
-          Bấm <strong style="color: var(--accent-coral);">"Duyệt ✏️"</strong> ở mỗi dòng để xem chi tiết bài làm, gợi ý AI và tiến hành chấm chữa
-        </div>
-      </div>
-
-      <!-- Segmented Tabs Lọc trạng thái -->
-      <div style="display: inline-flex; background: var(--bg-app); padding: 3px; border-radius: 10px; border: 1px solid var(--border-color); gap: 2px;">
-        <a href="?filter=all{% if search_query %}&q={{ search_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
-           class="btn btn-sm {% if current_filter == 'all' or not current_filter %}btn-primary{% else %}btn-ghost{% endif %}"
-           style="border-radius: 8px; padding: 5px 12px; font-size: 11.5px; font-weight: 600;">
-          Tất cả <span style="opacity: 0.8; font-weight: 700; margin-left: 2px;">({{ total_tests_count }})</span>
-        </a>
-        <a href="?filter=pending{% if search_query %}&q={{ search_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
-           class="btn btn-sm {% if current_filter == 'pending' %}btn-purple{% else %}btn-ghost{% endif %}"
-           style="border-radius: 8px; padding: 5px 12px; font-size: 11.5px; font-weight: 600;">
-          <i class="fa-regular fa-clock" style="font-size: 10.5px;"></i> Chờ duyệt <span style="opacity: 0.8; font-weight: 700; margin-left: 2px;">({{ pending_tests_count }})</span>
-        </a>
-        <a href="?filter=approved{% if search_query %}&q={{ search_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
-           class="btn btn-sm {% if current_filter == 'approved' %}btn-emerald{% else %}btn-ghost{% endif %}"
-           style="border-radius: 8px; padding: 5px 12px; font-size: 11.5px; font-weight: 600;">
-          <i class="fa-solid fa-circle-check" style="font-size: 10.5px;"></i> Đã duyệt <span style="opacity: 0.8; font-weight: 700; margin-left: 2px;">({{ approved_tests_count }})</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- Hàng 2: Ô tìm kiếm + Nút Sắp xếp -->
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%;">
-      <form method="GET" action="" style="display: flex; gap: 6px; align-items: center; flex: 1; max-width: 380px;" id="test-search-form">
-        {% if current_filter and current_filter != 'all' %}<input type="hidden" name="filter" value="{{ current_filter }}">{% endif %}
-        {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
-        <div style="position: relative; width: 100%;">
-          <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px;"></i>
-          <input type="text" name="q" id="local-test-search" class="form-control form-control-sm"
-                 value="{{ search_query }}"
-                 placeholder="Tìm theo Tên, SĐT, Email, Mã phiên..."
-                 style="padding-left: 32px; padding-right: 28px; border-radius: 8px; font-size: 12px; height: 34px;">
-          {% if search_query %}
-          <a href="?{% if current_filter and current_filter != 'all' %}filter={{ current_filter }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); text-decoration: none;" title="Xóa tìm kiếm">✕</a>
-          {% endif %}
-        </div>
-        <button type="submit" class="btn btn-outline btn-sm" style="border-radius: 8px; height: 34px; padding: 0 12px; font-size: 12px;">
-          Tìm
-        </button>
-      </form>
-
-      <button type="button" class="btn btn-outline btn-sm" id="btn-sort-review"
-              onclick="handleReviewSort(this)"
-              title="Đảo chiều sắp xếp theo thời gian nộp bài"
-              style="border-radius: 8px; height: 34px; padding: 0 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-        <i class="fa-solid {% if current_sort == 'asc' %}fa-arrow-up-wide-short{% else %}fa-arrow-down-wide-short{% endif %}" style="color: var(--accent-coral);"></i>
-        <span class="sort-text">{% if current_sort == 'asc' %}Xa nhất trước (Cũ → Mới){% else %}Gần nhất trước (Mới → Cũ){% endif %}</span>
-      </button>
-    </div>
-  </div>
-
-  <div class="table-wrapper" style="overflow-x: auto; width: 100%;">
-    <table id="students-table" style="width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed;" data-sort-order="{{ current_sort|default:'desc' }}">
-      <colgroup>
-        <col style="width: 4%;">    <!-- STT -->
-        <col style="width: 22%;">   <!-- Học viên & Mã phiên -->
-        <col style="width: 16%;">   <!-- Đề thi / Mục tiêu -->
-        <col style="width: 11%;">   <!-- Thời gian nộp -->
-        <col style="width: 7.5%;">  <!-- Speaking -->
-        <col style="width: 7.5%;">  <!-- Writing -->
-        <col style="width: 8%;">    <!-- Trắc nghiệm -->
-        <col style="width: 7.5%;">  <!-- Tổng điểm -->
-        <col style="width: 9%;">    <!-- Trạng thái -->
-        <col style="width: 7.5%;">  <!-- Thao tác -->
-      </colgroup>
-      <thead>
-        <tr style="border-bottom: 2px solid var(--border-color); background: #FAFBFD; color: #475569; font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
-          <th style="padding: 11px 4px; text-align: center;">STT</th>
-          <th style="padding: 11px 8px; text-align: left;">Học viên</th>
-          <th style="padding: 11px 6px; text-align: left;">Đề kiểm tra</th>
-          <th style="padding: 11px 6px; text-align: left; cursor: pointer; user-select: none;" onclick="handleReviewSort(document.getElementById('btn-sort-review'))" title="Bấm để đổi sắp xếp thời gian">
-            Nộp bài <i class="fa-solid fa-sort" style="font-size: 9.5px; opacity: 0.6; margin-left: 2px; color: var(--accent-coral);"></i>
-          </th>
-          <th style="padding: 11px 4px; text-align: center;">Speaking</th>
-          <th style="padding: 11px 4px; text-align: center;">Writing</th>
-          <th style="padding: 11px 4px; text-align: center;">Trắc nghiệm</th>
-          <th style="padding: 11px 4px; text-align: center;">Tổng</th>
-          <th style="padding: 11px 4px; text-align: center;">Trạng thái</th>
-          <th style="padding: 11px 4px; text-align: center;">Thao tác</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in page_obj %}
-        <tr data-timestamp="{{ item.timestamp }}" style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease; {% if item.is_selected %}background: #FAF5FF; border-left: 3px solid var(--accent-purple);{% endif %}">
-          <td class="stt-cell" style="padding: 10px 4px; font-weight: 700; color: var(--text-muted); text-align: center; font-size: 11.5px; vertical-align: middle;">
-            {{ forloop.counter }}
-          </td>
-          <td style="padding: 10px 8px; vertical-align: middle;">
-            <div>
-              <div style="display: flex; align-items: center; gap: 5px;">
-                <span style="font-weight: 700; font-size: 13px; color: var(--text-primary); white-space: nowrap;">{{ item.ten_hoc_vien }}</span>
-                <span class="badge badge-gray" style="font-size: 9.5px; padding: 1px 4px; font-weight: 600; flex-shrink: 0;">#{{ item.ma_phien }}</span>
-              </div>
-              <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px; white-space: nowrap;" title="{{ item.email }}">
-                {{ item.email }}
-              </div>
-              {% if item.so_dien_thoai and item.so_dien_thoai != 'Chưa có SĐT' %}
-              <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 1px; white-space: nowrap;">
-                <i class="fa-solid fa-phone" style="font-size: 9px;"></i> {{ item.so_dien_thoai }}
-              </div>
-              {% endif %}
-            </div>
-          </td>
-          <td style="padding: 10px 6px; vertical-align: middle;">
-            <span class="badge badge-purple" style="font-size: 11px; padding: 3px 7px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ item.ten_bai }}">
-              <i class="fa-solid fa-graduation-cap"></i> Entrance Test (105')
-            </span>
-          </td>
-          <td style="padding: 10px 6px; vertical-align: middle;">
-            <div style="font-weight: 600; font-size: 12px; color: var(--text-primary); white-space: nowrap;">
-              {{ item.thoi_gian|date:"d/m/Y" }}
-            </div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px; white-space: nowrap;">
-              <i class="fa-regular fa-clock" style="font-size: 9.5px;"></i> {{ item.thoi_gian|date:"H:i" }}
-            </div>
-          </td>
-          <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
-            {% if item.speaking_score is not None %}
-              <span class="badge badge-purple" style="padding: 2px 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap;">
-                {{ item.speaking_score }} <small style="font-size: 9.5px; opacity: 0.65; font-weight: 400;">/30</small>
-              </span>
-            {% else %}
-              <span class="text-muted" style="font-size: 11.5px;">—</span>
-            {% endif %}
-          </td>
-          <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
-            {% if item.writing_score is not None %}
-              <span class="badge badge-purple" style="padding: 2px 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap;">
-                {{ item.writing_score }} <small style="font-size: 9.5px; opacity: 0.65; font-weight: 400;">/30</small>
-              </span>
-            {% else %}
-              <span class="text-muted" style="font-size: 11.5px;">—</span>
-            {% endif %}
-          </td>
-          <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
-            {% if item.mcq_score is not None %}
-              <span class="badge badge-emerald" style="padding: 2px 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap;">
-                {{ item.mcq_score }} <small style="font-size: 9.5px; opacity: 0.65; font-weight: 400;">/40</small>
-              </span>
-            {% else %}
-              <span class="text-muted" style="font-size: 11.5px;">—</span>
-            {% endif %}
-          </td>
-          <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
-            <strong style="font-size: 13px; color: var(--accent-purple);">{{ item.tong_diem }}đ</strong>
-          </td>
-          <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
-            {% if item.trang_thai == 'approved' or item.is_approved %}
-              <span class="badge badge-emerald" style="padding: 3px 6px; font-size: 10.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">
-                <i class="fa-solid fa-check"></i> Đã duyệt
-              </span>
-            {% else %}
-              <span class="badge badge-coral" style="padding: 3px 6px; font-size: 10.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">
-                <i class="fa-regular fa-clock"></i> Chờ duyệt
-              </span>
-            {% endif %}
-          </td>
-          <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
-            {% if item.is_approved or item.trang_thai == 'approved' %}
-              <a href="?session={{ item.id }}&skill=SPEAKING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" class="btn btn-outline btn-sm" style="font-weight: 600; padding: 4px 10px; font-size: 11.5px; border-radius: 6px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; color: var(--accent-orange); border-color: #FDBA74; background: #FFF7ED;" title="Xem lại chi tiết bài làm đã duyệt">
-                <i class="fa-solid fa-eye"></i> Xem chi tiết
-              </a>
-            {% else %}
-              <a href="?session={{ item.id }}&skill=SPEAKING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" class="btn btn-primary btn-sm" style="font-weight: 700; padding: 4px 10px; font-size: 11.5px; border-radius: 6px; white-space: nowrap; display: inline-flex; align-items: center; gap: 3px;">
-                <span>Duyệt</span> <i class="fa-solid fa-pen-to-square"></i>
-              </a>
-            {% endif %}
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="10" style="text-align: center; padding: 40px; color: var(--text-muted);">
-            <div style="font-size: 32px; margin-bottom: 8px;">📋</div>
-            <div style="font-weight: 700; font-size: 14.5px;">Không tìm thấy bài thi nào phù hợp với từ khóa hoặc bộ lọc hiện tại.</div>
-            <div style="font-size: 12.5px; margin-top: 4px;">Hãy thử tìm kiếm với tên, số điện thoại, email hoặc mã phiên khác.</div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <!-- ─── PHÂN TRANG (TỐI ĐA 20 BÀI TRÊN MỖI TRANG) ─────────────── -->
-  {% include 'components/pagination.html' %}
-
-</div>
-{% endif %}
-
-<!-- ─── JAVASCRIPT ĐỒNG BỘ TÌM KIẾM GIỮA HEADER GLOBAL VÀ LOCAL ─── -->
-<script>
-// ─── HÀM SẮP XẾP DANH SÁCH BÀI THI THEO THỜI GIAN ───
-function handleReviewSort(btn) {
-  const table = document.getElementById('students-table');
-  if (!table) return;
-  const tbody = table.querySelector('tbody');
-  if (!tbody) return;
-  const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.querySelector('td[colspan]'));
-  if (rows.length < 2) return;
-
-  const currentOrder = table.dataset.sortOrder || 'desc';
-  const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
-  table.dataset.sortOrder = newOrder;
-
-  rows.sort((a, b) => {
-    const tA = parseFloat(a.dataset.timestamp) || 0;
-    const tB = parseFloat(b.dataset.timestamp) || 0;
-    return newOrder === 'asc' ? tA - tB : tB - tA;
-  });
-
-  rows.forEach(r => tbody.appendChild(r));
-
-  rows.forEach((r, idx) => {
-    const sttCell = r.querySelector('.stt-cell');
-    if (sttCell) {
-      sttCell.textContent = idx + 1;
-    }
-  });
-
-  if (btn) {
-    const sortText = btn.querySelector('.sort-text');
-    const sortIcon = btn.querySelector('i');
-    if (newOrder === 'asc') {
-      if (sortText) sortText.textContent = 'Xa nhất trước (Cũ → Mới)';
-      if (sortIcon) sortIcon.className = 'fa-solid fa-arrow-up-wide-short';
-      btn.style.borderColor = 'var(--accent-purple)';
-      btn.style.color = 'var(--accent-purple)';
-      btn.style.background = 'rgba(139, 92, 246, 0.08)';
-    } else {
-      if (sortText) sortText.textContent = 'Gần nhất trước (Mới → Cũ)';
-      if (sortIcon) sortIcon.className = 'fa-solid fa-arrow-down-wide-short';
-      btn.style.borderColor = '';
-      btn.style.color = '';
-      btn.style.background = '';
-    }
-  }
-
-  try {
-    const url = new URL(window.location.href);
-    url.searchParams.set('sort', newOrder);
-    window.history.replaceState({}, '', url.toString());
-  } catch (e) {}
-
-
-}
-window.handleReviewSort = handleReviewSort;
-window.toggleTableSortTime = handleReviewSort;
-
-document.addEventListener('DOMContentLoaded', function() {
-  const globalSearch = document.getElementById('global-search');
-  const localSearch = document.getElementById('local-test-search');
-  const searchForm = document.getElementById('test-search-form');
-
-  // 1. Đồng bộ giá trị tìm kiếm ban đầu lên header #global-search
-  const currentQuery = "{{ search_query|escapejs }}";
-  if (currentQuery && globalSearch) {
-    globalSearch.value = currentQuery;
-  }
-
-  // 2. Đồng bộ 2 chiều giữa #global-search và #local-test-search
-  if (globalSearch && localSearch) {
-    globalSearch.addEventListener('input', function() {
-      localSearch.value = this.value;
-    });
-
-    localSearch.addEventListener('input', function() {
-      globalSearch.value = this.value;
-    });
-
-    // Khi nhấn Enter ở global-search -> submit form tìm kiếm
-    globalSearch.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        localSearch.value = this.value;
-        if (searchForm) {
-          searchForm.submit();
-        } else {
-          window.location.href = '?q=' + encodeURIComponent(this.value) + '{% if current_filter and current_filter != "all" %}&filter={{ current_filter }}{% endif %}';
-        }
-      }
-    });
-  }
-});
-
-// ─── ĐIỀU CHỈNH ĐIỂM TỪNG CÂU TRẮC NGHIỆM & TỰ ĐỘNG CỘNG DỒN ───
-
-function setQuickMcqScore(qNum, score) {
-
-  var input = document.querySelector('.mcq-score-input[data-qnum="' + qNum + '"]');
-
-  if (input) {
-
-    input.value = parseFloat(score).toFixed(1);
-
-    handleMcqScoreChange(input);
-
-  }
-
-}
-
-
-
-function handleMcqScoreChange(input) {
-
-  var qNum = input.getAttribute('data-qnum');
-
-  var val = parseFloat(input.value);
-
-  if (isNaN(val)) val = 0.0;
-
-  if (val < 0) val = 0.0;
-
-  if (val > 1.6) val = 1.6;
-
-  input.value = val.toFixed(1);
-
-
-
-  // Tính lại tổng điểm từ 25 input
-
-  var total = 0.0;
-
-  document.querySelectorAll('.mcq-score-input').forEach(function(inp) {
-
-    total += parseFloat(inp.value) || 0.0;
-
-  });
-
-  total = Math.min(40.0, Math.round(total * 10) / 10);
-
-  var pct = Math.round((total / 40.0) * 100);
-
-
-
-  // Cập nhật giao diện trực quan
-
-  var liveTotal = document.getElementById('mcq-live-total');
-
-  if (liveTotal) liveTotal.innerText = total.toFixed(1);
-
-  var livePct = document.getElementById('mcq-live-pct');
-
-  if (livePct) livePct.innerText = pct + '%';
-
-  var bottomMcq = document.getElementById('bottom-mcq-score');
-
-  if (bottomMcq) bottomMcq.innerText = total.toFixed(1) + ' / 40đ';
-
-
-
-  var spkScore = parseFloat('{{ detail.scores.speaking }}') || 0.0;
-
-  var wriScore = parseFloat('{{ detail.scores.writing }}') || 0.0;
-
-  var bottomTotal = document.getElementById('bottom-total-score');
-
-  if (bottomTotal) {
-
-    var sum3 = Math.round((spkScore + wriScore + total) * 10) / 10;
-
-    bottomTotal.innerText = sum3.toFixed(1) + ' / 100đ';
-
-  }
-
-
-
-  // Gửi POST cập nhật điểm câu về máy chủ
-
-  var phienId = '{{ detail.phien_id }}';
-
-  if (!phienId) return;
-
-
-
-  var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '';
-
-
-
-  fetch('{% url "placement_tests:update_mcq_score" %}', {
-
-    method: 'POST',
-
-    headers: {
-
-      'Content-Type': 'application/json',
-
-      'X-CSRFToken': csrfToken
-
-    },
-
-    body: JSON.stringify({
-
-      phien_id: phienId,
-
-      question_num: qNum,
-
-      points: val
-
-    })
-
-  })
-
-  .then(function(res) { return res.json(); })
-
-  .then(function(data) {
-
-    if (data.status === 'success') {
-
-      // Hiển thị toast hoặc hiệu ứng thành công nhẹ
-
-      input.style.borderColor = '#10B981';
-
-      setTimeout(function() { input.style.borderColor = '#C084FC'; }, 1000);
-
-    }
-
-  })
-
-  .catch(function(err) {
-
-    console.error('Lỗi lưu điểm trắc nghiệm:', err);
-
-  });
-
-}
-
-
-
-// ─── BỘ LỌC ĐỐI SOÁT TRẮC NGHIỆM CHO GIẢNG VIÊN ───
-function filterMcqQuestions(status, btn) {
-  document.querySelectorAll('.mcq-filter-btn').forEach(function(b) {
-    b.classList.remove('active');
-    b.style.background = '#FFFFFF';
-    if (b.innerText.indexOf('Đúng') !== -1) {
-      b.style.color = '#065F46';
-      b.style.borderColor = '#A7F3D0';
-    } else if (b.innerText.indexOf('Sai') !== -1) {
-      b.style.color = '#991B1B';
-      b.style.borderColor = '#FECACA';
-    } else if (b.innerText.indexOf('Trống') !== -1) {
-      b.style.color = '#92400E';
-      b.style.borderColor = '#FDE68A';
-    } else {
-      b.style.color = 'var(--text-secondary)';
-      b.style.borderColor = 'var(--border-color)';
-    }
-  });
-
-  btn.classList.add('active');
-  btn.style.background = 'var(--accent-purple)';
-  btn.style.color = '#FFFFFF';
-  btn.style.borderColor = 'var(--accent-purple)';
-
-  var items = document.querySelectorAll('.mcq-card-item');
-  var visibleCount = 0;
-  items.forEach(function(el) {
-    if (status === 'ALL' || el.getAttribute('data-status') === status) {
-      el.style.display = 'flex';
-      visibleCount++;
-    } else {
-      el.style.display = 'none';
-    }
-  });
-
-  var emptyEl = document.getElementById('mcq-filter-empty');
-  if (emptyEl) {
-    emptyEl.style.display = (visibleCount === 0) ? 'block' : 'none';
-  }
-}
-</script>
-
-{% endblock %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Duyệt bài Chấm điểm AI – Giáo viên{% endblock %}
+{% block page_heading %}Thẩm định & Duyệt bài AI{% endblock %}
+
+{% block extra_css %}
+<style>
+  .review-grid {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .review-grid > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  @media (max-width: 1100px) {
+    .review-grid {
+      grid-template-columns: 1fr !important;
+      gap: 16px !important;
+    }
+  }
+  @media (max-width: 768px) {
+    .page-header {
+      margin-bottom: 16px !important;
+    }
+    .page-title {
+      font-size: 18px !important;
+    }
+    .page-subtitle {
+      font-size: 12px !important;
+    }
+    .card-header {
+      padding: 12px 14px !important;
+    }
+    .card-body {
+      padding: 12px 14px !important;
+    }
+    #local-test-search {
+      width: 100% !important;
+    }
+    form#test-search-form > div {
+      width: 100% !important;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ══════════════════════════════════════════════════════════════ #}
+{# PHẦN 1: GIAO DIỆN CHI TIẾT CHẤM CHỮA (KHI ĐÃ BẤM "DUYỆT" 1 BÀI) #}
+{# ══════════════════════════════════════════════════════════════ #}
+{% if is_detail_view and detail %}
+
+{% if is_approved_now %}
+<div style="background: var(--emerald-light); border: 1.5px solid #A7F3D0; border-radius: var(--radius-xl); padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
+  <i class="fa-solid fa-circle-check" style="font-size: 24px; color: var(--accent-emerald);"></i>
+  <div>
+    <strong>Phê duyệt &amp; Chốt kết quả toàn bài thành công!</strong>
+    <div style="font-size: 13px; margin-top: 2px;">Điểm số chính thức của 3 kỹ năng và Khung năng lực CEFR cho phiên thi #{{ detail.ma_phien }} đã được khóa và tự động đồng bộ sang bộ phận Tuyển sinh để phân lớp và thu học phí.</div>
+  </div>
+</div>
+{% endif %}
+
+{% if request.GET.saved %}
+<div style="background: var(--emerald-light); border: 1.5px solid #A7F3D0; border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
+  <i class="fa-solid fa-circle-check" style="font-size: 20px; color: var(--accent-emerald);"></i>
+  <div>
+    <strong>Đã lưu kết quả thẩm định phần thi {{ detail.current_skill_label }} thành công!</strong>
+    <div style="font-size: 13px; margin-top: 2px;">Điểm số điều chỉnh và nhận xét chính thức của Giáo viên đã được lưu lại trong CSDL.</div>
+  </div>
+</div>
+{% endif %}
+
+{% if request.GET.error == 'unapproved_skills' %}
+<div style="background: #FEF2F2; border: 1.5px solid #FECACA; border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #991B1B;">
+  <i class="fa-solid fa-triangle-exclamation" style="font-size: 22px; color: #DC2626;"></i>
+  <div>
+    <strong>Chưa thể phê duyệt kết quả chung!</strong>
+    <div style="font-size: 13px; margin-top: 2px;">Quy định bắt buộc: Giáo viên phải thẩm định và bấm <em>"Lưu Điểm &amp; Nhận xét"</em> cho toàn bộ cả 3 phần thi (Speaking, Writing, Trắc nghiệm) trước khi chốt kết quả.</div>
+  </div>
+</div>
+{% endif %}
+
+{% if request.GET.error == 'already_finalized' %}
+<div style="background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #92400E;">
+  <i class="fa-solid fa-lock" style="font-size: 22px; color: #D97706;"></i>
+  <div>
+    <strong>Bài thi đã được phê duyệt chính thức (Đã khóa)!</strong>
+    <div style="font-size: 13px; margin-top: 2px;">Phiên thi này đã hoàn tất thẩm định và phân lớp CEFR trước đó. Không được phép chỉnh sửa hoặc phê duyệt lại.</div>
+  </div>
+</div>
+{% endif %}
+
+{% if detail.is_test_finalized and not is_approved_now %}
+<div style="background: #F0FDF4; border: 1.5px solid #86EFAC; border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #166534; flex-wrap: wrap;">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <i class="fa-solid fa-lock" style="font-size: 22px; color: var(--accent-emerald);"></i>
+    <div>
+      <strong>Bài thi này đã được Giáo viên phê duyệt chính thức (Đã khóa)</strong>
+      <div style="font-size: 12.5px; margin-top: 2px;">Điểm số 3 kỹ năng và Khung năng lực CEFR đã được chốt và đồng bộ sang bộ phận Tuyển sinh. Không thể chỉnh sửa thêm.</div>
+    </div>
+  </div>
+  <span class="badge badge-emerald" style="font-size: 12px; padding: 4px 12px;"><i class="fa-solid fa-check"></i> Đã phê duyệt</span>
+</div>
+{% endif %}
+
+<div class="page-header">
+  <div class="page-breadcrumb"><span>Giáo viên</span> / <a href="{% url 'placement_tests:teacher_review' %}?filter={{ current_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" style="color: inherit; text-decoration: underline;">Danh sách bài thi</a> / Thẩm định phiên #{{ detail.ma_phien }}</div>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <h1 class="page-title">Thẩm định bài thi #{{ detail.ma_phien }} — {{ detail.hoc_vien_name }}</h1>
+      <p class="page-subtitle">
+        Học viên: <strong style="color: var(--text-primary);">{{ detail.hoc_vien_name }}</strong> ({{ detail.email }}) · 
+        SĐT: <strong>{{ detail.so_dien_thoai }}</strong> · 
+        Phiên thi: <strong>#{{ detail.ma_phien }}</strong> · 
+        Thi ngày: {{ detail.ngay_thi|date:"d/m/Y H:i" }} · 
+        Mục tiêu: <span class="badge badge-coral" style="font-size: 11.5px; font-weight: 700;">{{ detail.ten_bai }}</span>
+      </p>
+    </div>
+    <a href="{% url 'placement_tests:teacher_review' %}?filter={{ current_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-outline btn-sm">
+      <i class="fa-solid fa-arrow-left"></i> Quay lại Danh sách bài thi
+    </a>
+  </div>
+</div>
+
+<!-- ─── BỘ CHỌN KỸ NĂNG THẨM ĐỊNH (SPEAKING / WRITING / TRẮC NGHIỆM) ─── -->
+<div class="card rounded-2xl shadow-sm" style="margin-bottom: 20px;">
+  <div class="card-header" style="justify-content: flex-start; gap: 12px; flex-wrap: wrap;">
+    <div class="card-title" style="font-size: 13px; color: var(--text-muted);">Chọn Kỹ năng thẩm định:</div>
+    <a href="?session={{ detail.phien_id }}&skill=SPEAKING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+       class="btn {% if detail.current_skill == 'SPEAKING' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
+      <i class="fa-solid fa-microphone" style="margin-right: 4px;"></i> Speaking
+      <span class="badge {% if detail.speaking_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 9px; margin-left: 4px;">
+        {% if detail.speaking_status == 'GV_DA_DUYET' %}Đã duyệt{% else %}Chờ duyệt{% endif %}
+      </span>
+    </a>
+    <a href="?session={{ detail.phien_id }}&skill=WRITING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+       class="btn {% if detail.current_skill == 'WRITING' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
+      <i class="fa-solid fa-pen-nib" style="margin-right: 4px;"></i> Writing
+      <span class="badge {% if detail.writing_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-purple{% endif %}" style="font-size: 9px; margin-left: 4px;">
+        {% if detail.writing_status == 'GV_DA_DUYET' %}Đã duyệt{% else %}AI đã chấm{% endif %}
+      </span>
+    </a>
+    <a href="?session={{ detail.phien_id }}&skill=TRAC_NGHIEM{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+       class="btn {% if detail.current_skill == 'TRAC_NGHIEM' %}btn-purple{% else %}btn-outline{% endif %} btn-sm">
+      <i class="fa-solid fa-list-check" style="margin-right: 4px;"></i> Trắc nghiệm (40đ)
+      <span class="badge {% if detail.mcq_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-emerald{% endif %}" style="font-size: 9px; margin-left: 4px;">
+        {% if detail.mcq_status == 'GV_DA_DUYET' %}Đã duyệt{% else %}Tự động{% endif %}
+      </span>
+    </a>
+  </div>
+</div>
+
+<!-- ─── GIAO DIỆN SO SÁNH & ĐIỀU CHỈNH 3 CỘT (SIDE-BY-SIDE) ─── -->
+<div class="review-grid" style="display: grid; grid-template-columns: {% if detail.current_skill == 'TRAC_NGHIEM' %}2.2fr 1fr{% else %}repeat(3, 1fr){% endif %}; gap: 20px; margin-bottom: 24px;">
+
+  <!-- ═══════════════════════════════════════════════════════
+       CỘT 1: CÂU TRẢ LỜI THỰC TẾ CỦA HỌC VIÊN
+       ═══════════════════════════════════════════════════════ -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fa-regular fa-file-lines" style="color: var(--accent-purple); margin-right: 6px;"></i>1. Câu trả lời của Học viên</div>
+        <div class="card-subtitle">
+          {% if detail.current_skill == 'WRITING' %}Bài viết tự luận (Task 1 & Task 2)
+          {% elif detail.current_skill == 'TRAC_NGHIEM' %}Chi tiết bài làm Trắc nghiệm & Nghe (40 điểm)
+          {% else %}File ghi âm Speaking thực tế{% endif %}
+        </div>
+      </div>
+      <span class="badge badge-gray">Bản gốc</span>
+    </div>
+    <div class="card-body">
+
+      {% if detail.current_skill == 'WRITING' %}
+      <!-- NỘI DUNG BÀI WRITING -->
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;"><i class="fa-solid fa-pen-nib" style="color: var(--accent-purple); margin-right: 5px;"></i> Bài viết Writing tự luận:</div>
+        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text-primary); max-height: 440px; overflow-y: auto; white-space: pre-wrap;">{{ detail.cau_tra_loi.writing_text }}</div>
+      </div>
+
+      {% elif detail.current_skill == 'TRAC_NGHIEM' %}
+      <!-- NỘI DUNG BÀI TRẮC NGHIỆM ĐƯỢC THIẾT KẾ HIỆN ĐẠI (ACADEMIX THEME) -->
+      <div style="margin-bottom: 16px;">
+
+        <!-- 1. BẢNG TỔNG QUAN KẾT QUẢ ĐỐI SOÁT -->
+        <div style="background: linear-gradient(135deg, #F8FAFC 0%, #EEF2F6 100%); border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
+                Kết quả Đối soát Tự động
+              </div>
+              <div style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-top: 2px;">
+                <span id="mcq-live-total">{{ detail.cau_tra_loi.mcq_parsed.total_score }}</span> <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);">/ 40 điểm</span>
+              </div>
+            </div>
+            <span class="badge badge-purple" style="font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px;">
+              Đạt <span id="mcq-live-pct">{{ detail.cau_tra_loi.mcq_parsed.percentage }}%</span>
+            </span>
+          </div>
+
+          <!-- 3 Thẻ thống kê tỷ lệ Đúng - Sai - Bỏ trống -->
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+            <!-- Đúng -->
+            <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: var(--radius-md); padding: 8px 10px; text-align: center;">
+              <div style="font-size: 11px; font-weight: 700; color: #065F46; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                <i class="fa-solid fa-circle-check" style="color: #059669;"></i> Đúng
+              </div>
+              <div style="font-size: 15px; font-weight: 800; color: #065F46; margin-top: 2px;">
+                {{ detail.cau_tra_loi.mcq_parsed.correct_count }}/{{ detail.cau_tra_loi.mcq_parsed.total_questions }}
+              </div>
+              <div style="font-size: 10px; color: #059669; font-weight: 600; margin-top: 1px;">
+                +{{ detail.cau_tra_loi.mcq_parsed.total_score }}đ
+              </div>
+            </div>
+
+            <!-- Sai -->
+            <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: var(--radius-md); padding: 8px 10px; text-align: center;">
+              <div style="font-size: 11px; font-weight: 700; color: #991B1B; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                <i class="fa-solid fa-circle-xmark" style="color: #DC2626;"></i> Sai
+              </div>
+              <div style="font-size: 15px; font-weight: 800; color: #991B1B; margin-top: 2px;">
+                {{ detail.cau_tra_loi.mcq_parsed.wrong_count }}/{{ detail.cau_tra_loi.mcq_parsed.total_questions }}
+              </div>
+              <div style="font-size: 10px; color: #DC2626; font-weight: 600; margin-top: 1px;">
+                0đ
+              </div>
+            </div>
+
+            <!-- Bỏ trống -->
+            <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius-md); padding: 8px 10px; text-align: center;">
+              <div style="font-size: 11px; font-weight: 700; color: #92400E; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                <i class="fa-solid fa-triangle-exclamation" style="color: #D97706;"></i> Bỏ trống
+              </div>
+              <div style="font-size: 15px; font-weight: 800; color: #92400E; margin-top: 2px;">
+                {{ detail.cau_tra_loi.mcq_parsed.blank_count }}/{{ detail.cau_tra_loi.mcq_parsed.total_questions }}
+              </div>
+              <div style="font-size: 10px; color: #D97706; font-weight: 600; margin-top: 1px;">
+                Trừ điểm
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if detail.cau_tra_loi.mcq_parsed.questions %}
+        <!-- 2. BỘ LỌC NHANH CÂU HỎI -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+          <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">
+            <i class="fa-solid fa-list-check" style="color: var(--accent-purple); margin-right: 5px;"></i> Danh sách 25 câu &amp; Đáp án đối soát:
+          </div>
+          <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <button type="button" class="mcq-filter-btn active" onclick="filterMcqQuestions('ALL', this)" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 999px; border: 1.5px solid var(--accent-purple); background: var(--accent-purple); color: #FFFFFF; cursor: pointer; transition: 0.2s;">
+              Tất cả ({{ detail.cau_tra_loi.mcq_parsed.total_questions }})
+            </button>
+            <button type="button" class="mcq-filter-btn" onclick="filterMcqQuestions('CORRECT', this)" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 999px; border: 1.5px solid #A7F3D0; background: #FFFFFF; color: #065F46; cursor: pointer; transition: 0.2s;">
+              <i class="fa-solid fa-check"></i> Đúng ({{ detail.cau_tra_loi.mcq_parsed.correct_count }})
+            </button>
+            <button type="button" class="mcq-filter-btn" onclick="filterMcqQuestions('WRONG', this)" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 999px; border: 1.5px solid #FECACA; background: #FFFFFF; color: #991B1B; cursor: pointer; transition: 0.2s;">
+              <i class="fa-solid fa-xmark"></i> Sai ({{ detail.cau_tra_loi.mcq_parsed.wrong_count }})
+            </button>
+            <button type="button" class="mcq-filter-btn" onclick="filterMcqQuestions('BLANK', this)" style="padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 999px; border: 1.5px solid #FDE68A; background: #FFFFFF; color: #92400E; cursor: pointer; transition: 0.2s;">
+              <i class="fa-solid fa-triangle-exclamation"></i> Trống ({{ detail.cau_tra_loi.mcq_parsed.blank_count }})
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. DANH SÁCH CÂU HỎI THIẾT KẾ DẠNG THẺ TRỰC QUAN -->
+        <div id="mcq-questions-container" style="max-height: 480px; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 8px;">
+          {% for q in detail.cau_tra_loi.mcq_parsed.questions %}
+
+          <div class="mcq-card-item" data-status="{{ q.status }}" style="display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border-radius: 12px; background: #FFFFFF; border: 1.5px solid {% if q.is_correct %}#D1FAE5{% elif q.is_blank %}#FEF3C7{% else %}#FEE2E2{% endif %}; box-shadow: 0 1px 3px rgba(0,0,0,0.03); transition: all 0.2s;">
+
+            
+
+            <!-- HÀNG 1: STT CÂU, PHÂN LOẠI & ĐÁP ÁN ĐỐI SOÁT -->
+
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+
+              <div style="display: flex; align-items: center; gap: 10px;">
+
+                <div style="width: 34px; height: 34px; border-radius: 8px; background: {% if q.is_correct %}#ECFDF5; color: #059669; border: 1px solid #A7F3D0;{% elif q.is_blank %}#FFFBEB; color: #D97706; border: 1px solid #FDE68A;{% else %}#FEF2F2; color: #DC2626; border: 1px solid #FECACA;{% endif %} display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex-shrink: 0;">
+
+                  #{{ q.num_str }}
+
+                </div>
+
+                <div>
+
+                  <div style="font-size: 13px; font-weight: 800; color: var(--text-primary); line-height: 1.2;">
+
+                    Câu {{ q.num }}
+
+                  </div>
+
+                  {% if q.category %}
+
+                  <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">{{ q.category }}</div>
+
+                  {% endif %}
+
+                </div>
+
+              </div>
+
+
+
+              <!-- Thẻ so sánh đáp án Học viên & Hệ thống -->
+
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+
+                <div style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px;">
+
+                  <span style="color: var(--text-muted); font-size: 11px;">Học viên chọn:</span>
+
+                  {% if q.is_correct %}
+
+                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 6px; background: #ECFDF5; border: 1.5px solid #10B981; color: #065F46; font-weight: 800;">
+
+                      <i class="fa-solid fa-check" style="font-size: 10px; color: #059669;"></i> {{ q.user_ans }}
+
+                    </span>
+
+                  {% elif q.is_blank %}
+
+                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 6px; background: #F8FAFC; border: 1px dashed #CBD5E1; color: #64748B; font-weight: 600; font-style: italic;">
+
+                      <i class="fa-solid fa-circle-exclamation" style="font-size: 10px; color: #D97706;"></i> Bỏ trống
+
+                    </span>
+
+                  {% else %}
+
+                    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 6px; background: #FEF2F2; border: 1.5px solid #EF4444; color: #991B1B; font-weight: 800;">
+
+                      <i class="fa-solid fa-xmark" style="font-size: 10px; color: #DC2626;"></i> {{ q.user_ans }}
+
+                    </span>
+
+                  {% endif %}
+
+                </div>
+
+
+
+                <div style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 6px; background: #F0FDF4; border: 1px solid #BBF7D0; font-size: 12px; color: #166534;">
+
+                  <span style="color: var(--text-muted); font-size: 11px;">Đáp án đúng:</span>
+
+                  <strong style="font-weight: 800; color: #15803D;">{{ q.correct_ans }}</strong>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+
+            <!-- HÀNG 2: HIỂN THỊ ĐỀ THI (CÂU HỎI TRẮC NGHIỆM) -->
+
+            <div style="margin: 4px 0; background: #F8FAFC; border: 1px solid var(--border-color); border-left: 3.5px solid var(--accent-purple); border-radius: 8px; padding: 9px 12px; font-size: 13px; line-height: 1.55; color: var(--text-primary);">
+
+              <div style="font-weight: 700; color: var(--accent-purple); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">
+
+                <i class="fa-solid fa-book-open" style="margin-right: 4px;"></i> Đề thi:
+
+              </div>
+
+              <div>{{ q.question_text }}</div>
+
+            </div>
+
+
+
+            <!-- LỰA CHỌN A, B, C, D (NẾU CÓ) -->
+
+            {% if q.options_list %}
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 6px; margin: 2px 0;">
+
+              {% for opt in q.options_list %}
+
+              <div style="font-size: 12px; padding: 5px 9px; border-radius: 6px; background: {% if opt.key == q.correct_ans %}#ECFDF5; border: 1.5px solid #10B981; color: #065F46; font-weight: 700;{% elif opt.key == q.user_ans %}#FEF2F2; border: 1.5px solid #EF4444; color: #991B1B; font-weight: 700;{% else %}#FFFFFF; border: 1px solid var(--border-color); color: var(--text-secondary);{% endif %}; display: flex; align-items: center; justify-content: space-between;">
+
+                <span><strong>{{ opt.key }}.</strong> {{ opt.text }}</span>
+
+                {% if opt.key == q.correct_ans %}
+
+                  <span style="font-size: 10px; color: #059669; font-weight: 800;">(Đúng)</span>
+
+                {% elif opt.key == q.user_ans %}
+
+                  <span style="font-size: 10px; color: #DC2626; font-weight: 800;">(HV chọn)</span>
+
+                {% endif %}
+
+              </div>
+
+              {% endfor %}
+
+            </div>
+
+            {% endif %}
+
+
+
+            <!-- HÀNG 3: CỘT GIÁO VIÊN ĐIỀU CHỈNH ĐIỂM THEO TỪNG CÂU (TỰ ĐỘNG CỘNG DỒN) -->
+
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 7px 12px; background: #FAF5FF; border: 1px dashed #DDD6FE; border-radius: 8px; margin-top: 4px;">
+
+              <div style="display: flex; align-items: center; gap: 6px;">
+
+                <span style="font-size: 12px; font-weight: 700; color: var(--accent-purple);">
+
+                  Điểm câu #{{ q.num }}:
+
+                </span>
+
+                <span style="font-size: 11px; color: var(--text-muted); font-style: italic;">
+
+                  {% if q.is_adjusted %}<span style="color: #059669; font-weight: 700;">(Đã điều chỉnh)</span>{% else %}(Mặc định hệ thống, chỉ sửa khi cần){% endif %}
+
+                </span>
+
+              </div>
+
+
+
+              <div style="display: flex; align-items: center; gap: 8px;">
+
+                <div style="display: flex; align-items: center; gap: 4px;">
+
+                  <input type="number" min="0" max="1.6" step="0.1" 
+
+                         class="mcq-score-input" 
+
+                         data-qnum="{{ q.num }}" 
+
+                         value="{{ q.points }}" 
+
+                         onchange="handleMcqScoreChange(this)"
+
+                         {% if detail.is_test_finalized %}disabled{% endif %}
+
+                         style="width: 65px; padding: 3px 6px; font-size: 13.5px; font-weight: 800; border-radius: 6px; border: 1.5px solid #C084FC; text-align: center; background: #FFFFFF; color: var(--accent-purple);">
+
+                  <span style="font-size: 11.5px; font-weight: 700; color: var(--text-muted);">/1.6đ</span>
+
+                </div>
+
+                {% if not detail.is_test_finalized %}
+
+                <button type="button" class="btn btn-sm" onclick="setQuickMcqScore({{ q.num }}, 1.6)" style="padding: 3px 8px; font-size: 11px; font-weight: 700; background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; border-radius: 6px; cursor: pointer;" title="Chấm điểm câu này là Đúng (1.6đ)">
+
+                  <i class="fa-solid fa-check"></i> Đúng (+1.6đ)
+
+                </button>
+
+                <button type="button" class="btn btn-sm" onclick="setQuickMcqScore({{ q.num }}, 0.0)" style="padding: 3px 8px; font-size: 11px; font-weight: 700; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 6px; cursor: pointer;" title="Chấm điểm câu này là Sai (0đ)">
+
+                  <i class="fa-solid fa-xmark"></i> Sai (0đ)
+
+                </button>
+
+                {% endif %}
+
+              </div>
+
+            </div>
+
+
+
+          </div>{% endfor %}
+
+          <div id="mcq-filter-empty" style="display: none; text-align: center; padding: 32px 16px; color: var(--text-muted); font-size: 13px; background: #FFFFFF; border-radius: 12px; border: 1px dashed var(--border-color);">
+            <i class="fa-regular fa-folder-open" style="font-size: 26px; margin-bottom: 6px; display: block; color: var(--text-muted);"></i>
+            Không có câu hỏi nào theo bộ lọc đã chọn.
+          </div>
+        </div>
+
+        {% else %}
+        <!-- Fallback nếu không có dữ liệu phân tích cấu trúc -->
+        <div style="background: var(--bg-app); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; font-size: 12.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height: 1.75; color: var(--text-primary); max-height: 520px; overflow-y: auto; white-space: pre-wrap;">{{ detail.cau_tra_loi.mcq_summary }}</div>
+        {% endif %}
+
+      </div>
+
+      {% else %}
+      <!-- NỘI DUNG BÀI GHI ÂM SPEAKING -->
+      <div style="margin-bottom: 18px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
+          <i class="fa-solid fa-microphone" style="color: var(--accent-purple); margin-right: 5px;"></i> File Audio ghi âm &amp; Bản dịch Speech-to-Text:
+        </div>
+        <audio controls style="width: 100%; border-radius: 8px; margin-bottom: 10px;">
+          <source src="{{ detail.cau_tra_loi.audio_url|default:'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg' }}" type="audio/ogg">
+          Trình duyệt không hỗ trợ audio.
+        </audio>
+        <div style="font-size: 11px; color: var(--text-muted); font-style: italic;">
+          Bấm play để nghe toàn bộ phần ghi âm câu trả lời Speaking của thí sinh.
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+          <i class="fa-solid fa-file-lines" style="color: var(--accent-purple); margin-right: 5px;"></i> Transcript lời nói ghi âm:
+        </div>
+        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text-primary); max-height: 300px; overflow-y: auto; white-space: pre-wrap;">{{ detail.cau_tra_loi.transcript }}</div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       CỘT 2: PHÂN TÍCH & GỢI Ý TỪ AI AGENT (GEMINI FLASH)
+       (GIỮ NGUYÊN ĐIỂM AI GỢI Ý GỐC, KHÔNG BỊ TĂNG THEO GV SỬA)
+       ═══════════════════════════════════════════════════════ -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-purple); margin-right: 6px;"></i>2. Phân tích &amp; Gợi ý từ AI</div>
+        <div class="card-subtitle">
+          Mô hình: {{ detail.cham_diem_ai.mo_hinh_ai }} · Phiên bản: {{ detail.cham_diem_ai.phien_ban_prompt }}
+        </div>
+      </div>
+      <span class="badge badge-purple"><i class="fa-solid fa-shield-halved" style="margin-right: 4px;"></i>Độ tin cậy {{ detail.cham_diem_ai.do_tin_cay }}%</span>
+    </div>
+    <div class="card-body">
+
+      <!-- Hộp điểm AI đề xuất (Gốc) -->
+      <div style="background: linear-gradient(135deg, var(--purple-light), #EDE9FE); border-radius: var(--radius-lg); padding: 16px; text-align: center; margin-bottom: 18px;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-purple); margin-bottom: 4px;">
+          Điểm AI đề xuất (Gốc)
+        </div>
+        <div style="font-size: 38px; font-weight: 800; color: var(--accent-purple); line-height: 1;">
+          {{ detail.current_ai_score }}<span style="font-size: 20px; font-weight: 500; color: var(--text-muted);">/{{ detail.max_skill_score }}</span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 6px;">
+          Kỹ năng: <strong>{{ detail.current_skill_label }}</strong>
+        </div>
+      </div>
+
+      <!-- Chi tiết từng tiêu chí Rubric từ AI -->
+      <div style="margin-bottom: 18px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 10px;">
+          <i class="fa-solid fa-chart-simple" style="color: var(--accent-purple); margin-right: 5px;"></i> Chi tiết Rubric Phân tích
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          {% for crit in detail.ai_criteria %}
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12.5px;">
+            <span style="color: var(--text-secondary); flex: 1;">{{ crit.name }}</span>
+            <div style="width: 100px; height: 6px; background: #E2E8F0; border-radius: 999px; margin: 0 10px; overflow: hidden;">
+              <div style="width: {{ crit.pct }}%; height: 100%; background: var(--accent-purple); border-radius: 999px;"></div>
+            </div>
+            <strong style="color: var(--text-primary); min-width: 28px; text-align: right;">{{ crit.score }}</strong>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Nhận xét chi tiết từ AI -->
+      <div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+          <i class="fa-solid fa-robot" style="color: var(--accent-purple); margin-right: 5px;"></i> Nhận xét phân tích chi tiết từ AI
+        </div>
+        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; font-size: 12.5px; line-height: 1.65; color: var(--text-secondary);">
+          {{ detail.cham_diem_ai.nhan_xet }}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  {% if detail.current_skill != 'TRAC_NGHIEM' %}
+
+<!-- ═══════════════════════════════════════════════════════
+       CỘT 3: GIÁO VIÊN ĐIỀU CHỈNH & PHÊ DUYỆT CHÍNH THỨC
+       ═══════════════════════════════════════════════════════ -->
+  <div class="card rounded-2xl shadow-sm">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="fa-solid fa-pen-to-square" style="color: var(--accent-purple); margin-right: 6px;"></i>3. Thẩm định {{ detail.current_skill_label }}</div>
+        <div class="card-subtitle">Điểm &amp; Nhận xét riêng cho bài thi kỹ năng này</div>
+      </div>
+      <span class="badge {% if detail.bai_lam.trang_thai_cham == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}">
+        {% if detail.bai_lam.trang_thai_cham == 'GV_DA_DUYET' %}<i class="fa-solid fa-check"></i> Đã chấm kỹ năng{% else %}<i class="fa-regular fa-clock"></i> Chờ chấm{% endif %}
+      </span>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{% url 'placement_tests:approve_skill' %}">
+        {% csrf_token %}
+        <input type="hidden" name="phien_id" value="{{ detail.phien_id }}">
+        <input type="hidden" name="ky_nang" value="{{ detail.current_skill }}">
+
+        <!-- Readonly kỹ năng đang duyệt -->
+        <div class="form-group">
+          <label class="form-label">Kỹ năng đang thẩm định</label>
+          <input type="text" class="form-control" value="{{ detail.current_skill_label }}" readonly style="background: #F8FAFC; font-weight: 600;">
+        </div>
+
+        <!-- Readonly điểm AI tham khảo (Điểm AI gốc giữ nguyên) -->
+        <div class="form-group">
+          <label class="form-label">Điểm AI đề xuất (Tham khảo)</label>
+          <input type="text" class="form-control" value="{{ detail.current_ai_score }} / {{ detail.max_skill_score }} điểm" readonly style="background: #F8FAFC; color: var(--accent-purple); font-weight: 700;">
+        </div>
+
+        <!-- Input Giáo viên chỉnh sửa điểm cho kỹ năng này -->
+        <div class="form-group">
+          <label class="form-label" style="color: var(--accent-orange); font-weight: 700;">
+            Điểm Giáo viên điều chỉnh chính thức (0–{{ detail.max_skill_score }})
+          </label>
+          <input type="number" name="diem_dieu_chinh" class="form-control" 
+                 min="0" max="{{ detail.max_skill_score }}" step="0.5"
+                 value="{{ detail.current_teacher_score }}"
+                 style="font-size: 16px; font-weight: 700; border-color: var(--accent-coral);"
+                 required>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+            Giáo viên có quyền giữ nguyên hoặc điều chỉnh tăng/giảm theo đánh giá thực tế.
+          </div>
+        </div>
+
+        <!-- Textarea Giáo viên chỉnh sửa nhận xét riêng cho kỹ năng này -->
+        <div class="form-group">
+          <label class="form-label">Nhận xét chính thức của Giáo viên</label>
+          <textarea name="nhan_xet_gv" class="form-control" rows="4" 
+                    placeholder="Nhập nhận xét chi tiết của bạn cho bài làm kỹ năng {{ detail.current_skill_label }}…">{{ detail.bai_lam.nhan_xet_gv }}</textarea>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+            Nhận xét này sẽ được lưu riêng vào kết quả phần thi <strong>{{ detail.current_skill_label }}</strong> của học viên.
+          </div>
+        </div>
+
+        <!-- Nút POST lưu điểm kỹ năng -->
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-save-skill-submit" style="font-weight: 700;">
+          {% if detail.current_skill == 'SPEAKING' %}Lưu điểm Speaking{% elif detail.current_skill == 'WRITING' %}Lưu điểm Writing{% else %}Lưu điểm Trắc nghiệm{% endif %}
+        </button>
+
+        <div style="margin-top: 14px; padding: 10px 12px; background: #F8FAFC; border: 1px dashed var(--border-color); border-radius: var(--radius-md); font-size: 11.5px; color: var(--text-secondary); line-height: 1.45;">
+          <i class="fa-regular fa-lightbulb" style="color: var(--accent-coral); margin-right: 4px;"></i> Sau khi lưu điểm các phần thi, hãy chuyển xuống <strong>phần Tổng hợp &amp; Xếp loại CEFR ở dưới cùng</strong> để phê duyệt toàn bài thi sang Tuyển sinh.
+        </div>
+      </form>
+    </div>
+  </div>
+
+{% endif %}
+
+
+
+</div><!-- .review-grid -->
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PHẦN RIÊNG BIỆT DƯỚI CÙNG: TỔNG HỢP TOÀN BỘ BÀI THI & KHUNG NĂNG LỰC CEFR
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="card rounded-2xl shadow-sm" style="margin-top: 24px; border: 2px solid #E9D5FF; background: linear-gradient(180deg, #FFFFFF, #FAF8FF);">
+  <div class="card-header" style="background: linear-gradient(135deg, #F5F3FF, #FFF7ED); padding: 18px 24px; border-bottom: 1.5px solid #E9D5FF; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <div style="width: 46px; height: 46px; border-radius: 14px; background: var(--purple-light); color: var(--accent-purple); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; border: 1.5px solid #DDD6FE;">
+        <i class="fa-solid fa-award"></i>
+      </div>
+      <div>
+        <h3 style="font-size: 16.5px; font-weight: 800; color: var(--text-primary); margin: 0;">
+          Tổng kết Điểm 3 Kỹ năng &amp; Khung Năng lực CEFR Xếp loại
+        </h3>
+        <p style="font-size: 12.5px; color: var(--text-secondary); margin: 3px 0 0;">
+          Tổng hợp điểm 3 phần thi để xác nhận trình độ chuẩn CEFR và đề xuất khóa học chuyển sang Lane Tuyển sinh.
+        </p>
+      </div>
+    </div>
+    <span class="badge badge-purple" style="font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 999px;">
+      {{ detail.goal_title }}
+    </span>
+  </div>
+
+  <div class="card-body" style="padding: 24px;">
+    <!-- Bảng 3 kỹ năng & Tổng điểm -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 22px;">
+      <!-- Trắc nghiệm -->
+      <div style="background: #FFFFFF; border: 1.5px solid {% if detail.mcq_status == 'GV_DA_DUYET' %}#A7F3D0{% else %}#FECACA{% endif %}; border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+        <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;"><i class="fa-solid fa-list-check" style="margin-right: 4px;"></i> Trắc nghiệm &amp; Nghe</div>
+        <div style="font-size: 24px; font-weight: 900; color: #10B981; margin: 6px 0;"><span id="bottom-mcq-score">{{ detail.scores.mcq }} / 40đ</span></div>
+        <span class="badge {% if detail.mcq_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 10.5px;">
+          {% if detail.mcq_status == 'GV_DA_DUYET' %}<i class="fa-solid fa-check"></i> GV đã duyệt{% else %}<i class="fa-regular fa-clock"></i> Chờ thẩm định{% endif %}
+        </span>
+      </div>
+
+      <!-- Writing -->
+      <div style="background: #FFFFFF; border: 1.5px solid {% if detail.writing_status == 'GV_DA_DUYET' %}#A7F3D0{% else %}#FECACA{% endif %}; border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+        <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;"><i class="fa-solid fa-pen-nib" style="margin-right: 4px;"></i> Writing</div>
+        <div style="font-size: 24px; font-weight: 900; color: #8B5CF6; margin: 6px 0;">{{ detail.scores.writing }} / 30đ</div>
+        <span class="badge {% if detail.writing_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 10.5px;">
+          {% if detail.writing_status == 'GV_DA_DUYET' %}<i class="fa-solid fa-check"></i> GV đã duyệt{% else %}<i class="fa-regular fa-clock"></i> Chờ thẩm định{% endif %}
+        </span>
+      </div>
+
+      <!-- Speaking -->
+      <div style="background: #FFFFFF; border: 1.5px solid {% if detail.speaking_status == 'GV_DA_DUYET' %}#A7F3D0{% else %}#FECACA{% endif %}; border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+        <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;"><i class="fa-solid fa-microphone" style="margin-right: 4px;"></i> Speaking</div>
+        <div style="font-size: 24px; font-weight: 900; color: #FF7E5F; margin: 6px 0;">{{ detail.scores.speaking }} / 30đ</div>
+        <span class="badge {% if detail.speaking_status == 'GV_DA_DUYET' %}badge-emerald{% else %}badge-coral{% endif %}" style="font-size: 10.5px;">
+          {% if detail.speaking_status == 'GV_DA_DUYET' %}<i class="fa-solid fa-check"></i> GV đã duyệt{% else %}<i class="fa-regular fa-clock"></i> Chờ thẩm định{% endif %}
+        </span>
+      </div>
+
+      <!-- Tổng điểm tích lũy -->
+      <div style="background: linear-gradient(135deg, #FFF4ED, #FFF0EB); border: 2px solid #FFD8C2; border-radius: var(--radius-lg); padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(234, 88, 12, 0.08);">
+        <div style="font-size: 11.5px; font-weight: 800; color: var(--accent-orange); text-transform: uppercase;"><i class="fa-solid fa-trophy" style="margin-right: 4px;"></i> Tổng điểm tích lũy</div>
+        <div style="font-size: 28px; font-weight: 900; color: var(--accent-orange); margin: 4px 0;"><span id="bottom-total-score">{{ detail.scores.total }} / 100đ</span></div>
+        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">Trình độ: {{ detail.level_label }}</div>
+      </div>
+    </div>
+
+    <!-- KHỐI THÔNG BÁO TIẾN ĐỘ THẨM ĐỊNH -->
+    {% if not detail.all_skills_approved and not detail.is_test_finalized %}
+    <div style="background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 14px;">
+      <div style="width: 38px; height: 38px; border-radius: 50%; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <div style="flex: 1;">
+        <div style="font-weight: 800; font-size: 13.5px; color: #92400E;">
+          Chưa đủ điều kiện phê duyệt kết quả chung
+        </div>
+        <div style="font-size: 12.5px; color: #78350F; margin-top: 3px; line-height: 1.5;">
+          Quy định bắt buộc: Bạn cần thẩm định và bấm <strong>"Lưu Điểm &amp; Nhận xét"</strong> cho tất cả các phần thi trước khi phê duyệt chốt kết quả và chuyển Tuyển sinh.
+        </div>
+        <div style="margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+          <span style="font-size: 12px; font-weight: 700; color: #92400E;">Phần thi còn thiếu:</span>
+          {% for us in detail.unapproved_skills %}
+          <a href="?session={{ detail.phien_id }}&skill={{ us.key }}{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+             class="btn btn-sm btn-coral" style="padding: 4px 12px; font-size: 11.5px; font-weight: 700; text-decoration: none;">
+            {{ us.name }} → Thẩm định ngay
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% elif detail.all_skills_approved and not detail.is_test_finalized %}
+    <div style="background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
+      <i class="fa-solid fa-circle-check" style="font-size: 22px; color: #059669; flex-shrink: 0;"></i>
+      <div style="font-size: 13px; line-height: 1.5;">
+        <strong><i class="fa-solid fa-circle-check" style="margin-right: 4px;"></i> Đã hoàn tất thẩm định cả 3 phần thi:</strong> Cả 3 kỹ năng (Speaking, Writing, Trắc nghiệm) đã được Giảng viên xác nhận điểm. Bạn có thể chọn Khung năng lực CEFR và bấm nút bên dưới để chuyển tiếp sang Tuyển sinh.
+      </div>
+    </div>
+    {% elif detail.is_test_finalized %}
+    <div style="background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #065F46;">
+      <i class="fa-solid fa-circle-check" style="font-size: 22px; color: #059669; flex-shrink: 0;"></i>
+      <div style="font-size: 13px; line-height: 1.5;">
+        <strong>Bài thi này đã được phê duyệt chính thức hoàn tất</strong> và chuyển giao kết quả sang bộ phận Tuyển sinh để xếp lớp.
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Form xác nhận CEFR và phê duyệt chính thức -->
+    <form method="POST" action="{% url 'placement_tests:finalize_test_result' %}">
+      {% csrf_token %}
+      <input type="hidden" name="phien_id" value="{{ detail.phien_id }}">
+
+      <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; align-items: start; margin-bottom: 20px;">
+        <!-- Dropdown CEFR -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 13.5px; font-weight: 700; color: var(--text-primary);">Khung năng lực CEFR xếp loại</span>
+            <span class="badge badge-purple" style="font-size: 10px;">Chuẩn {{ detail.goal_title }}</span>
+          </label>
+          <select name="trinh_do" class="form-control" style="font-weight: 600;" required>
+            {% for lv in levels %}
+            <option value="{{ lv.value }}" {% if lv.value == detail.trinh_do %}selected{% endif %}>{{ lv.label }}</option>
+            {% endfor %}
+          </select>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+            <i class="fa-regular fa-lightbulb" style="color: var(--accent-purple); margin-right: 4px;"></i> Đề xuất xếp lớp theo đúng mục tiêu: <strong>{{ detail.khoa_de_xuat }}</strong>
+          </div>
+        </div>
+
+        <!-- Khóa học đề xuất cho Tuyển sinh -->
+        <div style="background: #F8FAFC; border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); padding: 14px 16px;">
+          <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Khóa học Đề xuất Xếp lớp</div>
+          <div style="font-size: 15px; font-weight: 800; color: var(--accent-purple); margin-top: 4px;">
+            {{ detail.khoa_de_xuat }}
+          </div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.45;">
+            Hệ thống sẽ đồng bộ khóa học này sang hồ sơ tư vấn để Tư vấn viên liên hệ xếp lớp và phát hành học phí.
+          </div>
+        </div>
+      </div>
+
+      <!-- Cảnh báo & Nút xác nhận -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; padding-top: 18px; border-top: 1px solid var(--border-color);">
+        <div style="font-size: 12.5px; color: var(--text-secondary); max-width: 550px; line-height: 1.5;">
+          <i class="fa-solid fa-triangle-exclamation" style="color: #D97706; margin-right: 4px;"></i> Sau khi nhấn <strong>Phê duyệt kết quả</strong>, điểm số và khung năng lực sẽ được khóa và tự động chuyển sang bộ phận <strong>Tư vấn Tuyển sinh</strong> để phân lớp.
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <a href="{% url 'placement_tests:teacher_review' %}?filter={{ current_filter }}{% if search_query %}&q={{ search_query }}{% endif %}" class="btn btn-outline">
+            ← Quay lại Danh sách bài thi
+          </a>
+          {% if detail.is_test_finalized %}
+          <button type="button" class="btn btn-emerald btn-lg" disabled style="font-weight: 800; padding: 10px 22px; opacity: 0.7; cursor: not-allowed;">
+            <i class="fa-solid fa-lock" style="margin-right: 4px;"></i> Đã phê duyệt chính thức (Đã khóa)
+          </button>
+          {% elif detail.all_skills_approved %}
+          <button type="submit" class="btn btn-emerald btn-lg" style="font-weight: 800; padding: 10px 22px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
+            <i class="fa-solid fa-check" style="margin-right: 4px;"></i> Phê duyệt kết quả &amp; Chuyển tuyển sinh
+          </button>
+          {% else %}
+          <button type="button" class="btn btn-lg" disabled style="font-weight: 800; padding: 10px 22px; background: #94A3B8; border-color: #94A3B8; color: #FFFFFF; opacity: 0.65; cursor: not-allowed;" title="Vui lòng thẩm định và lưu điểm cho toàn bộ các phần thi (Speaking, Writing, Trắc nghiệm) trước khi phê duyệt kết quả">
+            <i class="fa-solid fa-lock" style="margin-right: 4px;"></i> Cần thẩm định đủ 3 phần thi để phê duyệt
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endif %}
+
+{# ══════════════════════════════════════════════════════════════ #}
+{# PHẦN 2: BẢNG DANH SÁCH BÀI THI HỌC VIÊN ĐÃ LÀM TEST           #}
+{# (MẶC ĐỊNH HIỂN THỊ DANH SÁCH - ẨN ĐI KHI ĐANG THẨM ĐỊNH CHI TIẾT) #}
+{# ══════════════════════════════════════════════════════════════ #}
+{% if not is_detail_view %}
+<div class="page-header">
+  <div class="page-breadcrumb"><span>Giáo viên</span> / Duyệt bài AI</div>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <h1 class="page-title">Duyệt bài AI – So sánh &amp; Điều chỉnh điểm</h1>
+      <p class="page-subtitle">Danh sách các bài kiểm tra đầu vào học viên đã làm test — Thẩm định &amp; Phê duyệt điểm số</p>
+    </div>
+  </div>
+</div>
+
+<div class="card rounded-2xl shadow-sm">
+  <!-- ─── MODERN HEADER: 2 HÀNG RÕ RÀNG, SANG TRỌNG ─── -->
+  <div class="card-header" style="padding: 18px 22px; border-bottom: 1px solid var(--border-color); background: var(--bg-card); display: flex; flex-direction: column; gap: 14px;">
+    <!-- Hàng 1: Tiêu đề + Segmented Tabs -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; width: 100%;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, rgba(255, 107, 74, 0.15), rgba(144, 97, 249, 0.15)); color: var(--accent-coral, #FF6B4A); display: inline-flex; align-items: center; justify-content: center; font-size: 15px;">
+            <i class="fa-solid fa-clipboard-check"></i>
+          </span>
+          <span style="font-size: 16px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.2px;">
+            Danh sách bài thi học viên đã nộp
+          </span>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 3px; margin-left: 40px;">
+          Bấm vào biểu tượng bút <i class="fa-solid fa-pen-to-square" style="color: var(--accent-coral);"></i> hoặc mắt xem <i class="fa-solid fa-eye" style="color: var(--accent-orange);"></i> ở mỗi dòng để chấm duyệt hoặc xem lại bài làm
+        </div>
+      </div>
+
+      <!-- Segmented Tabs Lọc trạng thái -->
+      <div style="display: inline-flex; background: var(--bg-app); padding: 3px; border-radius: 10px; border: 1px solid var(--border-color); gap: 2px;">
+        <a href="?filter=all{% if search_query %}&q={{ search_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
+           class="btn btn-sm {% if current_filter == 'all' or not current_filter %}btn-primary{% else %}btn-ghost{% endif %}"
+           style="border-radius: 8px; padding: 5px 12px; font-size: 11.5px; font-weight: 600;">
+          Tất cả <span style="opacity: 0.8; font-weight: 700; margin-left: 2px;">({{ total_tests_count }})</span>
+        </a>
+        <a href="?filter=pending{% if search_query %}&q={{ search_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
+           class="btn btn-sm {% if current_filter == 'pending' %}btn-purple{% else %}btn-ghost{% endif %}"
+           style="border-radius: 8px; padding: 5px 12px; font-size: 11.5px; font-weight: 600;">
+          <i class="fa-regular fa-clock" style="font-size: 10.5px;"></i> Chờ duyệt <span style="opacity: 0.8; font-weight: 700; margin-left: 2px;">({{ pending_tests_count }})</span>
+        </a>
+        <a href="?filter=approved{% if search_query %}&q={{ search_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
+           class="btn btn-sm {% if current_filter == 'approved' %}btn-emerald{% else %}btn-ghost{% endif %}"
+           style="border-radius: 8px; padding: 5px 12px; font-size: 11.5px; font-weight: 600;">
+          <i class="fa-solid fa-circle-check" style="font-size: 10.5px;"></i> Đã duyệt <span style="opacity: 0.8; font-weight: 700; margin-left: 2px;">({{ approved_tests_count }})</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Hàng 2: Ô tìm kiếm + Nút Sắp xếp -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%;">
+      <form method="GET" action="" style="display: flex; gap: 6px; align-items: center; flex: 1; max-width: 380px;" id="test-search-form">
+        {% if current_filter and current_filter != 'all' %}<input type="hidden" name="filter" value="{{ current_filter }}">{% endif %}
+        {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
+        <div style="position: relative; width: 100%;">
+          <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px;"></i>
+          <input type="text" name="q" id="local-test-search" class="form-control form-control-sm"
+                 value="{{ search_query }}"
+                 placeholder="Tìm theo Tên, SĐT, Email, Mã phiên..."
+                 style="padding-left: 32px; padding-right: 28px; border-radius: 8px; font-size: 12px; height: 34px;">
+          {% if search_query %}
+          <a href="?{% if current_filter and current_filter != 'all' %}filter={{ current_filter }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); text-decoration: none;" title="Xóa tìm kiếm">✕</a>
+          {% endif %}
+        </div>
+        <button type="submit" class="btn btn-outline btn-sm" style="border-radius: 8px; height: 34px; padding: 0 12px; font-size: 12px;">
+          Tìm
+        </button>
+      </form>
+
+      <button type="button" class="btn btn-outline btn-sm" id="btn-sort-review"
+              onclick="handleReviewSort(this)"
+              title="Đảo chiều sắp xếp theo thời gian nộp bài"
+              style="border-radius: 8px; height: 34px; padding: 0 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+        <i class="fa-solid {% if current_sort == 'asc' %}fa-arrow-up-wide-short{% else %}fa-arrow-down-wide-short{% endif %}" style="color: var(--accent-coral);"></i>
+        <span class="sort-text">{% if current_sort == 'asc' %}Xa nhất trước (Cũ → Mới){% else %}Gần nhất trước (Mới → Cũ){% endif %}</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="table-wrapper" style="overflow-x: auto; width: 100%;">
+    <table id="students-table" style="width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed;" data-sort-order="{{ current_sort|default:'desc' }}">
+      <colgroup>
+        <col style="width: 4%;">    <!-- STT -->
+        <col style="width: 22%;">   <!-- Học viên & Mã phiên -->
+        <col style="width: 16%;">   <!-- Đề thi / Mục tiêu -->
+        <col style="width: 11%;">   <!-- Thời gian nộp -->
+        <col style="width: 7.5%;">  <!-- Speaking -->
+        <col style="width: 7.5%;">  <!-- Writing -->
+        <col style="width: 8%;">    <!-- Trắc nghiệm -->
+        <col style="width: 7.5%;">  <!-- Tổng điểm -->
+        <col style="width: 9%;">    <!-- Trạng thái -->
+        <col style="width: 7.5%;">  <!-- Thao tác -->
+      </colgroup>
+      <thead>
+        <tr style="border-bottom: 2px solid var(--border-color); background: #FAFBFD; color: #475569; font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+          <th style="padding: 11px 4px; text-align: center;">STT</th>
+          <th style="padding: 11px 8px; text-align: left;">Học viên</th>
+          <th style="padding: 11px 6px; text-align: left;">Đề kiểm tra</th>
+          <th style="padding: 11px 6px; text-align: left; cursor: pointer; user-select: none;" onclick="handleReviewSort(document.getElementById('btn-sort-review'))" title="Bấm để đổi sắp xếp thời gian">
+            Nộp bài <i class="fa-solid fa-sort" style="font-size: 9.5px; opacity: 0.6; margin-left: 2px; color: var(--accent-coral);"></i>
+          </th>
+          <th style="padding: 11px 4px; text-align: center;">Speaking</th>
+          <th style="padding: 11px 4px; text-align: center;">Writing</th>
+          <th style="padding: 11px 4px; text-align: center;">Trắc nghiệm</th>
+          <th style="padding: 11px 4px; text-align: center;">Tổng</th>
+          <th style="padding: 11px 4px; text-align: center;">Trạng thái</th>
+          <th style="padding: 11px 4px; text-align: center;">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in page_obj %}
+        <tr data-timestamp="{{ item.timestamp }}" style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease; {% if item.is_selected %}background: #FAF5FF; border-left: 3px solid var(--accent-purple);{% endif %}">
+          <td class="stt-cell" style="padding: 10px 4px; font-weight: 700; color: var(--text-muted); text-align: center; font-size: 11.5px; vertical-align: middle;">
+            {{ forloop.counter }}
+          </td>
+          <td style="padding: 10px 8px; vertical-align: middle;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 5px;">
+                <span style="font-weight: 700; font-size: 13px; color: var(--text-primary); white-space: nowrap;">{{ item.ten_hoc_vien }}</span>
+                <span class="badge badge-gray" style="font-size: 9.5px; padding: 1px 4px; font-weight: 600; flex-shrink: 0;">#{{ item.ma_phien }}</span>
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px; white-space: nowrap;" title="{{ item.email }}">
+                {{ item.email }}
+              </div>
+              {% if item.so_dien_thoai and item.so_dien_thoai != 'Chưa có SĐT' %}
+              <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 1px; white-space: nowrap;">
+                <i class="fa-solid fa-phone" style="font-size: 9px;"></i> {{ item.so_dien_thoai }}
+              </div>
+              {% endif %}
+            </div>
+          </td>
+          <td style="padding: 10px 6px; vertical-align: middle;">
+            <span class="badge badge-purple" style="font-size: 11px; padding: 3px 7px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ item.ten_bai }}">
+              <i class="fa-solid fa-graduation-cap"></i> Entrance Test (105')
+            </span>
+          </td>
+          <td style="padding: 10px 6px; vertical-align: middle;">
+            <div style="font-weight: 600; font-size: 12px; color: var(--text-primary); white-space: nowrap;">
+              {{ item.thoi_gian|date:"d/m/Y" }}
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 1px; white-space: nowrap;">
+              <i class="fa-regular fa-clock" style="font-size: 9.5px;"></i> {{ item.thoi_gian|date:"H:i" }}
+            </div>
+          </td>
+          <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
+            {% if item.speaking_score is not None %}
+              <span class="badge badge-purple" style="padding: 2px 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap;">
+                {{ item.speaking_score }} <small style="font-size: 9.5px; opacity: 0.65; font-weight: 400;">/30</small>
+              </span>
+            {% else %}
+              <span class="text-muted" style="font-size: 11.5px;">—</span>
+            {% endif %}
+          </td>
+          <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
+            {% if item.writing_score is not None %}
+              <span class="badge badge-purple" style="padding: 2px 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap;">
+                {{ item.writing_score }} <small style="font-size: 9.5px; opacity: 0.65; font-weight: 400;">/30</small>
+              </span>
+            {% else %}
+              <span class="text-muted" style="font-size: 11.5px;">—</span>
+            {% endif %}
+          </td>
+          <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
+            {% if item.mcq_score is not None %}
+              <span class="badge badge-emerald" style="padding: 2px 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap;">
+                {{ item.mcq_score }} <small style="font-size: 9.5px; opacity: 0.65; font-weight: 400;">/40</small>
+              </span>
+            {% else %}
+              <span class="text-muted" style="font-size: 11.5px;">—</span>
+            {% endif %}
+          </td>
+          <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
+            <strong style="font-size: 13px; color: var(--accent-purple);">{{ item.tong_diem }}đ</strong>
+          </td>
+          <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
+            {% if item.trang_thai == 'approved' or item.is_approved %}
+              <span class="badge badge-emerald" style="padding: 3px 6px; font-size: 10.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">
+                <i class="fa-solid fa-check"></i> Đã duyệt
+              </span>
+            {% else %}
+              <span class="badge badge-coral" style="padding: 3px 6px; font-size: 10.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">
+                <i class="fa-regular fa-clock"></i> Chờ duyệt
+              </span>
+            {% endif %}
+          </td>
+          <td style="padding: 10px 4px; text-align: center; vertical-align: middle;">
+            {% if item.is_approved or item.trang_thai == 'approved' %}
+              <a href="?session={{ item.id }}&skill=SPEAKING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
+                 class="btn btn-outline btn-sm"
+                 style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 13px; color: var(--accent-orange); border-color: #FDBA74; background: #FFF7ED;"
+                 title="Xem chi tiết bài làm">
+                <i class="fa-solid fa-eye"></i>
+              </a>
+            {% else %}
+              <a href="?session={{ item.id }}&skill=SPEAKING{% if current_filter %}&filter={{ current_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"
+                 class="btn btn-primary btn-sm"
+                 style="width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 13px;"
+                 title="Chấm duyệt bài thi">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <div style="margin-bottom: 8px;"><i class="fa-regular fa-clipboard" style="font-size: 32px; color: var(--text-muted);"></i></div>
+            <div style="font-weight: 700; font-size: 14.5px;">Không tìm thấy bài thi nào phù hợp với từ khóa hoặc bộ lọc hiện tại.</div>
+            <div style="font-size: 12.5px; margin-top: 4px;">Hãy thử tìm kiếm với tên, số điện thoại, email hoặc mã phiên khác.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── PHÂN TRANG (TỐI ĐA 20 BÀI TRÊN MỖI TRANG) ─────────────── -->
+  {% include 'components/pagination.html' %}
+
+</div>
+{% endif %}
+
+<!-- ─── JAVASCRIPT ĐỒNG BỘ TÌM KIẾM GIỮA HEADER GLOBAL VÀ LOCAL ─── -->
+<script>
+// ─── HÀM SẮP XẾP DANH SÁCH BÀI THI THEO THỜI GIAN ───
+function handleReviewSort(btn) {
+  const table = document.getElementById('students-table');
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+  const rows = Array.from(tbody.querySelectorAll('tr')).filter(r => !r.querySelector('td[colspan]'));
+  if (rows.length < 2) return;
+
+  const currentOrder = table.dataset.sortOrder || 'desc';
+  const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+  table.dataset.sortOrder = newOrder;
+
+  rows.sort((a, b) => {
+    const tA = parseFloat(a.dataset.timestamp) || 0;
+    const tB = parseFloat(b.dataset.timestamp) || 0;
+    return newOrder === 'asc' ? tA - tB : tB - tA;
+  });
+
+  rows.forEach(r => tbody.appendChild(r));
+
+  rows.forEach((r, idx) => {
+    const sttCell = r.querySelector('.stt-cell');
+    if (sttCell) {
+      sttCell.textContent = idx + 1;
+    }
+  });
+
+  if (btn) {
+    const sortText = btn.querySelector('.sort-text');
+    const sortIcon = btn.querySelector('i');
+    if (newOrder === 'asc') {
+      if (sortText) sortText.textContent = 'Xa nhất trước (Cũ → Mới)';
+      if (sortIcon) sortIcon.className = 'fa-solid fa-arrow-up-wide-short';
+      btn.style.borderColor = 'var(--accent-purple)';
+      btn.style.color = 'var(--accent-purple)';
+      btn.style.background = 'rgba(139, 92, 246, 0.08)';
+    } else {
+      if (sortText) sortText.textContent = 'Gần nhất trước (Mới → Cũ)';
+      if (sortIcon) sortIcon.className = 'fa-solid fa-arrow-down-wide-short';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      btn.style.background = '';
+    }
+  }
+
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set('sort', newOrder);
+    window.history.replaceState({}, '', url.toString());
+  } catch (e) {}
+
+
+}
+window.handleReviewSort = handleReviewSort;
+window.toggleTableSortTime = handleReviewSort;
+
+document.addEventListener('DOMContentLoaded', function() {
+  const globalSearch = document.getElementById('global-search');
+  const localSearch = document.getElementById('local-test-search');
+  const searchForm = document.getElementById('test-search-form');
+
+  // 1. Đồng bộ giá trị tìm kiếm ban đầu lên header #global-search
+  const currentQuery = "{{ search_query|escapejs }}";
+  if (currentQuery && globalSearch) {
+    globalSearch.value = currentQuery;
+  }
+
+  // 2. Đồng bộ 2 chiều giữa #global-search và #local-test-search
+  if (globalSearch && localSearch) {
+    globalSearch.addEventListener('input', function() {
+      localSearch.value = this.value;
+    });
+
+    localSearch.addEventListener('input', function() {
+      globalSearch.value = this.value;
+    });
+
+    // Khi nhấn Enter ở global-search -> submit form tìm kiếm
+    globalSearch.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        localSearch.value = this.value;
+        if (searchForm) {
+          searchForm.submit();
+        } else {
+          window.location.href = '?q=' + encodeURIComponent(this.value) + '{% if current_filter and current_filter != "all" %}&filter={{ current_filter }}{% endif %}';
+        }
+      }
+    });
+  }
+});
+
+// ─── ĐIỀU CHỈNH ĐIỂM TỪNG CÂU TRẮC NGHIỆM & TỰ ĐỘNG CỘNG DỒN ───
+
+function setQuickMcqScore(qNum, score) {
+
+  var input = document.querySelector('.mcq-score-input[data-qnum="' + qNum + '"]');
+
+  if (input) {
+
+    input.value = parseFloat(score).toFixed(1);
+
+    handleMcqScoreChange(input);
+
+  }
+
+}
+
+
+
+function handleMcqScoreChange(input) {
+
+  var qNum = input.getAttribute('data-qnum');
+
+  var val = parseFloat(input.value);
+
+  if (isNaN(val)) val = 0.0;
+
+  if (val < 0) val = 0.0;
+
+  if (val > 1.6) val = 1.6;
+
+  input.value = val.toFixed(1);
+
+
+
+  // Tính lại tổng điểm từ 25 input
+
+  var total = 0.0;
+
+  document.querySelectorAll('.mcq-score-input').forEach(function(inp) {
+
+    total += parseFloat(inp.value) || 0.0;
+
+  });
+
+  total = Math.min(40.0, Math.round(total * 10) / 10);
+
+  var pct = Math.round((total / 40.0) * 100);
+
+
+
+  // Cập nhật giao diện trực quan
+
+  var liveTotal = document.getElementById('mcq-live-total');
+
+  if (liveTotal) liveTotal.innerText = total.toFixed(1);
+
+  var livePct = document.getElementById('mcq-live-pct');
+
+  if (livePct) livePct.innerText = pct + '%';
+
+  var bottomMcq = document.getElementById('bottom-mcq-score');
+
+  if (bottomMcq) bottomMcq.innerText = total.toFixed(1) + ' / 40đ';
+
+
+
+  var spkScore = parseFloat('{{ detail.scores.speaking }}') || 0.0;
+
+  var wriScore = parseFloat('{{ detail.scores.writing }}') || 0.0;
+
+  var bottomTotal = document.getElementById('bottom-total-score');
+
+  if (bottomTotal) {
+
+    var sum3 = Math.round((spkScore + wriScore + total) * 10) / 10;
+
+    bottomTotal.innerText = sum3.toFixed(1) + ' / 100đ';
+
+  }
+
+
+
+  // Gửi POST cập nhật điểm câu về máy chủ
+
+  var phienId = '{{ detail.phien_id }}';
+
+  if (!phienId) return;
+
+
+
+  var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : '';
+
+
+
+  fetch('{% url "placement_tests:update_mcq_score" %}', {
+
+    method: 'POST',
+
+    headers: {
+
+      'Content-Type': 'application/json',
+
+      'X-CSRFToken': csrfToken
+
+    },
+
+    body: JSON.stringify({
+
+      phien_id: phienId,
+
+      question_num: qNum,
+
+      points: val
+
+    })
+
+  })
+
+  .then(function(res) { return res.json(); })
+
+  .then(function(data) {
+
+    if (data.status === 'success') {
+
+      // Hiển thị toast hoặc hiệu ứng thành công nhẹ
+
+      input.style.borderColor = '#10B981';
+
+      setTimeout(function() { input.style.borderColor = '#C084FC'; }, 1000);
+
+    }
+
+  })
+
+  .catch(function(err) {
+
+    console.error('Lỗi lưu điểm trắc nghiệm:', err);
+
+  });
+
+}
+
+
+
+// ─── BỘ LỌC ĐỐI SOÁT TRẮC NGHIỆM CHO GIẢNG VIÊN ───
+function filterMcqQuestions(status, btn) {
+  document.querySelectorAll('.mcq-filter-btn').forEach(function(b) {
+    b.classList.remove('active');
+    b.style.background = '#FFFFFF';
+    if (b.innerText.indexOf('Đúng') !== -1) {
+      b.style.color = '#065F46';
+      b.style.borderColor = '#A7F3D0';
+    } else if (b.innerText.indexOf('Sai') !== -1) {
+      b.style.color = '#991B1B';
+      b.style.borderColor = '#FECACA';
+    } else if (b.innerText.indexOf('Trống') !== -1) {
+      b.style.color = '#92400E';
+      b.style.borderColor = '#FDE68A';
+    } else {
+      b.style.color = 'var(--text-secondary)';
+      b.style.borderColor = 'var(--border-color)';
+    }
+  });
+
+  btn.classList.add('active');
+  btn.style.background = 'var(--accent-purple)';
+  btn.style.color = '#FFFFFF';
+  btn.style.borderColor = 'var(--accent-purple)';
+
+  var items = document.querySelectorAll('.mcq-card-item');
+  var visibleCount = 0;
+  items.forEach(function(el) {
+    if (status === 'ALL' || el.getAttribute('data-status') === status) {
+      el.style.display = 'flex';
+      visibleCount++;
+    } else {
+      el.style.display = 'none';
+    }
+  });
+
+  var emptyEl = document.getElementById('mcq-filter-empty');
+  if (emptyEl) {
+    emptyEl.style.display = (visibleCount === 0) ? 'block' : 'none';
+  }
+}
+</script>
+
+{% endblock %}
