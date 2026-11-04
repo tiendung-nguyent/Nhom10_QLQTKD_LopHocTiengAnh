@@ -107,7 +107,13 @@ def payment_detail(request):
 
             giao_dich_list = list(GiaoDichThanhToan.objects.filter(phieu_hoc_phi=phieu_hp).order_by('-thoi_gian'))
 
-    is_paid = phieu_hp.trang_thai == PhieuHocPhi.TrangThai.DA_TT if phieu_hp else False
+    is_paid = False
+    if phieu_hp:
+        has_success_tx = GiaoDichThanhToan.objects.filter(phieu_hoc_phi=phieu_hp, trang_thai='THANH_CONG').exists()
+        is_paid = (phieu_hp.trang_thai in [PhieuHocPhi.TrangThai.DA_TT, PhieuHocPhi.TrangThai.DU]) or has_success_tx
+        if has_success_tx and phieu_hp.trang_thai != PhieuHocPhi.TrangThai.DA_TT:
+            phieu_hp.trang_thai = PhieuHocPhi.TrangThai.DA_TT
+            phieu_hp.save(update_fields=['trang_thai'])
 
     context = {
         'today': now,

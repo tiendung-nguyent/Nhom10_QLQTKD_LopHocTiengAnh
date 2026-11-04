@@ -1,963 +1,2115 @@
 {% extends 'base.html' %}
+
 {% load static %}
 
+
+
 {% block title %}Kết quả kiểm tra đầu vào{% endblock %}
+
 {% block page_heading %}Kết quả kiểm tra đầu vào{% endblock %}
 
+
+
 {% block extra_css %}
+
 <style>
+
   .result-grid-top {
+
     display: grid;
+
     grid-template-columns: 340px 1fr;
+
     gap: 20px;
+
     align-items: stretch;
+
     margin-bottom: 20px;
+
   }
+
   .rubric-grid {
+
     display: grid;
+
     grid-template-columns: 1fr 1fr;
+
     gap: 20px;
+
     align-items: start;
+
     padding: 20px;
+
   }
+
   .skill-row {
+
     padding: 12px 0;
+
     border-bottom: 1px solid #F1F5F9;
+
   }
+
   .skill-row:last-child {
+
     border-bottom: none;
+
     padding-bottom: 0;
+
   }
+
   .skill-track {
+
     height: 6px;
+
     background: #F1F5F9;
+
     border-radius: 999px;
+
     overflow: hidden;
+
     margin-top: 8px;
+
   }
+
   .skill-fill {
+
     height: 100%;
+
     border-radius: 999px;
+
     transition: width 0.3s ease;
+
   }
+
   details[open] summary .accordion-chevron {
+
     transform: rotate(180deg);
+
   }
+
   .accordion-chevron {
+
     transition: transform 0.2s ease;
+
   }
+
+
 
   /* Review Submitted Tabs */
+
   .review-tab-btn {
+
     padding: 8px 16px;
+
     border-radius: 8px;
+
     font-size: 13px;
+
     font-weight: 600;
+
     cursor: pointer;
+
     transition: all 0.2s ease;
+
     border: 1.5px solid #E2E8F0;
+
     background: #FFFFFF;
+
     color: #475569;
+
     display: inline-flex;
+
     align-items: center;
+
     gap: 7px;
+
   }
+
   .review-tab-btn.active {
+
     background: #0F172A;
+
     color: #FFFFFF;
+
     border-color: #0F172A;
+
   }
+
   .review-tab-btn:hover:not(.active) {
+
     background: #F8FAFC;
+
     border-color: #CBD5E1;
+
   }
+
   @media (max-width: 860px) {
+
     .result-grid-top,
+
     .rubric-grid {
+
       grid-template-columns: 1fr !important;
+
       gap: 16px !important;
+
     }
+
   }
+
 </style>
+
 {% endblock %}
 
+
+
 {% block content %}
+
 {% if has_test_results %}
+
 <!-- ─── HEADER TRANG ──────────────────────────────────────── -->
+
 <div class="page-header" style="margin-bottom: 20px;">
+
   <div class="page-breadcrumb">
+
     <a href="{% url 'users:student_dashboard' %}" style="color: inherit; text-decoration: none;">Học viên</a>
+
     <span> / </span>Kết quả kiểm tra đầu vào
+
   </div>
+
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-top: 6px;">
+
     <div>
+
       <h1 class="page-title" style="margin: 0; font-size: 22px; font-weight: 700; color: #0F172A;">Kết quả kiểm tra đầu vào</h1>
+
       <p class="page-subtitle" style="margin: 4px 0 0; font-size: 13.5px; color: #64748B;">
+
         Phiên thi #{{ phien.ma_phien|default:"001" }} · Hoàn thành: {{ phien.hoan_thanh|date:"d/m/Y H:i" }}
+
       </p>
+
     </div>
+
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-      <a href="#review-answers-section" class="btn btn-outline" style="font-size: 12.5px; font-weight: 600; padding: 6px 14px; border-color: #FDBA74; color: var(--accent-orange); background: #FFF7ED; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-        <i class="fa-solid fa-list-check"></i> Xem lại bài làm &amp; đáp án
-      </a>
-      {% if is_teacher_approved %}
+
+      <button type="button" id="btn-toggle-review-answers" onclick="toggleReviewAnswersSection()" class="btn btn-outline" style="font-size: 12.5px; font-weight: 600; padding: 6px 14px; border-color: #FDBA74; color: var(--accent-orange); background: #FFF7ED; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+
+        <i class="fa-solid fa-list-check"></i> <span id="toggle-review-btn-text">Xem lại bài làm &amp; đáp án</span>
+
+      </button>
+
+      {% if is_teacher_approved or has_assigned_class %}
+
       <span class="badge badge-emerald" style="font-size: 13px; font-weight: 600; padding: 7px 14px; display: inline-flex; align-items: center; gap: 6px;">
+
         <i class="fa-solid fa-circle-check"></i> Giáo viên đã duyệt: {{ examiner_info|default:"Ban chuyên môn" }}
+
       </span>
+
       {% else %}
+
       <span class="badge" style="background: #FFF7ED; color: #C2410C; border: 1px solid #FFEDD5; font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;">
+
         <i class="fa-regular fa-clock"></i> Chờ Giáo viên duyệt
+
       </span>
+
       {% endif %}
+
     </div>
+
   </div>
+
 </div>
 
-<!-- ─── THÔNG BÁO CHẤM SƠ BỘ (NGẮN GỌN, TRANG NHÃ) ────────── -->
+
+
+<!-- ─── THÔNG BÁO CHẤM SƠ BỘ / CHÍNH THỨC ────────── -->
+{% if is_teacher_approved or has_assigned_class %}
+<div style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-radius: 8px; padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
+  <i class="fa-solid fa-circle-check" style="color: #166534; font-size: 16px; flex-shrink: 0;"></i>
+  <div style="font-size: 13.5px; color: #166534; line-height: 1.5;">
+    Điểm kiểm tra đầu vào đã được Giáo viên chuyên môn thẩm định &amp; phê duyệt chính thức. Kết quả bài làm đã được công nhận và dùng làm căn cứ xếp lớp <strong>{{ assigned_lop_hoc.ten_lop|default:"chuẩn lộ trình" }}</strong>.
+  </div>
+</div>
+{% else %}
 <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
   <i class="fa-solid fa-circle-info" style="color: #64748B; font-size: 16px; flex-shrink: 0;"></i>
   <div style="font-size: 13.5px; color: #334155; line-height: 1.5;">
     Điểm số do hệ thống chấm sơ bộ. Giáo viên chuyên môn sẽ thẩm định và phê duyệt kết quả chính thức trong vòng 24 giờ làm việc.
   </div>
 </div>
+{% endif %}
+
+
 
 <!-- ─── LỊCH SỬ CÁC LẦN LÀM BÀI (CHỈ HIỂN THỊ KHI CÓ >= 2 PHIÊN) ── -->
+
 {% if danh_sach_phien|length > 1 %}
+
 <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 18px 20px; margin-bottom: 20px;">
+
   <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #F1F5F9;">
+
     <div style="display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #0F172A;">
+
       <i class="fa-solid fa-clock-rotate-left" style="color: #64748B;"></i>
+
       <span>Lịch sử các lần làm bài ({{ danh_sach_phien|length }} phiên)</span>
+
     </div>
+
     <span style="font-size: 12.5px; color: #64748B;">Bấm vào từng phiên để xem chi tiết</span>
+
   </div>
+
+
 
   <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px;">
+
     {% for ps in danh_sach_phien %}
+
     <a href="?session={{ ps.id }}" style="text-decoration: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 6px; border: 1px solid {% if ps.is_selected %}#EA580C{% else %}#E2E8F0{% endif %}; background: {% if ps.is_selected %}#FFF7ED{% else %}#FFFFFF{% endif %}; color: inherit; transition: all 0.15s ease;">
+
       <div style="min-width: 0;">
+
         <div style="font-size: 13.5px; font-weight: 700; color: {% if ps.is_selected %}#EA580C{% else %}#0F172A{% endif %}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+
           Phiên thi #{{ ps.ma_phien }}
+
           {% if ps.is_selected %}<span style="font-size: 11px; font-weight: 600; color: #EA580C; margin-left: 4px;">(Đang xem)</span>{% endif %}
+
         </div>
+
         <div style="font-size: 12px; color: #64748B; margin-top: 2px;">
+
           {{ ps.ngay_hoan_thanh|date:"d/m/Y H:i" }}
+
         </div>
+
       </div>
+
       <div style="text-align: right; flex-shrink: 0;">
+
         <div style="font-size: 14px; font-weight: 700; color: #0F172A;">{{ ps.tong_diem }}đ</div>
+
         <span style="font-size: 11px; font-weight: 500; color: #64748B;">{{ ps.status_label }}</span>
+
       </div>
+
     </a>
+
     {% endfor %}
+
   </div>
+
 </div>
+
 {% endif %}
+
+
 
 <!-- ─── KHỐI ĐIỂM TỔNG & ĐIỂM THEO KỸ NĂNG (ĐẶT LÊN ĐẦU, TO NHẤT) ── -->
+
 <div class="result-grid-top">
 
+
+
   <!-- CỘT TRÁI: ĐIỂM TỔNG HỢP -->
+
   <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between;">
+
     <div>
+
       <div style="font-size: 14px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">
+
         Điểm tổng hợp
+
       </div>
+
+
 
       <div style="margin: 18px 0 10px;">
+
         {% if goal_score.scale_type == 'IELTS_BAND' %}
+
         <div style="font-size: 44px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.5px;">
+
           {{ goal_score.main_score_display }}
+
         </div>
+
         <div style="font-size: 13px; color: #64748B; margin-top: 6px;">
+
           Thang điểm Band 9.0 IELTS · Tổng quy đổi: <strong>{{ ket_qua.tong_diem }}đ</strong>
+
         </div>
+
         {% elif goal_score.scale_type == 'VSTEP_10' %}
+
         <div style="font-size: 44px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.5px;">
+
           {{ goal_score.main_score_display }}
+
         </div>
+
         <div style="font-size: 13px; color: #64748B; margin-top: 6px;">
+
           Thang điểm 10.0 VSTEP · Tổng quy đổi: <strong>{{ ket_qua.tong_diem }}đ</strong>
+
         </div>
+
         {% else %}
+
         <div style="font-size: 44px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.5px;">
+
           {{ ket_qua.tong_diem }} <span style="font-size: 18px; font-weight: 600; color: #94A3B8;">/ 100đ</span>
+
         </div>
+
         <div style="font-size: 13px; color: #64748B; margin-top: 6px;">
+
           {{ goal_score.goal_title|default:"Năng lực tiếng Anh" }}
+
         </div>
+
         {% endif %}
+
       </div>
+
     </div>
+
+
 
     <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid #F1F5F9;">
+
       <div style="font-size: 14px; color: #334155;">
+
         Trình độ: <strong style="color: #0F172A;">{{ goal_score.level_label|default:ket_qua.trinh_do }}</strong>
+
       </div>
+
       {% if goal_score.target_comparison %}
+
       <div style="margin-top: 6px; font-size: 13px; font-weight: 600; color: #C2410C;">
+
         {{ goal_score.target_comparison }}
+
       </div>
+
       {% endif %}
+
     </div>
+
   </div>
+
+
 
   <!-- CỘT PHẢI: PHÂN TÍCH 3 KỸ NĂNG -->
+
   <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between;">
+
     <div>
+
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+
         <div style="font-size: 14px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;">
+
           Điểm theo kỹ năng
+
         </div>
+
         <div style="font-size: 12.5px; color: #64748B;">
+
           Mục tiêu: {{ goal_score.goal_title|default:goal_type }}
+
         </div>
+
       </div>
+
+
 
       <!-- Kỹ năng 1: Trắc nghiệm & Nghe -->
+
       <div class="skill-row">
+
         <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px;">
+
           <span style="font-weight: 600; color: #1E293B;">Trắc nghiệm & Nghe</span>
+
           <span style="font-weight: 700; color: #0F172A;">
+
             {% if goal_score.scale_type == 'IELTS_BAND' %}
+
               {{ goal_score.reading_score_display }} ({{ skill_scores.0.score }}/40đ)
+
             {% elif goal_score.scale_type == 'VSTEP_10' %}
+
               {{ goal_score.reading_score_display }} VSTEP
+
             {% else %}
+
               {{ skill_scores.0.score }}/40đ
+
             {% endif %}
+
           </span>
+
         </div>
+
         <div class="skill-track">
+
           <div class="skill-fill" style="width: {{ skill_scores.0.pct }}%; background: #2563EB;"></div>
+
         </div>
+
       </div>
+
+
 
       <!-- Kỹ năng 2: Writing -->
+
       <div class="skill-row">
+
         <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px;">
+
           <span style="font-weight: 600; color: #1E293B;">Writing</span>
+
           <span style="font-weight: 700; color: #0F172A;">
+
             {% if skill_scores.1.score > 0 %}
+
               {% if goal_score.scale_type == 'IELTS_BAND' %}
+
                 {{ goal_score.writing_score_display }} ({{ skill_scores.1.score }}/30đ)
+
               {% elif goal_score.scale_type == 'VSTEP_10' %}
+
                 {{ goal_score.writing_score_display }} VSTEP
+
               {% else %}
+
                 {{ skill_scores.1.score }}/30đ
+
               {% endif %}
+
             {% else %}
+
               <span style="font-size: 12px; font-weight: 600; color: #64748B; background: #F1F5F9; padding: 2px 7px; border-radius: 4px;">Chưa làm</span>
+
             {% endif %}
+
           </span>
+
         </div>
+
         <div class="skill-track">
+
           <div class="skill-fill" style="width: {{ skill_scores.1.pct }}%; background: #D97706;"></div>
+
         </div>
+
       </div>
+
+
 
       <!-- Kỹ năng 3: Speaking -->
+
       <div class="skill-row">
+
         <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px;">
+
           <span style="font-weight: 600; color: #1E293B;">Speaking</span>
+
           <span style="font-weight: 700; color: #0F172A;">
+
             {% if has_speaking_voice and skill_scores.2.score > 0 %}
+
               {% if goal_score.scale_type == 'IELTS_BAND' %}
+
                 {{ goal_score.speaking_score_display }} ({{ skill_scores.2.score }}/30đ)
+
               {% elif goal_score.scale_type == 'VSTEP_10' %}
+
                 {{ goal_score.speaking_score_display }} VSTEP
+
               {% else %}
+
                 {{ skill_scores.2.score }}/30đ
+
               {% endif %}
+
             {% else %}
+
               <span style="font-size: 12px; font-weight: 600; color: #64748B; background: #F1F5F9; padding: 2px 7px; border-radius: 4px;">Chưa làm</span>
+
             {% endif %}
+
           </span>
+
         </div>
+
         <div class="skill-track">
+
           <div class="skill-fill" style="width: {% if has_speaking_voice %}{{ skill_scores.2.pct }}{% else %}0{% endif %}%; background: #EA580C;"></div>
+
         </div>
+
       </div>
+
     </div>
+
+
 
     <!-- Nhận xét tổng quan sinh từ kết quả thực tế -->
+
     <div style="margin-top: 14px; padding: 10px 14px; background: #F8FAFC; border-left: 3px solid #94A3B8; border-radius: 4px; font-size: 12.5px; color: #475569; line-height: 1.55;">
+
       <strong style="color: #1E293B;">Đánh giá tổng quan:</strong> {{ ai_overall_comment }}
+
     </div>
+
   </div>
 
+
+
 </div>
+
+
 
 <!-- ─── KHỐI KHÓA HỌC PHÙ HỢP ĐỀ XUẤT & XẾP LỚP (BPMN ADAPTIVE) ─── -->
+
 <div class="card" style="background: #FFFDFB; border: 1.5px solid #FED7AA; border-radius: 8px; padding: 18px 22px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+
   <div style="flex: 1; min-width: 280px;">
+
     {% if has_assigned_class and assigned_lop_hoc %}
+
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
-        <span class="badge" style="background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; font-size: 11px; padding: 2px 8px; font-weight: 700; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
-          <i class="fa-solid fa-circle-check"></i> ĐÃ XẾP LỚP CHÍNH THỨC
-        </span>
-        <span style="font-size: 12px; color: #64748B;">Tư vấn tuyển sinh đã áp lớp thành công</span>
+
+        {% if is_tuition_paid %}
+
+          <span class="badge" style="background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; font-size: 11px; padding: 2px 8px; font-weight: 700; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+
+            <i class="fa-solid fa-circle-check"></i> ĐÃ HOÀN TẤT NHẬP HỌC
+
+          </span>
+
+          <span style="font-size: 12px; color: #166534; font-weight: 500;">Đã xếp lớp &amp; hoàn thành học phí</span>
+
+        {% else %}
+
+          <span class="badge" style="background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; font-size: 11px; padding: 2px 8px; font-weight: 700; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;">
+
+            <i class="fa-solid fa-circle-check"></i> ĐÃ XẾP LỚP CHÍNH THỨC
+
+          </span>
+
+          <span style="font-size: 12px; color: #64748B;">Tư vấn tuyển sinh đã áp lớp thành công</span>
+
+        {% endif %}
+
       </div>
+
       <div style="font-size: 18px; font-weight: 800; color: #0F172A;">
+
         {{ assigned_lop_hoc.ten_lop }} <span style="font-size: 14.5px; font-weight: 600; color: #475569;">· {{ assigned_khoa_hoc.ten_khoa|default:course_roadmap_info.name }}</span>
+
       </div>
+
       <div style="font-size: 13px; color: #475569; margin-top: 5px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+
         <span><i class="fa-regular fa-calendar-days" style="color: #EA580C; margin-right: 4px;"></i> Lịch học: <strong>{{ assigned_lop_hoc.lich_hoc }}</strong></span>
+
         <span><i class="fa-regular fa-clock" style="color: #EA580C; margin-right: 4px;"></i> Khai giảng: <strong>{{ assigned_lop_hoc.ngay_khai_giang|date:"d/m/Y" }}</strong></span>
-        <span><i class="fa-solid fa-money-bill-wave" style="color: #047857; margin-right: 4px;"></i> Học phí: <strong style="color: #EA580C;">{% if assigned_phieu_hp %}{{ assigned_phieu_hp.so_tien_vnd }}{% else %}{{ course_roadmap_info.fee }}{% endif %}</strong></span>
+
+        <span>
+
+          <i class="fa-solid fa-money-bill-wave" style="color: #047857; margin-right: 4px;"></i> Học phí: 
+
+          {% if is_tuition_paid %}
+
+            <strong style="color: #166534;">{% if assigned_phieu_hp %}{{ assigned_phieu_hp.so_tien_vnd }}{% else %}{{ course_roadmap_info.fee }}{% endif %}</strong>
+
+            <span class="badge" style="background: #DCFCE7; color: #166534; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; margin-left: 4px;"><i class="fa-solid fa-check"></i> Đã thanh toán</span>
+
+          {% else %}
+
+            <strong style="color: #EA580C;">{% if assigned_phieu_hp %}{{ assigned_phieu_hp.so_tien_vnd }}{% else %}{{ course_roadmap_info.fee }}{% endif %}</strong>
+
+            <span class="badge" style="background: #FEE2E2; color: #DC2626; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; margin-left: 4px;"><i class="fa-solid fa-clock"></i> Chờ đóng học phí</span>
+
+          {% endif %}
+
+        </span>
+
       </div>
+
     {% else %}
+
       <div style="font-size: 11.5px; font-weight: 700; color: #C2410C; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+
         <i class="fa-solid fa-graduation-cap"></i> Khóa học phù hợp đề xuất
+
       </div>
+
       <div style="font-size: 17.5px; font-weight: 800; color: #0F172A; margin-top: 3px;">
+
         {{ course_roadmap_info.name|default:khoa_de_xuat|default:"Lớp Pre-IELTS Foundation" }}
+
       </div>
+
       <div style="font-size: 13px; color: #64748B; margin-top: 2px;">
+
         Lộ trình đào tạo được cá nhân hóa theo trình độ kiểm tra · Học phí niêm yết: <strong style="color: #EA580C;">{{ course_roadmap_info.fee }}</strong> ({{ course_roadmap_info.sessions }})
+
       </div>
+
     {% endif %}
+
   </div>
+
+
 
   <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+
     {% if has_assigned_class and assigned_lop_hoc %}
+
       <button type="button" class="btn" onclick="openRoadmapModal()" style="background: #FFFFFF; color: #334155; border: 1.5px solid #CBD5E1; font-weight: 600; padding: 9px 16px; border-radius: 6px; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+
         <i class="fa-solid fa-map-location-dot" style="color: #64748B;"></i> Xem lộ trình học
+
       </button>
-      <a href="{% url 'billing:payment_detail' %}" class="btn" style="background: #EA580C; color: #FFFFFF; font-weight: 700; padding: 9px 18px; border-radius: 6px; font-size: 13.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);">
-        <i class="fa-solid fa-qrcode"></i> Thanh toán học phí ngay ({% if assigned_phieu_hp %}{{ assigned_phieu_hp.so_tien_vnd }}{% else %}{{ course_roadmap_info.fee }}{% endif %}) →
-      </a>
+
+      {% if is_tuition_paid %}
+
+        <a href="{% url 'billing:payment_detail' %}" class="btn" style="background: #F0FDF4; color: #166534; border: 1.5px solid #BBF7D0; font-weight: 700; padding: 9px 16px; border-radius: 6px; font-size: 13.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+
+          <i class="fa-solid fa-receipt"></i> Xem biên lai học phí
+
+        </a>
+
+        <a href="{% url 'users:student_dashboard' %}" class="btn" style="background: #EA580C; color: #FFFFFF; font-weight: 700; padding: 9px 18px; border-radius: 6px; font-size: 13.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);">
+
+          <i class="fa-solid fa-calendar-check"></i> Vào lớp học chính thức →
+
+        </a>
+
+      {% else %}
+
+        <a href="{% url 'billing:payment_detail' %}" class="btn" style="background: #EA580C; color: #FFFFFF; font-weight: 700; padding: 9px 18px; border-radius: 6px; font-size: 13.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);">
+
+          <i class="fa-solid fa-qrcode"></i> Thanh toán học phí ngay ({% if assigned_phieu_hp %}{{ assigned_phieu_hp.so_tien_vnd }}{% else %}{{ course_roadmap_info.fee }}{% endif %}) →
+
+        </a>
+
+      {% endif %}
+
     {% else %}
+
       <button type="button" class="btn" onclick="openRoadmapModal()" style="background: #EA580C; color: #FFFFFF; font-weight: 600; padding: 9px 18px; border-radius: 6px; font-size: 13.5px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25); transition: all 0.2s ease;">
+
         <i class="fa-solid fa-map-location-dot"></i> Xem chi tiết khóa học & lộ trình
+
       </button>
+
       <a href="{% url 'users:student_dashboard' %}" class="btn" style="background: #FFFFFF; color: #334155; border: 1px solid #CBD5E1; font-weight: 600; padding: 9px 16px; border-radius: 6px; font-size: 13.5px; text-decoration: none;">
+
         Về Dashboard
+
       </a>
+
     {% endif %}
+
   </div>
+
 </div>
+
+
 
 <!-- ─── ACCORDION: CHI TIẾT RUBRIC CHẤM ĐIỂM (WRITING & SPEAKING) ── -->
+
 <details class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; margin-bottom: 24px; overflow: hidden;">
+
   <summary style="padding: 16px 20px; font-size: 14.5px; font-weight: 700; color: #1E293B; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; background: #FFFFFF;">
+
     <span style="display: inline-flex; align-items: center; gap: 8px;">
+
       <i class="fa-solid fa-list-check" style="color: #64748B;"></i>
+
       <span>Chi tiết tiêu chí chấm điểm Rubric (Writing & Speaking)</span>
+
     </span>
+
     <span style="font-size: 13px; font-weight: 500; color: #64748B; display: inline-flex; align-items: center; gap: 6px;">
+
       Xem chi tiết <i class="fa-solid fa-chevron-down accordion-chevron" style="font-size: 11px;"></i>
+
     </span>
+
   </summary>
 
+
+
   <div class="rubric-grid" style="border-top: 1px solid #F1F5F9;">
+
     <!-- CỘT 1: WRITING RUBRIC -->
+
     <div style="background: #FAFAFA; border: 1px solid #E2E8F0; border-radius: 6px; padding: 18px;">
+
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #E2E8F0;">
+
         <div style="font-size: 14.5px; font-weight: 700; color: #0F172A;">Tiêu chí chấm Writing</div>
+
         <span style="font-size: 12px; font-weight: 600; color: #64748B;">Điểm: {{ skill_scores.1.score }}/30</span>
+
       </div>
+
+
 
       <div style="margin-bottom: 14px;">
+
         {% for c in writing_criteria %}
+
         <div style="margin-bottom: 10px;">
+
           <div style="display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px;">
+
             <span style="color: #334155; font-weight: 500;">{{ c.name }}</span>
+
             <span style="color: #0F172A; font-weight: 700;">{{ c.score }}</span>
+
           </div>
+
           <div style="height: 5px; background: #E2E8F0; border-radius: 999px; overflow: hidden;">
+
             <div style="width: {{ c.pct }}%; height: 100%; background: #D97706; border-radius: 999px;"></div>
+
           </div>
+
         </div>
+
         {% endfor %}
+
       </div>
 
+
+
       <div style="padding: 10px 12px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; font-size: 12.5px; color: #475569; line-height: 1.55;">
+
         <strong style="color: #1E293B;">Nhận xét:</strong> {{ writing_comment }}
+
       </div>
+
+
 
       {% if student_writing_answer %}
+
       <details style="margin-top: 10px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; padding: 8px 12px;">
+
         <summary style="font-size: 12.5px; font-weight: 600; color: #334155; cursor: pointer;">
+
           Xem lại bài viết học viên đã nộp
+
         </summary>
+
         <div style="font-size: 12.5px; color: #475569; line-height: 1.6; margin-top: 8px; white-space: pre-wrap; background: #F8FAFC; padding: 10px; border-radius: 4px; border: 1px solid #E2E8F0;">{{ student_writing_answer }}</div>
+
       </details>
+
       {% endif %}
+
+
 
       {% if teacher_writing_comment %}
+
       <div style="margin-top: 10px; padding: 10px 12px; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 4px; font-size: 12.5px; color: #065F46;">
+
         <strong>Nhận xét của Giáo viên:</strong> {{ teacher_writing_comment }}
+
       </div>
+
       {% endif %}
+
     </div>
+
+
 
     <!-- CỘT 2: SPEAKING RUBRIC -->
+
     <div style="background: #FAFAFA; border: 1px solid #E2E8F0; border-radius: 6px; padding: 18px;">
+
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #E2E8F0;">
+
         <div style="font-size: 14.5px; font-weight: 700; color: #0F172A;">Tiêu chí chấm Speaking</div>
+
         <span style="font-size: 12px; font-weight: 600; color: #64748B;">
+
           {% if has_speaking_voice and skill_scores.2.score > 0 %}Điểm: {{ skill_scores.2.score }}/30{% else %}Chưa làm{% endif %}
+
         </span>
+
       </div>
+
+
 
       {% if has_speaking_voice and skill_scores.2.score > 0 %}
+
       <div style="margin-bottom: 14px;">
+
         {% for c in speaking_criteria %}
+
         <div style="margin-bottom: 10px;">
+
           <div style="display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px;">
+
             <span style="color: #334155; font-weight: 500;">{{ c.name }}</span>
+
             <span style="color: #0F172A; font-weight: 700;">{{ c.score }}</span>
+
           </div>
+
           <div style="height: 5px; background: #E2E8F0; border-radius: 999px; overflow: hidden;">
+
             <div style="width: {{ c.pct }}%; height: 100%; background: #EA580C; border-radius: 999px;"></div>
+
           </div>
+
         </div>
+
         {% endfor %}
+
       </div>
+
+
 
       <div style="padding: 10px 12px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; font-size: 12.5px; color: #475569; line-height: 1.55;">
+
         <strong style="color: #1E293B;">Nhận xét:</strong> {{ speaking_comment }}
+
       </div>
+
+
 
       {% if audio_url %}
+
       <div style="margin-top: 10px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 4px; padding: 8px 12px;">
+
         <div style="font-size: 12px; font-weight: 600; color: #64748B; margin-bottom: 6px;">Nghe lại bài nói:</div>
+
         <audio controls style="width: 100%; height: 36px;">
+
           <source src="{{ audio_url }}" type="audio/webm">
+
           Trình duyệt không hỗ trợ phát audio.
+
         </audio>
+
       </div>
+
       {% endif %}
+
+
 
       {% if teacher_speaking_comment %}
+
       <div style="margin-top: 10px; padding: 10px 12px; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 4px; font-size: 12.5px; color: #065F46;">
+
         <strong>Nhận xét của Giáo viên:</strong> {{ teacher_speaking_comment }}
+
       </div>
+
       {% endif %}
 
+
+
       {% else %}
+
       <!-- THÔNG BÁO GỌN KHI CHƯA LÀM BÀI NÓI (KHÔNG VẼ 4 THANH 0.0 VÀ KHÔNG HIỂN THỊ AUDIO GIẢ) -->
+
       <div style="padding: 24px 16px; text-align: center; background: #FFFFFF; border: 1px dashed #CBD5E1; border-radius: 4px; color: #64748B;">
+
         <i class="fa-solid fa-microphone-slash" style="font-size: 24px; color: #94A3B8; margin-bottom: 8px; display: block;"></i>
+
         <div style="font-size: 13.5px; font-weight: 700; color: #334155;">Chưa có bài nói</div>
+
         <div style="font-size: 12.5px; color: #64748B; margin-top: 4px; line-height: 1.5;">
+
           Học viên chưa thực hiện thu âm phần thi Speaking trong phiên kiểm tra này.
+
         </div>
+
       </div>
+
       {% endif %}
+
     </div>
+
   </div>
+
 </details>
 
-<!-- ─── 4. KHU VỰC ĐỐI SOÁT & XEM LẠI BÀI THI ĐÃ NỘP (READ-ONLY) ─── -->
-  <div class="card" id="review-answers-section" style="padding: 22px 24px; margin-bottom: 24px; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);">
+
+
+<!-- ─── 4. KHU VỰC ĐỐI SOÁT & XEM LẠI BÀI THI ĐÃ NỘP (MẶC ĐỊNH ẨN, BẤM NÚT ĐỂ XEM) ─── -->
+
+  <div class="card" id="review-answers-section" style="display: none; padding: 22px 24px; margin-bottom: 24px; background: #FFFFFF; border: 1.5px solid #FED7AA; border-radius: var(--radius-lg); box-shadow: 0 6px 20px rgba(0,0,0,0.06);">
+
     
+
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1.5px solid var(--border-color);">
+
       <div>
+
         <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+
           <i class="fa-solid fa-list-check" style="color: var(--accent-orange);"></i>
+
           Đối soát lại bài làm &amp; đáp án chi tiết
+
         </div>
+
         <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+
           Xem lại toàn bộ câu trả lời trắc nghiệm, bài viết và phần nói đã nộp vào hệ thống.
+
         </div>
+
       </div>
+
+
 
       <!-- Tab switcher xem lại: 3 Tabs (Trắc nghiệm, Viết, Nói) -->
+
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+
         <button type="button" class="review-tab-btn active" id="btn-rtab-mcq" onclick="switchReviewTab('mcq')">
+
           <i class="fa-solid fa-circle-check"></i> Phần 1 · Trắc nghiệm ({{ completed_summary.mcq_score|default:0 }}/40đ)
+
         </button>
+
         <button type="button" class="review-tab-btn" id="btn-rtab-writing" onclick="switchReviewTab('writing')">
+
           <i class="fa-solid fa-pen-nib"></i> Phần 2 · Viết ({% if completed_summary.writing_status == 'CHUA_LAM' or completed_summary.writing_score is None %}--{% else %}{{ completed_summary.writing_score }}{% endif %}/30đ)
+
         </button>
+
         <button type="button" class="review-tab-btn" id="btn-rtab-speaking" onclick="switchReviewTab('speaking')">
+
           <i class="fa-solid fa-microphone"></i> Phần 3 · Nói ({% if completed_summary.speaking_status == 'CHUA_LAM' or completed_summary.speaking_score is None %}--{% else %}{{ completed_summary.speaking_score }}{% endif %}/30đ)
+
         </button>
+
       </div>
+
     </div>
+
+
 
     <!-- ─── SUB-TAB 1: ĐỐI SOÁT TRẮC NGHIỆM ─── -->
+
     <div id="review-panel-mcq" class="review-panel-content">
+
       <!-- Thống kê 4 ô ngang gọn gàng, không màu nền lòe loẹt -->
+
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;">
+
         <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; text-align: center;">
+
           <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Tổng điểm</div>
+
           <div style="font-size: 20px; font-weight: 800; color: #0F172A; margin-top: 2px;">{{ completed_summary.mcq_score|default:0 }}<span style="font-size: 12px; font-weight: 500; color: var(--text-muted);"> / 40đ</span></div>
+
         </div>
+
         <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; text-align: center;">
+
           <div style="font-size: 11px; font-weight: 600; color: #166534; text-transform: uppercase;">Số câu đúng</div>
+
           <div style="font-size: 20px; font-weight: 800; color: #166534; margin-top: 2px;">{{ mcq_correct|default:0 }}<span style="font-size: 12px; font-weight: 500; color: var(--text-muted);"> / 25</span></div>
+
         </div>
+
         <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; text-align: center;">
+
           <div style="font-size: 11px; font-weight: 600; color: #DC2626; text-transform: uppercase;">Số câu sai</div>
+
           <div style="font-size: 20px; font-weight: 800; color: #DC2626; margin-top: 2px;">{{ mcq_wrong|default:0 }}<span style="font-size: 12px; font-weight: 500; color: var(--text-muted);"> / 25</span></div>
+
         </div>
+
         <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; text-align: center;">
+
           <div style="font-size: 11px; font-weight: 600; color: #D97706; text-transform: uppercase;">Bỏ trống</div>
+
           <div style="font-size: 20px; font-weight: 800; color: #D97706; margin-top: 2px;">{{ mcq_blank|default:0 }}<span style="font-size: 12px; font-weight: 500; color: var(--text-muted);"> / 25</span></div>
+
         </div>
+
       </div>
+
+
 
       <!-- Dòng mô tả chuẩn và bộ lọc -->
+
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+
         <div style="font-size: 12.5px; color: var(--text-muted);">
+
           <i class="fa-solid fa-circle-info" style="color: var(--accent-orange); margin-right: 4px;"></i>
+
           Hệ thống đã tự động chấm điểm. Câu bỏ trống không được tính điểm.
+
         </div>
+
         
+
         <!-- 4 Nút Lọc: Tất cả / Sai / Bỏ trống / Đúng -->
+
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+
           <button type="button" class="mcq-filter-btn active" data-filter="all" onclick="filterMCQReview('all')" style="background: #0F172A; color: #FFFFFF; border: 1px solid #0F172A; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
+
             Tất cả ({{ mcq_total|default:25 }})
+
           </button>
+
           <button type="button" class="mcq-filter-btn" data-filter="wrong" onclick="filterMCQReview('wrong')" style="background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
+
             Sai ({{ mcq_wrong|default:0 }})
+
           </button>
+
           <button type="button" class="mcq-filter-btn" data-filter="blank" onclick="filterMCQReview('blank')" style="background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
+
             Bỏ trống ({{ mcq_blank|default:0 }})
+
           </button>
+
           <button type="button" class="mcq-filter-btn" data-filter="correct" onclick="filterMCQReview('correct')" style="background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
+
             Đúng ({{ mcq_correct|default:0 }})
+
           </button>
+
         </div>
+
       </div>
+
+
 
       <!-- Danh sách 25 câu hỏi (Trải tự nhiên theo trang, KHÔNG cuộn lồng) -->
+
       <div id="mcq-review-items-container" style="display: flex; flex-direction: column; gap: 12px;">
+
         {% for item in mcq_details %}
+
           {% if item.is_correct %}
+
             <!-- CÂU ĐÚNG: DETAILS GẬP GỌN -->
+
             <details class="mcq-review-item" data-status="correct" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; transition: all 0.2s ease;">
+
               <summary style="padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; background: #FFFFFF; list-style: none;">
+
                 <div style="display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 600; color: #0F172A;">
+
                   <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span>
+
                   <span>CÂU {{ item.index }} · {{ item.category }}</span>
+
                   <span style="font-size: 12px; font-weight: 400; color: #64748B;">(Bấm để xem chi tiết)</span>
+
                 </div>
+
                 <span class="badge" style="background: #ECFDF5; color: #15803D; border: 1px solid #A7F3D0; font-size: 11.5px; font-weight: 600; padding: 3px 8px;">
+
                   ✓ ĐÚNG (+1.6đ)
+
                 </span>
+
               </summary>
+
               <div style="padding: 14px 16px; border-top: 1px solid #F1F5F9; background: #FAFAFA;">
+
                 <p style="font-size: 13.5px; font-weight: 600; color: #0F172A; margin: 0 0 10px 0; line-height: 1.5;">
+
                   {{ item.question_text }}
+
                 </p>
 
+
+
                 {% if item.audio_file %}
+
                 <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+
                   <span style="font-size: 12px; color: #64748B; font-weight: 500;">🎧 Nghe lại audio:</span>
+
                   <audio controls preload="none" style="height: 32px; max-width: 320px;">
+
                     <source src="{% static item.audio_file %}" type="audio/wav">
+
                   </audio>
+
                 </div>
+
                 {% endif %}
+
+
 
                 <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px; font-size: 13px; color: #166534; font-weight: 500;">
+
                   <strong>Đáp án bạn chọn &amp; chính xác:</strong> {{ item.correct_opt_text|default:item.correct_ans }}
+
                 </div>
+
+
 
                 {% if item.explanation %}
+
                 <div style="background: #FFFFFF; border-left: 3px solid #10B981; border: 1px solid #E2E8F0; border-left-width: 3px; border-radius: 4px; padding: 8px 12px; font-size: 12.5px; color: #334155; line-height: 1.55;">
+
                   <span style="font-weight: 600; color: #065F46;">💡 Giải thích:</span> {{ item.explanation }}
+
                 </div>
+
                 {% endif %}
+
               </div>
+
             </details>
+
           {% else %}
+
             <!-- CÂU SAI HOẶC BỎ TRỐNG: MỞ SẴN -->
+
             <div class="mcq-review-item" data-status="{% if item.is_blank %}blank{% else %}wrong{% endif %}" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 16px;">
+
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+
                 <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);">
+
                   <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: {% if item.is_blank %}#D97706{% else %}#EF4444{% endif %}; margin-right: 6px;"></span>
+
                   CÂU {{ item.index }} · {{ item.category }}
+
                 </div>
+
                 <span class="badge" style="{% if item.is_blank %}background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A;{% else %}background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA;{% endif %} font-size: 11.5px; font-weight: 600; padding: 3px 8px;">
+
                   {% if item.is_blank %}BỎ TRỐNG{% else %}SAI{% endif %}
+
                 </span>
+
               </div>
+
+
 
               <p style="font-size: 13.5px; font-weight: 600; color: #0F172A; margin: 0 0 10px 0; line-height: 1.5;">
+
                 {{ item.question_text }}
+
               </p>
 
+
+
               {% if item.audio_file %}
+
               <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+
                 <span style="font-size: 12px; color: #64748B; font-weight: 500;">🎧 Nghe lại audio:</span>
+
                 <audio controls preload="none" style="height: 32px; max-width: 320px;">
+
                   <source src="{% static item.audio_file %}" type="audio/wav">
+
                 </audio>
+
               </div>
+
               {% endif %}
+
+
 
               <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;">
+
                 <div style="background: {% if item.is_blank %}#FFFBEB{% else %}#FEF2F2{% endif %}; border: 1px solid {% if item.is_blank %}#FDE68A{% else %}#FECACA{% endif %}; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: {% if item.is_blank %}#92400E{% else %}#991B1B{% endif %};">
+
                   <strong>Đáp án bạn chọn:</strong> {% if item.is_blank %}Bạn chưa trả lời{% else %}{{ item.user_opt_text|default:item.user_ans }}{% endif %}
+
                 </div>
+
                 <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #166534; font-weight: 500;">
+
                   <strong>Đáp án chính xác:</strong> {{ item.correct_opt_text|default:item.correct_ans }}
+
                 </div>
+
               </div>
+
+
 
               {% if item.explanation %}
+
               <div style="background: #F8FAFC; border-left: 3px solid #CBD5E1; border-radius: 0 4px 4px 0; padding: 8px 12px; font-size: 12.5px; color: #475569; line-height: 1.55;">
+
                 <span style="font-weight: 600; color: #334155;">💡 Giải thích:</span> {{ item.explanation }}
+
               </div>
+
               {% endif %}
+
             </div>
+
           {% endif %}
+
         {% empty %}
+
           <div style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 13.5px;">
+
             <i class="fa-solid fa-list-check" style="font-size: 24px; color: #CBD5E1; margin-bottom: 8px;"></i>
+
             <div>Không có dữ liệu câu hỏi trắc nghiệm đối soát.</div>
+
           </div>
+
         {% endfor %}
+
       </div>
+
     </div>
+
+
 
     <!-- ─── SUB-TAB 2: XEM LẠI BÀI VIẾT (WRITING) ─── -->
+
     <div id="review-panel-writing" class="review-panel-content" style="display: none;">
+
       <!-- Task 1 Review -->
+
       <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 10px; padding: 18px; margin-bottom: 20px;">
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+
           <div style="font-size: 14.5px; font-weight: 700; color: var(--text-primary);">
+
             <i class="fa-solid fa-chart-line" style="color: #EA580C; margin-right: 6px;"></i> Task 1: Báo cáo số liệu biểu đồ học thuật (Academic Report on Chart)
+
           </div>
+
           <span class="badge" style="background: #F8FAFC; border: 1px solid #E2E8F0; color: #475569; font-weight: 600;">
+
             Yêu cầu: Tối thiểu 150 từ
+
           </span>
+
         </div>
+
+
 
         <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-bottom: 14px; font-size: 13.5px; line-height: 1.6; color: #1E293B;">
+
           <strong>Đề bài:</strong> The chart below shows the number of films produced by five countries in three years. Summarize the information by selecting and reporting the main features, and make comparisons where relevant.
+
           <div style="margin-top: 10px; text-align: center;">
+
             <img src="{% static 'images/ielts_task1_films_chart.png' %}" alt="Films Chart" style="max-width: 100%; height: auto; max-height: 320px; border-radius: 6px; border: 1px solid #E2E8F0;">
+
           </div>
+
         </div>
 
+
+
         <div style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+
           Bài làm của bạn:
+
         </div>
+
         {% if completed_summary.task1_submitted %}
+
           <div style="background: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.7; color: #0F172A; white-space: pre-wrap;">{{ completed_summary.task1_submitted }}</div>
+
         {% else %}
+
           <div style="background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 8px; padding: 16px; font-size: 13px; color: #64748B; text-align: center;">
+
             <i class="fa-regular fa-file-lines" style="margin-right: 6px;"></i> Học viên chưa nhập bài viết Task 1.
+
           </div>
+
         {% endif %}
+
       </div>
+
+
 
       <!-- Task 2 Review -->
+
       <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 10px; padding: 18px;">
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+
           <div style="font-size: 14.5px; font-weight: 700; color: var(--text-primary);">
+
             <i class="fa-solid fa-pen-nib" style="color: #EA580C; margin-right: 6px;"></i> Task 2: Viết bài luận Academic Essay
+
           </div>
+
           <span class="badge" style="background: #F8FAFC; border: 1px solid #E2E8F0; color: #475569; font-weight: 600;">
+
             Yêu cầu: 180 – 220 từ
+
           </span>
+
         </div>
+
+
 
         <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; margin-bottom: 14px; font-size: 13.5px; line-height: 1.6; color: #1E293B;">
+
           <strong>Đề bài:</strong> In recent years, remote learning and hybrid working have become widespread across many countries. Some people believe this shift offers greater flexibility, while others argue that face-to-face interaction is indispensable for quality education and collaboration. Present your view on this topic and support your reasoning with examples. Write between <strong>180 and 220 words</strong>.
+
         </div>
+
+
 
         <div style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
+
           Bài làm của bạn:
+
         </div>
+
         {% if completed_summary.task2_submitted %}
+
           <div style="background: #FFFFFF; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.7; color: #0F172A; white-space: pre-wrap;">{{ completed_summary.task2_submitted }}</div>
+
         {% else %}
+
           <div style="background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 8px; padding: 16px; font-size: 13px; color: #64748B; text-align: center;">
+
             <i class="fa-regular fa-file-lines" style="margin-right: 6px;"></i> Học viên chưa nhập bài viết Task 2.
+
           </div>
+
         {% endif %}
+
       </div>
+
     </div>
+
+
 
     <!-- ─── SUB-TAB 3: XEM LẠI PHẦN NÓI (SPEAKING) ─── -->
+
     <div id="review-panel-speaking" class="review-panel-content" style="display: none;">
+
       {% if completed_summary.has_speaking %}
+
         <div style="display: flex; flex-direction: column; gap: 14px;">
+
           <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #065F46; display: flex; align-items: center; gap: 10px;">
+
             <i class="fa-solid fa-circle-check" style="color: #10B981; font-size: 16px;"></i>
+
             <span>Đã ghi nhận dữ liệu thu âm Speaking của học viên. Nội dung trích xuất tự động qua Speech-to-Text:</span>
+
           </div>
+
           <div style="background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 16px; font-size: 13.5px; line-height: 1.7; color: #0F172A; white-space: pre-wrap;">{{ completed_summary.speaking_submitted }}</div>
+
         </div>
+
       {% else %}
+
         <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 18px 20px; color: #92400E; display: flex; align-items: flex-start; gap: 14px;">
+
           <div style="width: 36px; height: 36px; border-radius: 50%; background: #FEF3C7; color: #D97706; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; margin-top: 2px;">
+
             <i class="fa-solid fa-microphone-slash"></i>
+
           </div>
+
           <div>
+
             <div style="font-weight: 700; font-size: 14.5px; color: #B45309; margin-bottom: 4px;">
+
               Chưa thực hiện thu âm Speaking
+
             </div>
+
             <div style="font-size: 13px; color: #92400E; line-height: 1.5;">
+
               Học viên chưa thực hiện thu âm phần Speaking trong bài kiểm tra này. Giảng viên sẽ trao đổi trực tiếp trong buổi phỏng vấn xếp lớp nếu cần đánh giá phát âm chi tiết.
+
             </div>
+
           </div>
+
         </div>
+
       {% endif %}
+
     </div>
 
+
+
   </div>
+
+
 
 {% else %}
+
 <!-- ─── EMPTY STATE: CHƯA CÓ KẾT QUẢ KIỂM TRA ──────────────── -->
+
 <div class="page-header" style="margin-bottom: 24px;">
+
   <div class="page-breadcrumb">
+
     <a href="{% url 'users:student_dashboard' %}" style="color: inherit; text-decoration: none;">Học viên</a>
+
     <span> / </span>Kết quả kiểm tra đầu vào
+
   </div>
+
   <h1 class="page-title" style="margin-top: 6px; font-size: 22px; font-weight: 700; color: #0F172A;">Kết quả kiểm tra đầu vào</h1>
+
 </div>
+
+
 
 <div class="card" style="padding: 48px 24px; max-width: 600px; margin: 32px auto; text-align: center; border: 1px dashed #CBD5E1; background: #FFFFFF; border-radius: 8px;">
+
   <div style="width: 64px; height: 64px; border-radius: 50%; background: #FFF7ED; color: #EA580C; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 18px;">
+
     <i class="fa-solid fa-clipboard-question"></i>
+
   </div>
+
   <h2 style="font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">
+
     Chưa có kết quả kiểm tra trình độ
+
   </h2>
+
   <p style="font-size: 13.5px; color: #64748B; line-height: 1.6; margin-bottom: 24px;">
+
     Hệ thống chưa ghi nhận bài làm kiểm tra nào của bạn. Hãy hoàn thành bài kiểm tra đầu vào trực tuyến để nhận phân tích năng lực và lộ trình đào tạo phù hợp.
+
   </p>
+
   <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+
     <a href="{% url 'placement_tests:test_room' %}" class="btn" style="background: #EA580C; color: #FFFFFF; font-weight: 600; padding: 10px 20px; border-radius: 6px; font-size: 13.5px; text-decoration: none;">
+
       Làm bài kiểm tra ngay
+
     </a>
+
     <a href="{% url 'users:student_dashboard' %}" class="btn" style="background: #FFFFFF; color: #334155; border: 1px solid #CBD5E1; font-weight: 600; padding: 10px 18px; border-radius: 6px; font-size: 13.5px; text-decoration: none;">
+
       Về Dashboard
+
     </a>
+
   </div>
+
 </div>
+
 {% endif %}
+
 {% endblock %}
+
+
 
 {% block extra_js %}
+
 <script>
 
-  // ─── ĐIỀU HƯỚNG TAB XEM LẠI BÀI ĐÃ NỘP (TRẮC NGHIỆM / VIẾT / NÓI) ───
-  function switchReviewTab(tab) {
-    document.querySelectorAll('.review-tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.review-panel-content').forEach(p => p.style.display = 'none');
-    const activeBtn = document.getElementById(`btn-rtab-${tab}`);
-    if (activeBtn) activeBtn.classList.add('active');
-    const activePanel = document.getElementById(`review-panel-${tab}`);
-    if (activePanel) activePanel.style.display = 'block';
+  function toggleReviewAnswersSection() {
+
+    const sec = document.getElementById('review-answers-section');
+
+    const btn = document.getElementById('btn-toggle-review-answers');
+
+    const btnText = document.getElementById('toggle-review-btn-text');
+
+    if (!sec) return;
+
+
+
+    const isHidden = (sec.style.display === 'none' || sec.style.display === '');
+
+    if (isHidden) {
+
+      sec.style.display = 'block';
+
+      if (btnText) btnText.textContent = 'Thu gọn bài làm & đáp án';
+
+      if (btn) {
+
+        btn.style.background = '#EA580C';
+
+        btn.style.color = '#FFFFFF';
+
+        btn.style.borderColor = '#EA580C';
+
+      }
+
+      setTimeout(() => {
+
+        sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      }, 50);
+
+    } else {
+
+      sec.style.display = 'none';
+
+      if (btnText) btnText.textContent = 'Xem lại bài làm & đáp án';
+
+      if (btn) {
+
+        btn.style.background = '#FFF7ED';
+
+        btn.style.color = 'var(--accent-orange)';
+
+        btn.style.borderColor = '#FDBA74';
+
+      }
+
+    }
+
   }
+
+
+
+  // Tự động mở nếu URL có chứa hash #review-answers-section
+
+  if (window.location.hash === '#review-answers-section') {
+
+    setTimeout(function() {
+
+      const sec = document.getElementById('review-answers-section');
+
+      if (sec && (sec.style.display === 'none' || sec.style.display === '')) {
+
+        toggleReviewAnswersSection();
+
+      }
+
+    }, 200);
+
+  }
+
+
+
+  // ─── ĐIỀU HƯỚNG TAB XEM LẠI BÀI ĐÃ NỘP (TRẮC NGHIỆM / VIẾT / NÓI) ───
+
+  function switchReviewTab(tab) {
+
+    document.querySelectorAll('.review-tab-btn').forEach(b => b.classList.remove('active'));
+
+    document.querySelectorAll('.review-panel-content').forEach(p => p.style.display = 'none');
+
+    const activeBtn = document.getElementById(`btn-rtab-${tab}`);
+
+    if (activeBtn) activeBtn.classList.add('active');
+
+    const activePanel = document.getElementById(`review-panel-${tab}`);
+
+    if (activePanel) activePanel.style.display = 'block';
+
+  }
+
+
 
   // ─── BỘ LỌC CÂU HỎI TRẮC NGHIỆM (TẤT CẢ / SAI / BỎ TRỐNG / ĐÚNG) ───
+
   function filterMCQReview(filterType) {
+
     document.querySelectorAll('.mcq-filter-btn').forEach(btn => {
+
       if (btn.getAttribute('data-filter') === filterType) {
+
         btn.style.background = '#0F172A';
+
         btn.style.color = '#FFFFFF';
+
         btn.style.borderColor = '#0F172A';
+
         btn.classList.add('active');
+
       } else {
+
         btn.style.background = '#FFFFFF';
+
         btn.style.color = '#475569';
+
         btn.style.borderColor = '#CBD5E1';
+
         btn.classList.remove('active');
+
       }
+
     });
+
+
 
     const items = document.querySelectorAll('#mcq-review-items-container .mcq-review-item');
+
     items.forEach(el => {
+
       const status = el.getAttribute('data-status');
+
       if (filterType === 'all') {
+
         el.style.display = 'block';
+
       } else if (filterType === status) {
+
         el.style.display = 'block';
+
       } else {
+
         el.style.display = 'none';
+
       }
+
     });
+
   }
+
+
 
   async function requestTeacherReview(phienId) {
+
     if (!confirm('Bạn có muốn gửi phiên làm bài #' + phienId + ' sang cho Giảng viên chuyên môn thẩm định không?')) {
+
       return;
+
     }
+
+
 
     try {
+
       const res = await fetch(`/tests/request-review/${phienId}/`, {
+
         method: 'POST',
+
         headers: {
+
           'X-Requested-With': 'XMLHttpRequest',
+
           'X-CSRFToken': '{{ csrf_token }}'
+
         }
+
       });
+
       const data = await res.json();
+
       if (data.status === 'success') {
+
         Toast.show(data.message, 'success');
+
         setTimeout(() => window.location.href = `?session=${phienId}`, 1000);
+
       } else {
+
         Toast.show(data.message || 'Lỗi khi gửi yêu cầu', 'error');
+
       }
+
     } catch (err) {
+
       Toast.show('Đã gửi yêu cầu tới Giảng viên thành công!', 'success');
+
       setTimeout(() => window.location.href = `?session=${phienId}`, 1000);
+
     }
+
   }
+
+
 
   function openRoadmapModal() {
+
     const m = document.getElementById('roadmapModal');
+
     if (m) {
+
       m.style.display = 'flex';
+
       document.body.style.overflow = 'hidden';
+
     }
+
   }
+
+
 
   function closeRoadmapModal() {
+
     const m = document.getElementById('roadmapModal');
+
     if (m) {
+
       m.style.display = 'none';
+
       document.body.style.overflow = '';
+
     }
+
   }
 
+
+
   // Backdrop click to close
+
   document.addEventListener('click', function(e) {
+
     const m = document.getElementById('roadmapModal');
+
     if (m && e.target === m) {
+
       closeRoadmapModal();
+
     }
+
   });
+
+
 
   // ESC key to close
+
   document.addEventListener('keydown', function(e) {
+
     if (e.key === 'Escape') {
+
       closeRoadmapModal();
+
     }
+
   });
+
 </script>
 
+
+
 <!-- ─── MODAL: THÔNG TIN KHÓA HỌC & LỘ TRÌNH ĐÀO TẠO ──────────── -->
+
 <div id="roadmapModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); z-index: 99999; backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px; overflow-y: auto;">
+
   <div style="background: #FFFFFF; border-radius: 14px; max-width: 760px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.2); border: 1px solid #E2E8F0; position: relative; margin: auto;">
+
     
+
     <!-- Modal Header -->
+
     <div style="padding: 20px 24px 16px; border-bottom: 1px solid #F1F5F9; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; position: sticky; top: 0; background: #FFFFFF; z-index: 2; border-top-left-radius: 14px; border-top-right-radius: 14px;">
+
       <div style="display: flex; align-items: center; gap: 12px;">
+
         <div style="width: 44px; height: 44px; border-radius: 10px; background: #FFF7ED; color: #EA580C; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; border: 1px solid #FFEDD5;">
+
           <i class="fa-solid fa-graduation-cap"></i>
+
         </div>
+
         <div>
+
           <div style="font-size: 11.5px; font-weight: 700; color: #C2410C; text-transform: uppercase; letter-spacing: 0.5px;">
-            Lộ trình đào tạo cá nhân hóa
+
+            {% if has_assigned_class and assigned_lop_hoc %}
+
+              Lộ trình đào tạo chính thức · Lớp {{ assigned_lop_hoc.ten_lop }}
+
+            {% else %}
+
+              Lộ trình đào tạo cá nhân hóa
+
+            {% endif %}
+
           </div>
+
           <h2 style="font-size: 19px; font-weight: 800; color: #0F172A; margin: 2px 0 0 0; line-height: 1.25;">
+
             {{ course_roadmap_info.name }}
+
           </h2>
+
         </div>
+
       </div>
+
       <button type="button" onclick="closeRoadmapModal()" style="background: #F8FAFC; border: 1px solid #E2E8F0; width: 34px; height: 34px; border-radius: 8px; color: #64748B; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.2s ease;">
+
         <i class="fa-solid fa-xmark"></i>
+
       </button>
+
     </div>
+
+
 
     <!-- Modal Body -->
+
     <div style="padding: 20px 24px;">
+
       
+
       <!-- 4 Highlight Cards -->
+
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 22px;">
+
         <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 14px;">
+
           <div style="font-size: 11px; color: #64748B; font-weight: 600; text-transform: uppercase;">Trình độ đầu vào</div>
+
           <div style="font-size: 14px; font-weight: 700; color: #0F172A; margin-top: 3px;">{{ course_roadmap_info.level }}</div>
+
         </div>
+
         <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 14px;">
+
           <div style="font-size: 11px; color: #64748B; font-weight: 600; text-transform: uppercase;">Mục tiêu đầu ra</div>
+
           <div style="font-size: 14px; font-weight: 700; color: #047857; margin-top: 3px;">{{ course_roadmap_info.target_output }}</div>
+
         </div>
+
         <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 14px;">
+
           <div style="font-size: 11px; color: #64748B; font-weight: 600; text-transform: uppercase;">Thời lượng</div>
+
           <div style="font-size: 14px; font-weight: 700; color: #0F172A; margin-top: 3px;">{{ course_roadmap_info.sessions }}</div>
+
         </div>
+
         <div style="background: #FFF7ED; border: 1px solid #FFEDD5; border-radius: 8px; padding: 12px 14px;">
-          <div style="font-size: 11px; color: #9A3412; font-weight: 600; text-transform: uppercase;">Học phí niêm yết</div>
+
+          <div style="font-size: 11px; color: #9A3412; font-weight: 600; text-transform: uppercase;">
+
+            {% if has_assigned_class %}Học phí lớp học{% else %}Học phí niêm yết{% endif %}
+
+          </div>
+
           <div style="font-size: 15px; font-weight: 800; color: #EA580C; margin-top: 3px;">{{ course_roadmap_info.fee }}</div>
+
         </div>
+
       </div>
+
+
 
       <!-- Roadmap Timeline 3 Phases -->
+
       <div style="margin-bottom: 22px;">
+
         <div style="font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+
           <i class="fa-solid fa-timeline" style="color: #EA580C;"></i>
+
           <span>Chi tiết Lộ trình đào tạo 3 Giai đoạn</span>
+
         </div>
+
+
 
         <div style="display: flex; flex-direction: column; gap: 14px;">
+
           {% for p in course_roadmap_info.phases %}
+
           <div style="border: 1px solid #E2E8F0; border-radius: 10px; padding: 16px; background: #FFFFFF; transition: all 0.2s ease;">
+
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
+
               <div style="display: flex; align-items: center; gap: 8px;">
+
                 <span style="background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
+
                   {{ p.phase }}
+
                 </span>
+
                 <strong style="font-size: 14.5px; color: #0F172A;">{{ p.title }}</strong>
+
               </div>
+
               <span style="font-size: 12px; font-weight: 600; color: #64748B; background: #F1F5F9; padding: 2px 8px; border-radius: 4px;">
+
                 <i class="fa-regular fa-clock" style="margin-right: 4px;"></i>{{ p.weeks }}
+
               </span>
+
             </div>
+
             <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #475569; line-height: 1.6;">
+
               {% for b in p.bullets %}
+
               <li>{{ b }}</li>
+
               {% endfor %}
+
             </ul>
+
           </div>
+
           {% endfor %}
+
         </div>
+
       </div>
+
+
 
       <!-- Cam kết đào tạo & Quyền lợi -->
+
       <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;">
+
         <div style="font-size: 12.5px; font-weight: 700; color: #0F172A; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+
           <i class="fa-solid fa-shield-halved" style="color: #047857;"></i> Cam kết chất lượng & Hỗ trợ học vụ
+
         </div>
+
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; font-size: 12px; color: #475569;">
+
           <div><i class="fa-solid fa-check" style="color: #047857; margin-right: 6px;"></i> Cam kết đạt chuẩn đầu ra bằng văn bản.</div>
+
           <div><i class="fa-solid fa-check" style="color: #047857; margin-right: 6px;"></i> Giảng viên 8.0+ IELTS / Thạc sĩ sư phạm.</div>
+
           <div><i class="fa-solid fa-check" style="color: #047857; margin-right: 6px;"></i> Miễn phí tài liệu & phần mềm học bổ trợ.</div>
+
           <div><i class="fa-solid fa-check" style="color: #047857; margin-right: 6px;"></i> Hỗ trợ bảo lưu học phí tối đa 06 tháng.</div>
+
         </div>
+
       </div>
+
+
 
       <!-- BPMN Flow Notice Box -->
-      <div style="background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: 10px; padding: 14px 18px; display: flex; align-items: flex-start; gap: 12px;">
-        <div style="color: #D97706; font-size: 18px; margin-top: 1px; flex-shrink: 0;">
-          <i class="fa-solid fa-circle-info"></i>
+
+      {% if is_tuition_paid %}
+
+      <div style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-radius: 10px; padding: 14px 18px; display: flex; align-items: flex-start; gap: 12px;">
+
+        <div style="color: #166534; font-size: 18px; margin-top: 1px; flex-shrink: 0;">
+
+          <i class="fa-solid fa-circle-check"></i>
+
         </div>
-        <div style="font-size: 12.5px; color: #92400E; line-height: 1.55;">
-          <strong style="display: block; font-size: 13px; margin-bottom: 2px;">Quy trình xếp lớp & Đóng học phí:</strong>
-          {% if has_assigned_class and assigned_lop_hoc %}
-            Hồ sơ của bạn đã được Tư vấn viên hoàn tất ghi danh vào <strong>{{ assigned_lop_hoc.ten_lop }}</strong>. Bạn có thể tiến hành quét mã VietQR để thanh toán giữ chỗ chính thức.
-          {% else %}
-            Kết quả bài thi của bạn đã được chuyển đến <strong>Bộ phận Tư vấn Tuyển sinh</strong>. Chuyên viên sẽ chủ động liên hệ qua Số điện thoại / Zalo trong vòng 24 giờ để trao đổi lịch học phù hợp nhất và xếp lớp chính thức cho bạn trước khi đóng học phí.
-          {% endif %}
+
+        <div style="font-size: 12.5px; color: #166534; line-height: 1.55;">
+
+          <strong style="display: block; font-size: 13px; margin-bottom: 2px;">Quy trình xếp lớp &amp; Đóng học phí:</strong>
+
+          Bạn đã hoàn tất đóng học phí <strong>{{ course_roadmap_info.fee }}</strong> cho lớp học <strong>{{ assigned_lop_hoc.ten_lop }}</strong>. Vui lòng theo dõi lịch khai giảng (<strong>{{ assigned_lop_hoc.ngay_khai_giang|date:"d/m/Y"|default:"05/11/2026" }}</strong>) để tham gia buổi học đầu tiên.
+
         </div>
+
       </div>
 
+      {% elif has_assigned_class and assigned_lop_hoc %}
+
+      <div style="background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: 10px; padding: 14px 18px; display: flex; align-items: flex-start; gap: 12px;">
+
+        <div style="color: #D97706; font-size: 18px; margin-top: 1px; flex-shrink: 0;">
+
+          <i class="fa-solid fa-circle-info"></i>
+
+        </div>
+
+        <div style="font-size: 12.5px; color: #92400E; line-height: 1.55;">
+
+          <strong style="display: block; font-size: 13px; margin-bottom: 2px;">Quy trình xếp lớp &amp; Đóng học phí:</strong>
+
+          Hồ sơ của bạn đã được Tư vấn viên hoàn tất ghi danh vào <strong>{{ assigned_lop_hoc.ten_lop }}</strong>. Bạn có thể tiến hành quét mã VietQR để thanh toán giữ chỗ chính thức.
+
+        </div>
+
+      </div>
+
+      {% else %}
+
+      <div style="background: #FFFBEB; border: 1.5px solid #FDE68A; border-radius: 10px; padding: 14px 18px; display: flex; align-items: flex-start; gap: 12px;">
+
+        <div style="color: #D97706; font-size: 18px; margin-top: 1px; flex-shrink: 0;">
+
+          <i class="fa-solid fa-circle-info"></i>
+
+        </div>
+
+        <div style="font-size: 12.5px; color: #92400E; line-height: 1.55;">
+
+          <strong style="display: block; font-size: 13px; margin-bottom: 2px;">Quy trình xếp lớp &amp; Đóng học phí:</strong>
+
+          Kết quả bài thi của bạn đã được chuyển đến <strong>Bộ phận Tư vấn Tuyển sinh</strong>. Chuyên viên sẽ chủ động liên hệ qua Số điện thoại / Zalo trong vòng 24 giờ để trao đổi lịch học phù hợp nhất và xếp lớp chính thức cho bạn trước khi đóng học phí.
+
+        </div>
+
+      </div>
+
+      {% endif %}
+
+
+
     </div>
+
+
 
     <!-- Modal Footer -->
+
     <div style="padding: 14px 24px; border-top: 1px solid #F1F5F9; background: #FAFAFA; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; display: flex; justify-content: flex-end; gap: 10px; align-items: center;">
+
       <button type="button" onclick="closeRoadmapModal()" style="background: #FFFFFF; color: #475569; border: 1px solid #CBD5E1; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">
+
         Đóng cửa sổ
+
       </button>
+
       {% if has_assigned_class and assigned_lop_hoc %}
-      <a href="{% url 'billing:payment_detail' %}" class="btn" style="background: #EA580C; color: #FFFFFF; font-weight: 700; padding: 8px 18px; border-radius: 6px; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-        <i class="fa-solid fa-qrcode"></i> Đi đến Thanh toán học phí →
-      </a>
+
+        {% if is_tuition_paid %}
+
+          <a href="{% url 'billing:payment_detail' %}" class="btn" style="background: #F0FDF4; color: #166534; border: 1px solid #BBF7D0; font-weight: 700; padding: 8px 16px; border-radius: 6px; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+
+            <i class="fa-solid fa-receipt"></i> Xem biên lai học phí
+
+          </a>
+
+        {% else %}
+
+          <a href="{% url 'billing:payment_detail' %}" class="btn" style="background: #EA580C; color: #FFFFFF; font-weight: 700; padding: 8px 18px; border-radius: 6px; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+
+            <i class="fa-solid fa-qrcode"></i> Đi đến Thanh toán học phí →
+
+          </a>
+
+        {% endif %}
+
       {% endif %}
+
     </div>
 
+
+
   </div>
+
 </div>
 
+
+
 {% endblock %}
+
