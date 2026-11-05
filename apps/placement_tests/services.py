@@ -50,6 +50,51 @@ def clean_json_response(raw_text: str) -> dict:
     return None
 
 
+def round_to_half(val) -> float:
+    """Làm tròn điểm số chỉ có phần thập phân .0 hoặc .5 (bước nhảy 0.5)."""
+    if val is None:
+        return 0.0
+    try:
+        f = float(val)
+        return round(f * 2.0) / 2.0
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def sanitize_ai_evaluation_scores(data: dict) -> dict:
+    """
+    Chuẩn hóa toàn bộ điểm số bài thi (Writing/Speaking) do AI chấm:
+    BẮT BUỘC chỉ được có phần thập phân .0 hoặc .5 (bước nhảy 0.5).
+    """
+    if not isinstance(data, dict):
+        return data
+
+    if "overall_score" in data and data["overall_score"] is not None:
+        data["overall_score"] = round_to_half(data.get("overall_score"))
+
+    if "ielts_band" in data and data["ielts_band"] is not None:
+        try:
+            data["ielts_band"] = f"{round_to_half(data['ielts_band']):.1f}"
+        except Exception:
+            pass
+
+    if "vstep_score" in data and data["vstep_score"] is not None:
+        try:
+            data["vstep_score"] = round_to_half(data["vstep_score"])
+        except Exception:
+            pass
+
+    # Tiêu chí chi tiết của Writing & Speaking
+    for k in [
+        "task_achievement", "coherence_cohesion", "lexical_resource", "grammar_accuracy",
+        "vocabulary", "grammar", "coherence", "pronunciation"
+    ]:
+        if k in data and isinstance(data[k], dict) and "score" in data[k]:
+            data[k]["score"] = round_to_half(data[k]["score"])
+
+    return data
+
+
 def generate_english_placement_test(goal_type="IELTS", target_detail="5.0 đến 6.5", num_questions=25):
     """
     Hàm gọi Gemini API để tự động sinh bài test trắc nghiệm Tiếng Anh (45 phút)
@@ -260,6 +305,8 @@ def grade_writing_with_gemini(task1_text: str, task2_text: str, target_goal: str
         3. Lexical Resource (Vốn từ học thuật Academic Word List, collocations, tính chính xác)
         4. Grammatical Range and Accuracy (Sự đa dạng cấu trúc câu ghép/phức và độ chuẩn xác ngữ pháp)
 
+        QUY TẮC ĐIỂM SỐ (BẮT BUỘC): Tất cả điểm số (overall_score và điểm từng tiêu chí con) BẮT BUỘC CHỈ ĐƯỢC CHẤM Ở PHẦN THẬP PHÂN .0 HOẶC .5 (bước nhảy 0.5 điểm, ví dụ: 5.0, 5.5, 6.0, 6.5, 7.0, 7.5,...). TUYỆT ĐỐI KHÔNG chấm các số lẻ khác như 6.2, 6.8, 7.2, 7.8.
+
         Yêu cầu trả về BẮT BUỘC định dạng JSON sau:
         {{
             "rubric_type": "IELTS",
@@ -307,6 +354,8 @@ def grade_writing_with_gemini(task1_text: str, task2_text: str, target_goal: str
         2. Organization (Bố cục bài viết, tính liên kết giữa các đoạn văn)
         3. Vocabulary (Vốn từ vựng học thuật phù hợp chuẩn B1/B2)
         4. Grammar (Độ chuẩn xác và linh hoạt của các cấu trúc ngữ pháp)
+
+        QUY TẮC ĐIỂM SỐ (BẮT BUỘC): Tất cả điểm số (overall_score, vstep_score và điểm từng tiêu chí con) BẮT BUỘC CHỈ ĐƯỢC CHẤM Ở PHẦN THẬP PHÂN .0 HOẶC .5 (bước nhảy 0.5 điểm, ví dụ: 5.0, 5.5, 6.0, 6.5, 7.0, 7.5,...). TUYỆT ĐỐI KHÔNG chấm các số lẻ khác như 6.2, 6.8, 7.2, 7.8.
 
         Yêu cầu trả về BẮT BUỘC định dạng JSON sau:
         {{
@@ -356,6 +405,8 @@ def grade_writing_with_gemini(task1_text: str, task2_text: str, target_goal: str
         3. Workplace Vocabulary (Từ vựng nghiệp vụ, thuật ngữ thương mại, cụm từ công sở)
         4. Practical Accuracy (Độ chuẩn xác ngữ pháp giao việc, kiểm soát chính tả)
 
+        QUY TẮC ĐIỂM SỐ (BẮT BUỘC): Tất cả điểm số (overall_score và điểm từng tiêu chí con) BẮT BUỘC CHỈ ĐƯỢC CHẤM Ở PHẦN THẬP PHÂN .0 HOẶC .5 (bước nhảy 0.5 điểm, ví dụ: 5.0, 5.5, 6.0, 6.5, 7.0, 7.5,...). TUYỆT ĐỐI KHÔNG chấm các số lẻ khác như 6.2, 6.8, 7.2, 7.8.
+
         Yêu cầu trả về BẮT BUỘC định dạng JSON sau:
         {{
             "rubric_type": "GIAO_TIEP",
@@ -403,6 +454,8 @@ def grade_writing_with_gemini(task1_text: str, task2_text: str, target_goal: str
         3. Grammar Foundation (Nắm vững thì hiện tại, quá khứ cơ bản, động từ to-be)
         4. Clarity of Meaning (Độ rõ nghĩa, người đọc hiểu được nội dung cơ bản)
 
+        QUY TẮC ĐIỂM SỐ (BẮT BUỘC): Tất cả điểm số (overall_score và điểm từng tiêu chí con) BẮT BUỘC CHỈ ĐƯỢC CHẤM Ở PHẦN THẬP PHÂN .0 HOẶC .5 (bước nhảy 0.5 điểm, ví dụ: 5.0, 5.5, 6.0, 6.5, 7.0, 7.5,...). TUYỆT ĐỐI KHÔNG chấm các số lẻ khác như 6.2, 6.8, 7.2, 7.8.
+
         Yêu cầu trả về BẮT BUỘC định dạng JSON sau:
         {{
             "rubric_type": "MAT_GOC",
@@ -447,7 +500,7 @@ def grade_writing_with_gemini(task1_text: str, task2_text: str, target_goal: str
                 )
                 data = clean_json_response(response.text)
                 if data and "overall_score" in data:
-                    return data
+                    return sanitize_ai_evaluation_scores(data)
             except Exception as e:
                 logger.warning(f"Chấm Writing với {model_name} thất bại: {e}")
                 err_str = str(e)
@@ -455,7 +508,7 @@ def grade_writing_with_gemini(task1_text: str, task2_text: str, target_goal: str
                     break
                 continue
 
-    return get_fallback_writing_evaluation(task1_text, task2_text, task1_word_count, task2_word_count, target_goal)
+    return sanitize_ai_evaluation_scores(get_fallback_writing_evaluation(task1_text, task2_text, task1_word_count, task2_word_count, target_goal))
 
 
 # ─── HÀM KIỂM TRA BÀI NÓI RỖNG HOẶC CHỈ CHỨA PLACEHOLDER ─────────────────
@@ -547,6 +600,8 @@ def grade_speaking_with_gemini(transcript: str, task_details: dict = None, targe
         3. Grammatical Range and Accuracy (Sự đa dạng cấu trúc câu và sự chuẩn xác)
         4. Pronunciation (Phát âm chuẩn âm, trọng âm từ, ngữ điệu câu, tính dễ hiểu)
 
+        QUY TẮC ĐIỂM SỐ (BẮT BUỘC): Tất cả điểm số (overall_score, ielts_band và điểm từng tiêu chí con) BẮT BUỘC CHỈ ĐƯỢC CHẤM Ở PHẦN THẬP PHÂN .0 HOẶC .5 (bước nhảy 0.5 điểm, ví dụ: 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0,...). TUYỆT ĐỐI KHÔNG chấm các số lẻ khác như 6.2, 6.8, 7.2, 7.8.
+
         Yêu cầu trả về BẮT BUỘC định dạng JSON sau:
         {{
             "rubric_type": "IELTS",
@@ -594,6 +649,8 @@ def grade_speaking_with_gemini(transcript: str, task_details: dict = None, targe
         3. Pronunciation (Phát âm, trọng âm, ngữ điệu)
         4. Interactive Communication (Giao tiếp tương tác, phản xạ xử lý câu hỏi)
 
+        QUY TẮC ĐIỂM SỐ (BẮT BUỘC): Tất cả điểm số (overall_score, vstep_score và điểm từng tiêu chí con) BẮT BUỘC CHỈ ĐƯỢC CHẤM Ở PHẦN THẬP PHÂN .0 HOẶC .5 (bước nhảy 0.5 điểm, ví dụ: 5.0, 5.5, 6.0, 6.5, 7.0, 7.5,...). TUYỆT ĐỐI KHÔNG chấm các số lẻ khác như 6.2, 6.8, 7.2, 7.8.
+
         Yêu cầu trả về BẮT BUỘC định dạng JSON sau:
         {{
             "rubric_type": "VSTEP",
@@ -612,12 +669,12 @@ def grade_speaking_with_gemini(transcript: str, task_details: dict = None, targe
             }},
             "coherence": {{
                 "criterion_name": "Interactive Communication (Tương tác & Phản xạ)",
-                "score": 7.2,
+                "score": 7.0,
                 "comment": "Đánh giá phản xạ trả lời và tương tác xã hội..."
             }},
             "pronunciation": {{
                 "criterion_name": "Pronunciation (Phát âm & Ngữ điệu)",
-                "score": 6.8,
+                "score": 7.0,
                 "comment": "Đánh giá phát âm và trọng âm ngữ điệu..."
             }},
             "detailed_feedback": "Đánh giá năng lực đạt chuẩn đầu ra VSTEP B1/B2."
@@ -641,6 +698,8 @@ def grade_speaking_with_gemini(transcript: str, task_details: dict = None, targe
         3. Situational Response (Khả năng xử lý tình huống, phản xạ thương lượng, đàm phán)
         4. Pronunciation & Clarity (Phát âm rõ ràng, âm lượng, truyền đạt thông điệp dễ hiểu)
 
+        QUY TẮC ĐIỂM SỐ (BẮT BUỘC): Tất cả điểm số (overall_score và điểm từng tiêu chí con) BẮT BUỘC CHỈ ĐƯỢC CHẤM Ở PHẦN THẬP PHÂN .0 HOẶC .5 (bước nhảy 0.5 điểm, ví dụ: 5.0, 5.5, 6.0, 6.5, 7.0, 7.5,...). TUYỆT ĐỐI KHÔNG chấm các số lẻ khác như 6.2, 6.8, 7.2, 7.8.
+
         Yêu cầu trả về BẮT BUỘC định dạng JSON sau:
         {{
             "rubric_type": "GIAO_TIEP",
@@ -648,12 +707,12 @@ def grade_speaking_with_gemini(transcript: str, task_details: dict = None, targe
             "cefr_level": "B2",
             "vocabulary": {{
                 "criterion_name": "Workplace Expressions (Ngôn ngữ công sở)",
-                "score": 7.8,
+                "score": 8.0,
                 "comment": "Đánh giá việc áp dụng từ ngữ chuyên nghiệp trong công việc..."
             }},
             "grammar": {{
                 "criterion_name": "Situational Response (Ứng biến tình huống)",
-                "score": 7.2,
+                "score": 7.0,
                 "comment": "Đánh giá phản xạ xử lý vấn đề trong công sở..."
             }},
             "coherence": {{
@@ -687,10 +746,12 @@ def grade_speaking_with_gemini(transcript: str, task_details: dict = None, targe
         3. Pronunciation & Phonetics (Nhận diện âm IPA cơ bản, phát âm phụ âm cuối)
         4. Response Reflex (Tốc độ phản xạ và sự tự tin khi mở lời)
 
+        QUY TẮC ĐIỂM SỐ (BẮT BUỘC): Tất cả điểm số (overall_score và điểm từng tiêu chí con) BẮT BUỘC CHỈ ĐƯỢC CHẤM Ở PHẦN THẬP PHÂN .0 HOẶC .5 (bước nhảy 0.5 điểm, ví dụ: 5.0, 5.5, 6.0, 6.5, 7.0, 7.5,...). TUYỆT ĐỐI KHÔNG chấm các số lẻ khác như 6.2, 6.8, 7.2, 7.8.
+
         Yêu cầu trả về BẮT BUỘC định dạng JSON sau:
         {{
             "rubric_type": "MAT_GOC",
-            "overall_score": 6.8,
+            "overall_score": 7.0,
             "cefr_level": "A2",
             "vocabulary": {{
                 "criterion_name": "Basic Vocabulary (Từ vựng sinh hoạt)",
@@ -704,7 +765,7 @@ def grade_speaking_with_gemini(transcript: str, task_details: dict = None, targe
             }},
             "coherence": {{
                 "criterion_name": "Response Reflex (Phản xạ trả lời)",
-                "score": 6.8,
+                "score": 7.0,
                 "comment": "Đánh giá độ tự tin và phản xạ..."
             }},
             "pronunciation": {{
@@ -729,7 +790,7 @@ def grade_speaking_with_gemini(transcript: str, task_details: dict = None, targe
                 )
                 data = clean_json_response(response.text)
                 if data and "overall_score" in data:
-                    return data
+                    return sanitize_ai_evaluation_scores(data)
             except Exception as e:
                 logger.warning(f"Chấm Speaking với {model_name} thất bại: {e}")
                 err_str = str(e)
@@ -737,7 +798,7 @@ def grade_speaking_with_gemini(transcript: str, task_details: dict = None, targe
                     break
                 continue
 
-    return get_fallback_speaking_evaluation(transcript, target_goal)
+    return sanitize_ai_evaluation_scores(get_fallback_speaking_evaluation(transcript, target_goal))
 
 
 # ─── BỘ ĐỀ VÀ BẢNG CHẤM DỰ PHÒNG THÍCH ỨNG THEO MỤC TIÊU (25 CÂU MỖI BỘ) ───
@@ -1036,7 +1097,7 @@ def get_fallback_writing_evaluation(task1: str, task2: str, t1_words: int, t2_wo
     elif 60 <= t2_words < 140: score_t2 = 4.5
     elif t2_words > 0: score_t2 = 2.5
 
-    overall = round((score_t1 * 0.4 + score_t2 * 0.6), 1)
+    overall = round_to_half(score_t1 * 0.4 + score_t2 * 0.6)
 
     if 'IELTS' in goal_key:
         score_t1 = 0.0
@@ -1053,9 +1114,9 @@ def get_fallback_writing_evaluation(task1: str, task2: str, t1_words: int, t2_wo
         elif 30 <= t2_words < 80: score_t2 = 3.5
         elif t2_words > 0: score_t2 = 2.0
 
-        overall = round((score_t1 * 0.4 + score_t2 * 0.6), 1)
+        overall = round_to_half(score_t1 * 0.4 + score_t2 * 0.6)
         band = f"{overall:.1f}"
-        return {
+        return sanitize_ai_evaluation_scores({
             "rubric_type": "IELTS",
             "overall_score": float(band),
             "ielts_band": band,
@@ -1072,20 +1133,20 @@ def get_fallback_writing_evaluation(task1: str, task2: str, t1_words: int, t2_wo
             },
             "lexical_resource": {
                 "criterion_name": "Lexical Resource",
-                "score": min(9.0, round(float(band) + 0.3, 1)) if float(band) > 0 else 0.0,
+                "score": min(9.0, round_to_half(float(band) + 0.5)) if float(band) > 0 else 0.0,
                 "comment": "Vốn từ vựng tương thích với mục tiêu IELTS." if overall > 3.0 else "Vốn từ vựng hạn chế, cần trau dồi thêm."
             },
             "grammar_accuracy": {
                 "criterion_name": "Grammatical Range & Accuracy",
-                "score": max(0.0, round(float(band) - 0.2, 1)) if float(band) > 0 else 0.0,
+                "score": max(0.0, round_to_half(float(band) - 0.5)) if float(band) > 0 else 0.0,
                 "comment": "Kiểm soát thì và ngữ pháp câu tương đối tốt." if overall > 3.0 else "Còn nhiều lỗi ngữ pháp và cấu trúc câu đơn giản."
             },
             "detailed_feedback": "Bài làm phản ánh đúng năng lực hiện tại của học viên. Cần hoàn thành đủ độ dài quy định cho cả 2 Task." if overall > 0 else "Thí sinh chưa viết bài.",
             "task1_word_count": t1_words,
             "task2_word_count": t2_words
-        }
+        })
     elif 'DAU_RA' in goal_key or 'DH' in goal_key:
-        return {
+        return sanitize_ai_evaluation_scores({
             "rubric_type": "VSTEP",
             "overall_score": overall,
             "vstep_score": overall,
@@ -1102,20 +1163,20 @@ def get_fallback_writing_evaluation(task1: str, task2: str, t1_words: int, t2_wo
             },
             "lexical_resource": {
                 "criterion_name": "Vocabulary (Từ vựng học thuật)",
-                "score": round(overall + 0.3, 1),
+                "score": round_to_half(overall + 0.5),
                 "comment": "Sử dụng từ vựng giáo trình và thuật ngữ tương thích chuẩn B1/B2."
             },
             "grammar_accuracy": {
                 "criterion_name": "Grammar (Ngữ pháp & Cấu trúc)",
-                "score": round(overall - 0.2, 1),
+                "score": round_to_half(overall - 0.5),
                 "comment": "Cấu trúc câu phong phú, kiểm soát tốt các thì câu học thuật."
             },
             "detailed_feedback": "Năng lực viết đạt chuẩn tốt nghiệp Đại học theo khung VSTEP.",
             "task1_word_count": t1_words,
             "task2_word_count": t2_words
-        }
+        })
     elif 'GIAO_TIEP' in goal_key:
-        return {
+        return sanitize_ai_evaluation_scores({
             "rubric_type": "GIAO_TIEP",
             "overall_score": overall,
             "cefr_level": "B2" if overall >= 6.5 else "B1",
@@ -1126,7 +1187,7 @@ def get_fallback_writing_evaluation(task1: str, task2: str, t1_words: int, t2_wo
             },
             "coherence_cohesion": {
                 "criterion_name": "Clarity & Coherence (Rõ ràng & Mạch lạc)",
-                "score": 7.2,
+                "score": 7.0,
                 "comment": "Truyền đạt thông tin súc tích, mạch lạc và dễ tiếp nhận cho đối tác."
             },
             "lexical_resource": {
@@ -1136,15 +1197,15 @@ def get_fallback_writing_evaluation(task1: str, task2: str, t1_words: int, t2_wo
             },
             "grammar_accuracy": {
                 "criterion_name": "Practical Accuracy (Độ chuẩn xác văn bản)",
-                "score": 6.8,
+                "score": 7.0,
                 "comment": "Cấu trúc câu mạch lạc, ngữ pháp giao việc rõ ràng."
             },
             "detailed_feedback": "Khả năng soạn thảo email và giải pháp công việc đáp ứng tốt môi trường doanh nghiệp.",
             "task1_word_count": t1_words,
             "task2_word_count": t2_words
-        }
+        })
     else:  # MAT_GOC
-        return {
+        return sanitize_ai_evaluation_scores({
             "rubric_type": "MAT_GOC",
             "overall_score": overall,
             "cefr_level": "A2" if overall >= 6.0 else "A1",
@@ -1155,7 +1216,7 @@ def get_fallback_writing_evaluation(task1: str, task2: str, t1_words: int, t2_wo
             },
             "coherence_cohesion": {
                 "criterion_name": "Clarity of Meaning (Độ rõ nghĩa)",
-                "score": 6.8,
+                "score": 7.0,
                 "comment": "Người đọc nắm bắt được nội dung muốn truyền tải."
             },
             "lexical_resource": {
@@ -1171,7 +1232,7 @@ def get_fallback_writing_evaluation(task1: str, task2: str, t1_words: int, t2_wo
             "detailed_feedback": "Tiến bộ rõ rệt trong việc hình thành câu. Tiếp tục củng cố các thì nền tảng.",
             "task1_word_count": t1_words,
             "task2_word_count": t2_words
-        }
+        })
 
 
 def get_fallback_speaking_evaluation(transcript: str, target_goal: str):
@@ -1269,13 +1330,13 @@ def get_fallback_speaking_evaluation(transcript: str, target_goal: str):
     else:
         topic_comment = "Nội dung có liên quan đến các câu hỏi được đặt ra."
 
-    # Tính điểm chi tiết từng tiêu chí
-    score_lr = max(1.0, round(base_score - topic_deduction, 1))
-    score_gr = max(1.0, round(base_score - (0.5 if words_count < 35 else 0.0), 1))
-    score_fc = max(1.0, round(base_score - fluency_deduction, 1))
-    score_pr = max(1.0, round(base_score - (0.5 if total_hesitation_count >= 3 else 0.0), 1))
+    # Tính điểm chi tiết từng tiêu chí (chỉ nhận điểm bước nhảy 0.5)
+    score_lr = max(1.0, round_to_half(base_score - topic_deduction))
+    score_gr = max(1.0, round_to_half(base_score - (0.5 if words_count < 35 else 0.0)))
+    score_fc = max(1.0, round_to_half(base_score - fluency_deduction))
+    score_pr = max(1.0, round_to_half(base_score - (0.5 if total_hesitation_count >= 3 else 0.0)))
 
-    overall_val = round((score_lr + score_gr + score_fc + score_pr) / 4.0, 1)
+    overall_val = round_to_half((score_lr + score_gr + score_fc + score_pr) / 4.0)
 
     # Tổng hợp nhận xét chi tiết
     feedback_parts = [
@@ -1290,7 +1351,7 @@ def get_fallback_speaking_evaluation(transcript: str, target_goal: str):
 
     if 'IELTS' in goal_key:
         band_str = f"{overall_val:.1f}"
-        return {
+        return sanitize_ai_evaluation_scores({
             "rubric_type": "IELTS",
             "overall_score": overall_val,
             "ielts_band": band_str,
@@ -1317,95 +1378,95 @@ def get_fallback_speaking_evaluation(transcript: str, target_goal: str):
             },
             "detailed_feedback": detailed_feedback,
             "transcript_evaluated": transcript[:200]
-        }
+        })
     elif 'DAU_RA' in goal_key or 'DH' in goal_key:
-        scale_10 = min(10.0, max(1.0, round(overall_val * 1.1, 1)))
-        return {
+        scale_10 = min(10.0, max(1.0, round_to_half(overall_val * 1.1)))
+        return sanitize_ai_evaluation_scores({
             "rubric_type": "VSTEP",
             "overall_score": scale_10,
             "vstep_score": scale_10,
             "cefr_level": "B2" if scale_10 >= 6.0 else ("B1" if scale_10 >= 4.0 else "A2"),
             "vocabulary": {
                 "criterion_name": "Grammar & Vocabulary (Ngữ pháp & Từ vựng)",
-                "score": min(10.0, round(score_lr * 1.1, 1)),
+                "score": min(10.0, round_to_half(score_lr * 1.1)),
                 "comment": f"Vốn từ học thuật VSTEP ({words_count} từ). {topic_comment}"
             },
             "grammar": {
                 "criterion_name": "Discourse Management (Quản lý diễn ngôn)",
-                "score": min(10.0, round(score_gr * 1.1, 1)),
+                "score": min(10.0, round_to_half(score_gr * 1.1)),
                 "comment": len_comment
             },
             "coherence": {
                 "criterion_name": "Interactive Communication (Tương tác & Phản xạ)",
-                "score": min(10.0, round(score_fc * 1.1, 1)),
+                "score": min(10.0, round_to_half(score_fc * 1.1)),
                 "comment": hesitation_comment
             },
             "pronunciation": {
                 "criterion_name": "Pronunciation (Phát âm & Ngữ điệu)",
-                "score": min(10.0, round(score_pr * 1.1, 1)),
+                "score": min(10.0, round_to_half(score_pr * 1.1)),
                 "comment": "Phát âm cơ bản, cần cải thiện trọng âm và ngắt câu hợp lý."
             },
             "detailed_feedback": detailed_feedback,
             "transcript_evaluated": transcript[:200]
-        }
+        })
     elif 'GIAO_TIEP' in goal_key:
-        scale_10 = min(10.0, max(1.0, round(overall_val * 1.1, 1)))
-        return {
+        scale_10 = min(10.0, max(1.0, round_to_half(overall_val * 1.1)))
+        return sanitize_ai_evaluation_scores({
             "rubric_type": "GIAO_TIEP",
             "overall_score": scale_10,
             "cefr_level": "B2" if scale_10 >= 7.0 else ("B1" if scale_10 >= 5.0 else "A2"),
             "vocabulary": {
                 "criterion_name": "Workplace Expressions (Ngôn ngữ công sở)",
-                "score": min(10.0, round(score_lr * 1.1, 1)),
+                "score": min(10.0, round_to_half(score_lr * 1.1)),
                 "comment": f"Áp dụng từ ngữ giao việc ({words_count} từ). {topic_comment}"
             },
             "grammar": {
                 "criterion_name": "Situational Response (Ứng biến tình huống)",
-                "score": min(10.0, round(score_gr * 1.1, 1)),
+                "score": min(10.0, round_to_half(score_gr * 1.1)),
                 "comment": len_comment
             },
             "coherence": {
                 "criterion_name": "Professional Fluency & Tone (Lưu loát & Tác phong)",
-                "score": min(10.0, round(score_fc * 1.1, 1)),
+                "score": min(10.0, round_to_half(score_fc * 1.1)),
                 "comment": hesitation_comment
             },
             "pronunciation": {
                 "criterion_name": "Pronunciation & Clarity (Phát âm & Rõ ràng)",
-                "score": min(10.0, round(score_pr * 1.1, 1)),
+                "score": min(10.0, round_to_half(score_pr * 1.1)),
                 "comment": "Âm lượng và độ rõ âm cần luyện tập thêm để tự tin trong họp và đàm phán."
             },
             "detailed_feedback": detailed_feedback,
             "transcript_evaluated": transcript[:200]
-        }
+        })
     else:  # MAT_GOC
-        scale_10 = min(10.0, max(1.0, round(overall_val * 1.05, 1)))
-        return {
+        scale_10 = min(10.0, max(1.0, round_to_half(overall_val * 1.05)))
+        return sanitize_ai_evaluation_scores({
             "rubric_type": "MAT_GOC",
             "overall_score": scale_10,
             "cefr_level": "A2" if scale_10 >= 6.0 else "A1",
             "vocabulary": {
                 "criterion_name": "Basic Vocabulary (Từ vựng sinh hoạt)",
-                "score": min(10.0, round(score_lr * 1.05, 1)),
+                "score": min(10.0, round_to_half(score_lr * 1.05)),
                 "comment": f"Từ vựng sinh hoạt quen thuộc ({words_count} từ). {topic_comment}"
             },
             "grammar": {
                 "criterion_name": "Basic Grammar (Cấu trúc câu đơn)",
-                "score": min(10.0, round(score_gr * 1.05, 1)),
+                "score": min(10.0, round_to_half(score_gr * 1.05)),
                 "comment": len_comment
             },
             "coherence": {
                 "criterion_name": "Response Reflex (Phản xạ trả lời)",
-                "score": min(10.0, round(score_fc * 1.05, 1)),
+                "score": min(10.0, round_to_half(score_fc * 1.05)),
                 "comment": hesitation_comment
             },
             "pronunciation": {
                 "criterion_name": "Pronunciation & Phonetics (Phát âm & Âm cuối)",
-                "score": min(10.0, round(score_pr * 1.05, 1)),
+                "score": min(10.0, round_to_half(score_pr * 1.05)),
                 "comment": "Cần tập phát âm chuẩn bảng âm IPA và bật âm đuôi rõ ràng."
             },
             "detailed_feedback": detailed_feedback,
             "transcript_evaluated": transcript[:200]
-        }
+        })
 
 
 # ─── QUY ĐỔI ĐIỂM ĐỒNG BỘ CHÍNH XÁC THEO TỪNG LOẠI HÌNH MỤC TIÊU ───
@@ -1435,8 +1496,8 @@ def calculate_goal_based_score(mcq_score: float, writing_result: dict, speaking_
     w_raw_10 = float(writing_result.get('overall_score', 0.0) if writing_result else 0.0)
     s_raw_10 = float(speaking_result.get('overall_score', 0.0) if speaking_result else 0.0)
 
-    w_scaled = round(w_raw_10 * 3.0, 1)
-    s_scaled = round(s_raw_10 * 3.0, 1)
+    w_scaled = round_to_half(w_raw_10 * 3.0)
+    s_scaled = round_to_half(s_raw_10 * 3.0)
     total_100 = round(mcq_raw + w_scaled + s_scaled, 1)
 
     if 'IELTS' in goal_key:

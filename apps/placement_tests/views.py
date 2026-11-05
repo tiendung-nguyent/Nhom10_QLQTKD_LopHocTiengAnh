@@ -35,19 +35,13 @@ from apps.placement_tests.models import (
 )
 
 from apps.placement_tests.services import (
-
     generate_english_placement_test,
-
     grade_writing_with_gemini,
-
     grade_speaking_with_gemini,
-
     get_fallback_mcq_test,
-
     calculate_goal_based_score,
-
     get_goal_placement_info,
-
+    round_to_half,
 )
 
 import re
@@ -2558,9 +2552,9 @@ def submit_writing_speaking(request):
 
         )
 
-        speaking_score_10 = float(speaking_result.get('overall_score', 0.0) if speaking_result else 0.0)
+        speaking_score_10 = round_to_half(speaking_result.get('overall_score', 0.0) if speaking_result else 0.0)
 
-        speaking_scaled = round(speaking_score_10 * 3.0, 1)
+        speaking_scaled = round_to_half(speaking_score_10 * 3.0)
 
         speaking_status = 'DA_CHAM'
 
@@ -2568,9 +2562,9 @@ def submit_writing_speaking(request):
 
 
 
-    writing_score_10 = float(writing_result.get('overall_score', 0.0) if writing_result else 0.0)
+    writing_score_10 = round_to_half(writing_result.get('overall_score', 0.0) if writing_result else 0.0)
 
-    writing_scaled = round(writing_score_10 * 3.0, 1) if has_writing else 0.0
+    writing_scaled = round_to_half(writing_score_10 * 3.0) if has_writing else 0.0
 
     writing_status = 'DA_CHAM' if has_writing else 'CHUA_LAM'
 
@@ -4854,9 +4848,9 @@ def teacher_review(request):
 
         for b in phien_db.bai_lam_ky_nangs.all():
 
-            auto_val = float(b.diem_tu_dong or 0.0)
+            auto_val = round_to_half(float(b.diem_tu_dong or 0.0)) if b.ky_nang in ['SPEAKING', 'WRITING'] else float(b.diem_tu_dong or 0.0)
 
-            adj_val = float(b.diem_dieu_chinh) if b.diem_dieu_chinh is not None else None
+            adj_val = round_to_half(float(b.diem_dieu_chinh)) if (b.diem_dieu_chinh is not None and b.ky_nang in ['SPEAKING', 'WRITING']) else (float(b.diem_dieu_chinh) if b.diem_dieu_chinh is not None else None)
 
 
 
@@ -4900,9 +4894,9 @@ def teacher_review(request):
 
         if is_writing:
 
-            current_ai_score = ai_wri_score
+            current_ai_score = round_to_half(ai_wri_score)
 
-            current_teacher_score = teacher_wri_score if teacher_wri_score is not None else ai_wri_score
+            current_teacher_score = round_to_half(teacher_wri_score if teacher_wri_score is not None else ai_wri_score)
 
             current_skill = 'WRITING'
 
@@ -4924,9 +4918,9 @@ def teacher_review(request):
 
         else:
 
-            current_ai_score = ai_spk_score
+            current_ai_score = round_to_half(ai_spk_score)
 
-            current_teacher_score = teacher_spk_score if teacher_spk_score is not None else ai_spk_score
+            current_teacher_score = round_to_half(teacher_spk_score if teacher_spk_score is not None else ai_spk_score)
 
             current_skill = 'SPEAKING'
 
@@ -5096,13 +5090,13 @@ def teacher_review(request):
 
                         c_title = v.get('criterion_name') or k.replace('_', ' ').title()
 
-                        c_score = v.get('score', 7.0)
+                        c_score = round_to_half(v.get('score', 7.0)) if not is_mcq else v.get('score', 7.0)
 
                         ai_criteria.append({
 
                             'name': c_title,
 
-                            'score': str(c_score),
+                            'score': f"{c_score:.1f}" if not is_mcq else str(c_score),
 
                             'pct': int(float(c_score) * 10) if float(c_score) <= 10 else int(float(c_score))
 
@@ -5136,9 +5130,9 @@ def teacher_review(request):
 
                     {'name': 'Task Achievement / Response', 'score': '7.0', 'pct': 70},
 
-                    {'name': 'Coherence & Cohesion', 'score': '6.8', 'pct': 68},
+                    {'name': 'Coherence & Cohesion', 'score': '6.5', 'pct': 65},
 
-                    {'name': 'Lexical Resource', 'score': '7.2', 'pct': 72},
+                    {'name': 'Lexical Resource', 'score': '7.5', 'pct': 75},
 
                     {'name': 'Grammatical Range & Accuracy', 'score': '7.0', 'pct': 70},
 
@@ -5150,11 +5144,11 @@ def teacher_review(request):
 
                     {'name': 'Fluency & Coherence', 'score': '7.0', 'pct': 70},
 
-                    {'name': 'Lexical Resource', 'score': '6.8', 'pct': 68},
+                    {'name': 'Lexical Resource', 'score': '6.5', 'pct': 65},
 
                     {'name': 'Grammatical Range & Accuracy', 'score': '7.0', 'pct': 70},
 
-                    {'name': 'Pronunciation & Intonation', 'score': '7.2', 'pct': 72},
+                    {'name': 'Pronunciation & Intonation', 'score': '7.5', 'pct': 75},
 
                 ]
 
@@ -5234,9 +5228,17 @@ def teacher_review(request):
 
             'max_skill_score': max_skill_score,
 
-            'current_ai_score': round(current_ai_score, 1),
+            'current_ai_score': round_to_half(current_ai_score) if current_skill in ['SPEAKING', 'WRITING'] else round(current_ai_score, 1),
 
-            'current_teacher_score': round(current_teacher_score, 1),
+            'current_teacher_score': round_to_half(current_teacher_score) if current_skill in ['SPEAKING', 'WRITING'] else round(current_teacher_score, 1),
+
+            'current_ai_score_str': f"{round_to_half(current_ai_score):.1f}" if current_skill in ['SPEAKING', 'WRITING'] else f"{round(current_ai_score, 1):.1f}",
+
+            'current_teacher_score_str': f"{round_to_half(current_teacher_score):.1f}" if current_skill in ['SPEAKING', 'WRITING'] else f"{round(current_teacher_score, 1):.1f}",
+
+            'is_score_saved': bool(bl_cur and (bl_cur.diem_dieu_chinh is not None or bl_cur.trang_thai_cham == BaiLamKyNang.TrangThaiCham.GV_DA_DUYET)),
+
+            'saved_teacher_score_str': (f"{round_to_half(bl_cur.diem_dieu_chinh):.1f}" if current_skill in ['SPEAKING', 'WRITING'] else f"{round(bl_cur.diem_dieu_chinh, 1):.1f}") if (bl_cur and bl_cur.diem_dieu_chinh is not None) else "",
 
             'speaking_status': spk_status,
 
@@ -5254,11 +5256,19 @@ def teacher_review(request):
 
                 'mcq': round(eff_mcq_curr, 1),
 
-                'writing': round(eff_wri_curr, 1),
+                'writing': round_to_half(eff_wri_curr),
 
-                'speaking': round(eff_spk_curr, 1),
+                'speaking': round_to_half(eff_spk_curr),
+
+                'mcq_str': f"{round(eff_mcq_curr, 1):.1f}",
+
+                'writing_str': f"{round_to_half(eff_wri_curr):.1f}",
+
+                'speaking_str': f"{round_to_half(eff_spk_curr):.1f}",
 
                 'total': total_3_skills,
+
+                'total_str': f"{total_3_skills:.1f}",
 
             },
 
@@ -5294,7 +5304,7 @@ def teacher_review(request):
 
                 'do_tin_cay': 92,
 
-                'diem_tong': round(current_ai_score, 1),  # Luôn giữ nguyên điểm AI gợi ý lúc đầu
+                'diem_tong': round_to_half(current_ai_score) if current_skill in ['SPEAKING', 'WRITING'] else round(current_ai_score, 1),  # Luôn giữ nguyên điểm AI gợi ý lúc đầu
 
                 'nhan_xet': ai_comment,
 
@@ -5304,11 +5314,15 @@ def teacher_review(request):
 
             'bai_lam': {
 
-                'diem_dieu_chinh': round(current_teacher_score, 1),
+                'diem_dieu_chinh': round_to_half(current_teacher_score) if current_skill in ['SPEAKING', 'WRITING'] else round(current_teacher_score, 1),
+
+                'diem_dieu_chinh_str': f"{round_to_half(current_teacher_score):.1f}" if current_skill in ['SPEAKING', 'WRITING'] else f"{round(current_teacher_score, 1):.1f}",
 
                 'nhan_xet_gv': bl_cur.nhan_xet_gv if (bl_cur and bl_cur.nhan_xet_gv) else '',
 
                 'trang_thai_cham': bl_cur.trang_thai_cham if bl_cur else 'CHO_CHAM',
+
+                'nhan_vien_duyet_ten': bl_cur.nhan_vien_duyet.ho_ten if (bl_cur and bl_cur.nhan_vien_duyet) else '',
 
             },
 
@@ -5658,27 +5672,49 @@ def approve_skill(request):
 
             # Cập nhật hoặc tạo BaiLamKyNang cho kỹ năng này
 
+            # Xử lý làm sạch và chuyển đổi diem_dieu_chinh (hỗ trợ cả dấu chấm '.' và phẩy ',')
+
+            parsed_diem = 0.0
+
+            if diem_dieu_chinh is not None:
+
+                try:
+
+                    cleaned_str = str(diem_dieu_chinh).strip().replace(',', '.')
+
+                    raw_num = float(cleaned_str)
+
+                    if ky_nang in ['SPEAKING', 'WRITING']:
+
+                        parsed_diem = round_to_half(raw_num)
+
+                        parsed_diem = max(0.0, min(30.0, parsed_diem))
+
+                    else:
+
+                        parsed_diem = round(raw_num, 1)
+
+                        parsed_diem = max(0.0, min(40.0, parsed_diem))
+
+                except (ValueError, TypeError):
+
+                    parsed_diem = 0.0
+
+
+
             bai_lam, _ = BaiLamKyNang.objects.get_or_create(
 
                 phien_lam_bai=phien_db,
 
                 ky_nang=ky_nang,
 
-                defaults={'diem_tu_dong': float(diem_dieu_chinh or 0.0)}
+                defaults={'diem_tu_dong': parsed_diem}
 
             )
 
 
 
-            if diem_dieu_chinh is not None:
-
-                try:
-
-                    bai_lam.diem_dieu_chinh = float(diem_dieu_chinh)
-
-                except ValueError:
-
-                    pass
+            bai_lam.diem_dieu_chinh = parsed_diem
 
             bai_lam.nhan_xet_gv = nhan_xet_gv
 
@@ -5704,15 +5740,15 @@ def approve_skill(request):
 
                 if b.ky_nang == 'TRAC_NGHIEM':
 
-                    eff_mcq = val
+                    eff_mcq = round(val, 1)
 
                 elif b.ky_nang == 'WRITING':
 
-                    eff_wri = val
+                    eff_wri = round_to_half(val)
 
                 elif b.ky_nang == 'SPEAKING':
 
-                    eff_spk = val
+                    eff_spk = round_to_half(val)
 
             total_3_skills = round(eff_mcq + eff_wri + eff_spk, 1)
 
@@ -5736,7 +5772,11 @@ def approve_skill(request):
 
             'status': 'success',
 
-            'message': f'Đã lưu điểm điều chỉnh ({diem_dieu_chinh}đ) và nhận xét riêng cho kỹ năng {ky_nang} thành công!',
+            'message': f'Đã lưu điểm điều chỉnh ({parsed_diem:.1f}đ) và nhận xét riêng cho kỹ năng {ky_nang} thành công!',
+
+            'score': parsed_diem,
+
+            'score_str': f"{parsed_diem:.1f}",
 
         })
 
