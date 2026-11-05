@@ -4792,7 +4792,35 @@ def teacher_review(request):
 
     phien_db = None
 
-    detail_data = {}
+    detail_data = {
+        'scores': {
+            'mcq': 0.0,
+            'writing': 0.0,
+            'speaking': 0.0,
+            'total': 0.0,
+            'mcq_str': '0.0',
+            'writing_str': '0.0',
+            'speaking_str': '0.0',
+            'total_str': '0.0',
+        },
+        'phien_id': '',
+        'ma_phien': '',
+        'current_skill': 'SPEAKING',
+        'current_skill_label': 'Speaking',
+        'current_teacher_score': 0.0,
+        'current_teacher_score_str': '0.0',
+        'current_ai_score': 0.0,
+        'current_ai_score_str': '0.0',
+        'is_score_saved': False,
+        'saved_teacher_score_str': '',
+        'bai_lam': {
+            'diem_dieu_chinh': 0.0,
+            'diem_dieu_chinh_str': '0.0',
+            'nhan_xet_gv': '',
+            'trang_thai_cham': 'CHO_CHAM',
+            'nhan_vien_duyet_ten': '',
+        },
+    }
 
 
 
