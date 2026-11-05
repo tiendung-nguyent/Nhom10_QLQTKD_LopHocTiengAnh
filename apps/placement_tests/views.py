@@ -4617,7 +4617,8 @@ def teacher_review(request):
 
 
 
-            if bl.trang_thai_cham != BaiLamKyNang.TrangThaiCham.GV_DA_DUYET:
+            # Chỉ tính các kỹ năng tự luận cần GV chấm duyệt thủ công (Speaking, Writing)
+            if bl.ky_nang != 'TRAC_NGHIEM' and bl.trang_thai_cham != BaiLamKyNang.TrangThaiCham.GV_DA_DUYET:
 
                 has_any_pending = True
 
@@ -5175,23 +5176,19 @@ def teacher_review(request):
 
         mcq_approved = (mcq_status == BaiLamKyNang.TrangThaiCham.GV_DA_DUYET)
 
-        all_skills_approved = bool(spk_approved and wri_approved and mcq_approved)
-
-
-
+        # Phần trắc nghiệm đã được hệ thống tự động chấm điểm (Tự động), GV chỉ điều chỉnh điểm khi cần.
+        # Điều kiện để phê duyệt kết quả chung chỉ cần các kỹ năng tự luận (Speaking, Writing) nếu có đã được duyệt.
         unapproved_skills = []
 
-        if not spk_approved:
-
+        has_spk = phien_db.bai_lam_ky_nangs.filter(ky_nang='SPEAKING').exists()
+        if has_spk and not spk_approved:
             unapproved_skills.append({'key': 'SPEAKING', 'name': 'Speaking (Ghi âm)'})
 
-        if not wri_approved:
-
+        has_wri = phien_db.bai_lam_ky_nangs.filter(ky_nang='WRITING').exists()
+        if has_wri and not wri_approved:
             unapproved_skills.append({'key': 'WRITING', 'name': 'Writing (Tự luận)'})
 
-        if not mcq_approved:
-
-            unapproved_skills.append({'key': 'TRAC_NGHIEM', 'name': 'Trắc nghiệm (40đ)'})
+        all_skills_approved = (len(unapproved_skills) == 0)
 
 
 
@@ -5795,27 +5792,22 @@ def finalize_test_result(request):
 
 
 
-    # KIỂM TRA ĐIỀU KIỆN BẮT BUỘC: Chưa phê duyệt hết tất cả các phần thi của thẩm định thì KHÔNG ĐƯỢC phê duyệt kết quả
-
+    # KIỂM TRA ĐIỀU KIỆN: Giáo viên cần hoàn tất thẩm định các phần thi tự luận (Speaking, Writing) nếu có
+    # Phần Trắc nghiệm tự động chấm, GV chỉ điều chỉnh khi cần, không bắt buộc duyệt riêng
+    has_spk = phien_db.bai_lam_ky_nangs.filter(ky_nang='SPEAKING').exists()
     spk_approved = phien_db.bai_lam_ky_nangs.filter(ky_nang='SPEAKING', trang_thai_cham=BaiLamKyNang.TrangThaiCham.GV_DA_DUYET).exists()
 
+    has_wri = phien_db.bai_lam_ky_nangs.filter(ky_nang='WRITING').exists()
     wri_approved = phien_db.bai_lam_ky_nangs.filter(ky_nang='WRITING', trang_thai_cham=BaiLamKyNang.TrangThaiCham.GV_DA_DUYET).exists()
 
-    mcq_approved = phien_db.bai_lam_ky_nangs.filter(ky_nang='TRAC_NGHIEM', trang_thai_cham=BaiLamKyNang.TrangThaiCham.GV_DA_DUYET).exists()
+    unapproved = []
+    if has_spk and not spk_approved:
+        unapproved.append('Speaking (Ghi âm)')
+    if has_wri and not wri_approved:
+        unapproved.append('Writing (Tự luận)')
 
-
-
-    if not (spk_approved and wri_approved and mcq_approved):
-
-        unapproved = []
-
-        if not spk_approved: unapproved.append('Speaking (Ghi âm)')
-
-        if not wri_approved: unapproved.append('Writing (Tự luận)')
-
-        if not mcq_approved: unapproved.append('Trắc nghiệm (40đ)')
-
-        msg = f"Chưa thể phê duyệt kết quả! Bạn cần thẩm định và lưu điểm cho toàn bộ các phần thi trước ({', '.join(unapproved)})."
+    if unapproved:
+        msg = f"Chưa thể phê duyệt kết quả! Bạn cần thẩm định và lưu điểm cho các phần thi tự luận ({', '.join(unapproved)}) trước khi phê duyệt."
 
         if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
 
@@ -5952,6 +5944,15 @@ def finalize_test_result(request):
         kq.ngay_xac_nhan = timezone.now()
 
         kq.save()
+
+    # Đồng bộ BaiLamKyNang TRAC_NGHIEM sang GV_DA_DUYET khi chốt toàn bài thi
+    bl_mcq = phien_db.bai_lam_ky_nangs.filter(ky_nang='TRAC_NGHIEM').first()
+    if bl_mcq and bl_mcq.trang_thai_cham != BaiLamKyNang.TrangThaiCham.GV_DA_DUYET:
+        bl_mcq.trang_thai_cham = BaiLamKyNang.TrangThaiCham.GV_DA_DUYET
+        if bl_mcq.diem_dieu_chinh is None:
+            bl_mcq.diem_dieu_chinh = bl_mcq.diem_tu_dong
+        bl_mcq.nhan_vien_duyet = current_teacher
+        bl_mcq.save(update_fields=['trang_thai_cham', 'diem_dieu_chinh', 'nhan_vien_duyet'])
 
 
 
