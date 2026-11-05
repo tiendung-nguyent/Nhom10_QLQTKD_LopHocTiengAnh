@@ -586,7 +586,7 @@
             <span class="bank-code-tag">{{ item.ma_gd_ngan_hang }}</span>
           </div>
           <div style="font-size: 11px; color: #64748B; margin-top: 2px;" class="text-tabular">
-            {{ item.thoi_gian|date:"d/m/Y H:i"|default:"—" }}
+            {{ item.thoi_gian_display|default:item.thoi_gian|default:"—" }}
           </div>
         </td>
 
