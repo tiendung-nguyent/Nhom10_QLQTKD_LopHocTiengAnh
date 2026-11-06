@@ -9,7 +9,7 @@
   <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
     <div>
       <h1 class="page-title">Dashboard Giáo viên</h1>
-      <p class="page-subtitle">Quản lý và thẩm định kết quả chấm điểm AI — Thứ 3, 03/11/2026</p>
+      <p class="page-subtitle">Quản lý và thẩm định kết quả chấm điểm AI — {{ today|date:"l, d/m/Y" }}</p>
     </div>
     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
       <a href="{% url 'placement_tests:teacher_review' %}" class="btn btn-purple">
@@ -25,9 +25,9 @@
   <div class="stat-card" style="padding: 14px 18px; gap: 12px; margin-bottom: 0;">
     <div class="stat-icon" style="background: #FFF0E6; color: var(--accent-orange); width: 42px; height: 42px; font-size: 18px; border-radius: 12px; flex-shrink: 0;"><i class="fa-solid fa-hourglass-half"></i></div>
     <div class="stat-info">
-      <div class="stat-value" style="font-size: 24px; font-weight: 800; line-height: 1;">{{ pending_reviews_count }}</div>
-      <div class="stat-label" style="font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 600;">Bài thi chờ duyệt hôm nay</div>
-      <div class="stat-delta" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">↑ {{ total_reviews_count }} bài mới nộp gần đây</div>
+      <div class="stat-value" style="font-size: 24px; font-weight: 800; line-height: 1;">{{ pending_count }}</div>
+      <div class="stat-label" style="font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 600;">Bài thi chờ duyệt</div>
+      <div class="stat-delta" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">{{ pending_today_count }} bài nộp hôm nay</div>
     </div>
   </div>
 
@@ -37,7 +37,7 @@
     <div class="stat-info">
       <div class="stat-value" style="font-size: 24px; font-weight: 800; line-height: 1;">{{ approved_month_count }}</div>
       <div class="stat-label" style="font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 600;">Bài đã phê duyệt tháng này</div>
-      <div class="stat-delta" style="font-size: 11px; color: var(--accent-emerald); margin-top: 2px;">↑ 100% hồ sơ chuyển tuyển sinh</div>
+      <div class="stat-delta" style="font-size: 11px; color: var(--accent-emerald); margin-top: 2px;">Tổng cộng {{ approved_total_count }} bài đã phê duyệt</div>
     </div>
   </div>
 
@@ -45,9 +45,9 @@
   <div class="stat-card" style="padding: 14px 18px; gap: 12px; margin-bottom: 0;">
     <div class="stat-icon" style="background: #FAF5FF; color: var(--accent-purple); width: 42px; height: 42px; font-size: 18px; border-radius: 12px; flex-shrink: 0;"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
     <div class="stat-info">
-      <div class="stat-value" style="font-size: 24px; font-weight: 800; line-height: 1;">{{ ai_accuracy_rate }}</div>
+      <div class="stat-value" style="font-size: 24px; font-weight: 800; line-height: 1;">{% if ai_accuracy is not None %}{{ ai_accuracy }}%{% else %}—{% endif %}</div>
       <div class="stat-label" style="font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 600;">Độ tương đồng điểm AI &amp; GV</div>
-      <div class="stat-delta" style="font-size: 11px; color: var(--accent-purple); margin-top: 2px;">↑ Sai số trung bình &lt; 0,4đ</div>
+      <div class="stat-delta" style="font-size: 11px; color: var(--accent-purple); margin-top: 2px;">{% if avg_diff is not None %}Sai số trung bình {{ avg_diff }}đ trên {{ evaluated_count }} kỹ năng{% else %}Chưa có bài GV điều chỉnh điểm{% endif %}</div>
     </div>
   </div>
 </div>

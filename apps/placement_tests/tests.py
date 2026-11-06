@@ -69,6 +69,56 @@ class PendingListConsistencyTests(TeacherReviewTestBase):
         self.assertEqual(review.context['pending_tests_count'], 3)
 
 
+class ArchivedSessionTests(TeacherReviewTestBase):
+    def setUp(self):
+        super().setUp()
+        ai = BaiLamKyNang.TrangThaiCham.AI_DA_CHAM
+        self.active = self.make_session('a@test.vn', self.ielts_test, 10, {'SPEAKING': ai})
+        self.archived = self.make_session('b@test.vn', self.ielts_test, 5, {'SPEAKING': ai}, KetQuaKiemTra.TrangThai.LUU_TRU)
+
+    def test_archived_session_is_hidden_everywhere(self):
+        dashboard = self.client.get(reverse('users:teacher_dashboard'))
+        self.assertEqual([r['id'] for r in dashboard.context['review_list']], [self.active.id])
+        self.assertEqual(dashboard.context['pending_review_count'], 1)
+        for filter_type in ['all', 'pending', 'approved']:
+            with self.subTest(filter=filter_type):
+                review = self.client.get(reverse('placement_tests:teacher_review'), {'filter': filter_type})
+                self.assertNotIn(self.archived.id, [r['id'] for r in review.context['page_obj']])
+
+    def test_archived_session_detail_is_not_opened(self):
+        response = self.client.get(reverse('placement_tests:teacher_review'), {'session': self.archived.id})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context['is_detail_view'])
+        self.assertIn('lưu trữ', response.context['session_error'])
+
+
+class DashboardStatsTests(TeacherReviewTestBase):
+    def test_empty_database_shows_zero_not_placeholder_numbers(self):
+        response = self.client.get(reverse('users:teacher_dashboard'))
+        self.assertEqual(response.status_code, 200)
+        ctx = response.context
+        self.assertEqual(ctx['pending_count'], 0)
+        self.assertEqual(ctx['pending_today_count'], 0)
+        self.assertEqual(ctx['approved_month_count'], 0)
+        self.assertEqual(ctx['approved_total_count'], 0)
+        self.assertIsNone(ctx['ai_accuracy'])
+        self.assertIsNone(ctx['avg_diff'])
+        self.assertContains(response, 'Chưa có bài GV điều chỉnh điểm')
+
+    def test_stats_reflect_real_data(self):
+        ai = BaiLamKyNang.TrangThaiCham.AI_DA_CHAM
+        self.make_session('a@test.vn', self.ielts_test, 1, {'SPEAKING': ai})
+        self.make_session('b@test.vn', self.ielts_test, 2, {'SPEAKING': ai}, KetQuaKiemTra.TrangThai.DA_XAC_NHAN)
+        KetQuaKiemTra.objects.update(ngay_xac_nhan=timezone.now())
+        BaiLamKyNang.objects.update(diem_dieu_chinh=8.0)
+
+        ctx = self.client.get(reverse('users:teacher_dashboard')).context
+        self.assertEqual(ctx['pending_count'], 1)
+        self.assertEqual(ctx['approved_month_count'], 1)
+        self.assertEqual(ctx['avg_diff'], 3.0)
+        self.assertEqual(ctx['ai_accuracy'], 90.0)
+
+
 class ReviewPageInputValidationTests(TeacherReviewTestBase):
     def setUp(self):
         super().setUp()

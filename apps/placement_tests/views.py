@@ -4608,7 +4608,11 @@ def teacher_review(request):
 
     if session_id is not None:
 
-        phien_db = PhienLamBai.objects.filter(pk=session_id).select_related(
+        phien_db = PhienLamBai.objects.filter(pk=session_id).exclude(
+
+            ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
+
+        ).select_related(
 
             'ho_so_tu_van__khach_hang', 'bai_kiem_tra', 'ket_qua_kiem_tra'
 
@@ -4624,7 +4628,13 @@ def teacher_review(request):
 
         if phien_db is None:
 
-            session_error = f'Không tìm thấy phiên làm bài #{session_id}.'
+            if KetQuaKiemTra.objects.filter(phien_lam_bai_id=session_id, trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU).exists():
+
+                session_error = f'Phiên làm bài #{session_id} đã được lưu trữ nên không hiển thị trong danh sách duyệt.'
+
+            else:
+
+                session_error = f'Không tìm thấy phiên làm bài #{session_id}.'
 
 
 

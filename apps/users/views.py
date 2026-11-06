@@ -741,59 +741,43 @@ def teacher_dashboard(request):
     if not request.session.get('user_email') and not (hasattr(request, 'user') and request.user.is_authenticated):
         return redirect('users:student_login')
     now = timezone.now()
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    local_now = timezone.localtime(now)
+    today_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start = local_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    from apps.placement_tests.models import PhienLamBai, BaiLamKyNang, KetQuaKiemTra
+    from apps.placement_tests.models import BaiLamKyNang, KetQuaKiemTra
     from apps.placement_tests.review_queue import REVIEW_PAGE_SIZE, build_review_rows
 
     # 1. Pending list comes from the same source as the AI review page (filter=pending)
     pending_rows = [r for r in build_review_rows() if r['trang_thai'] == 'pending']
 
-    total_pending = len(pending_rows)
+    pending_count = len(pending_rows)
     pending_today_count = len([r for r in pending_rows if r['thoi_gian'] >= today_start])
-    if pending_today_count == 0:
-        pending_today_count = total_pending if total_pending > 0 else 0
 
-    recent_count = PhienLamBai.objects.filter(
-        ho_so_tu_van__isnull=False,
-        hoan_thanh__gte=now - timedelta(days=2)
-    ).distinct().count()
-    if recent_count == 0:
-        recent_count = 3
+    # 2. Approved results (archived results have their own status, so they are never counted here)
+    approved_qs = KetQuaKiemTra.objects.filter(trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN)
+    approved_month_count = approved_qs.filter(ngay_xac_nhan__gte=month_start).count()
+    approved_total_count = approved_qs.count()
 
-    # 2. Thống kê bài đã phê duyệt trong tháng này
-    approved_count = KetQuaKiemTra.objects.filter(
-        trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN,
-        ngay_xac_nhan__gte=month_start
-    ).count()
-    if approved_count == 0:
-        approved_count = KetQuaKiemTra.objects.filter(
-            trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN
-        ).count()
-    if approved_count == 0:
-        approved_count = 12
-
-    # Tính độ tương đồng điểm AI & GV từ dữ liệu thật trong CSDL
+    # AI vs teacher score similarity, only from real adjusted scores of non-archived sessions
     evaluated_skills = BaiLamKyNang.objects.filter(
         diem_dieu_chinh__isnull=False,
         diem_tu_dong__isnull=False
+    ).exclude(
+        phien_lam_bai__ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
     )
-    if evaluated_skills.exists():
-        diffs = []
-        similarities = []
-        for bl in evaluated_skills:
-            max_s = 40.0 if bl.ky_nang == 'TRAC_NGHIEM' else 30.0
-            d = abs(float(bl.diem_dieu_chinh) - float(bl.diem_tu_dong))
-            diffs.append(d)
-            sim = max(0.0, 100.0 - (d / max_s * 100.0))
-            similarities.append(sim)
-
+    ai_accuracy = None
+    avg_diff = None
+    diffs = []
+    similarities = []
+    for bl in evaluated_skills:
+        max_s = 40.0 if bl.ky_nang == 'TRAC_NGHIEM' else 30.0
+        d = abs(float(bl.diem_dieu_chinh) - float(bl.diem_tu_dong))
+        diffs.append(d)
+        similarities.append(max(0.0, 100.0 - (d / max_s * 100.0)))
+    if diffs:
         avg_diff = round(sum(diffs) / len(diffs), 1)
         ai_accuracy = round(sum(similarities) / len(similarities), 1)
-    else:
-        avg_diff = 1.2
-        ai_accuracy = 92.0
 
     # 3. Pending reviews, in the same order as the first page of the AI review page
     real_reviews = [
@@ -815,11 +799,13 @@ def teacher_dashboard(request):
 
     context = {
         'today': now,
+        'pending_count': pending_count,
         'pending_today_count': pending_today_count,
-        'recent_count': recent_count,
-        'approved_count': approved_count,
+        'approved_month_count': approved_month_count,
+        'approved_total_count': approved_total_count,
         'ai_accuracy': ai_accuracy,
         'avg_diff': avg_diff,
+        'evaluated_count': len(diffs),
         'review_list': real_reviews[:REVIEW_PAGE_SIZE],
     }
     return render(request, 'users/teacher_dashboard.html', context)
