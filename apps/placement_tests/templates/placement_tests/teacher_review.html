@@ -1003,22 +1003,57 @@
 
           <!-- Trình phát Audio của thí sinh -->
           <div>
-            <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
-              <i class="fa-solid fa-headphones" style="color: var(--accent-purple); margin-right: 5px;"></i>Nghe bài ghi âm của học viên:
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+              <span><i class="fa-solid fa-headphones" style="color: var(--accent-purple); margin-right: 5px;"></i>Nghe bài ghi âm của học viên:</span>
+              {% if spk.has_audio %}
+              <a href="{{ spk.audio_url }}" target="_blank" download style="font-size: 11px; color: var(--accent-purple); text-decoration: none;">
+                <i class="fa-solid fa-arrow-up-right-from-square" style="margin-right: 3px;"></i>Mở file audio
+              </a>
+              {% endif %}
             </div>
+
             {% if spk.has_audio %}
-            <audio controls style="width: 100%; border-radius: 8px; margin-bottom: 6px; outline: none;">
-              <source src="{{ spk.audio_url }}">
-              Trình duyệt của bạn không hỗ trợ phát audio.
-            </audio>
-            <div style="font-size: 11px; color: #059669; font-style: italic; display: flex; align-items: center; gap: 4px;">
+            <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin-bottom: 10px;">
+              <!-- HTML5 Audio Player chính -->
+              <audio id="audio-player-{{ spk.task_key }}" controls preload="auto" src="{{ spk.audio_url }}" style="width: 100%; border-radius: 8px; margin-bottom: 8px; outline: none;">
+                <source src="{{ spk.audio_url }}" type="audio/wav">
+                <source src="{{ spk.audio_url }}" type="audio/webm">
+                <source src="{{ spk.audio_url }}">
+                Trình duyệt của bạn không hỗ trợ phát audio.
+              </audio>
+
+              <!-- Các nút bấm nghe nhanh trực tiếp -->
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <button type="button" id="btn-play-{{ spk.task_key }}" class="btn btn-sm btn-primary" onclick="togglePlayAudio('audio-player-{{ spk.task_key }}', 'btn-play-{{ spk.task_key }}')" style="font-size: 12px; padding: 5px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">
+                  <i class="fa-solid fa-play"></i> Bấm để Nghe bài thu
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="speakScriptTTS(document.getElementById('script-text-{{ spk.task_key }}').innerText)" style="font-size: 12px; padding: 5px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">
+                  <i class="fa-solid fa-volume-high"></i> Đọc giọng mẫu (TTS)
+                </button>
+              </div>
+            </div>
+
+            <div style="font-size: 11px; color: #059669; font-style: italic; display: flex; align-items: center; gap: 4px; margin-bottom: 12px;">
               <i class="fa-solid fa-circle-check"></i> File audio thật được lưu từ phiên làm bài của thí sinh.
             </div>
             {% else %}
-            <div style="padding: 10px 14px; background: #fffbeb; border: 1px dashed #f59e0b; border-radius: 8px; color: #b45309; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+            <div style="padding: 10px 14px; background: #fffbeb; border: 1px dashed #f59e0b; border-radius: 8px; color: #b45309; font-size: 12px; display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
               <i class="fa-solid fa-triangle-exclamation"></i> Phiên thi này chưa có file audio trực tiếp của học viên.
             </div>
             {% endif %}
+          </div>
+
+          <!-- SCRIPT / TRANSCRIPT LỜI NÓI CỦA HỌC VIÊN -->
+          <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+              <span>
+                <i class="fa-solid fa-file-waveform" style="color: var(--accent-purple); margin-right: 5px;"></i>Script bài nói của học viên (Transcript):
+              </span>
+              <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">
+                (Bản ghi lời nói thí sinh)
+              </span>
+            </div>
+            <div id="script-text-{{ spk.task_key }}" style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; font-size: 13.5px; line-height: 1.65; color: var(--text-primary); max-height: 220px; overflow-y: auto; white-space: pre-wrap; font-family: inherit;">{{ spk.transcript }}</div>
           </div>
         </div>
         {% empty %}
@@ -2788,6 +2823,36 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+function togglePlayAudio(playerId, btnId) {
+  const audio = document.getElementById(playerId);
+  const btn = document.getElementById(btnId);
+  if (!audio) return;
+  if (audio.paused) {
+    document.querySelectorAll('audio').forEach(a => { if (a !== audio) a.pause(); });
+    audio.play().then(() => {
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i> Tạm dừng';
+    }).catch(err => {
+      console.warn('Audio play error:', err);
+    });
+  } else {
+    audio.pause();
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i> Bấm để Nghe bài thu';
+  }
+}
+
+function speakScriptTTS(text) {
+  if (!('speechSynthesis' in window)) {
+    alert('Trình duyệt không hỗ trợ Web Speech Synthesis.');
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const cleanText = (text || '').trim();
+  if (!cleanText) return;
+  const utter = new SpeechSynthesisUtterance(cleanText);
+  utter.lang = 'en-US';
+  utter.rate = 0.95;
+  window.speechSynthesis.speak(utter);
+}
 </script>
 
 
