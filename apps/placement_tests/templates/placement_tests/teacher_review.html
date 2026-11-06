@@ -1150,7 +1150,6 @@
         </div>
         {% endfor %}
       </div>
-
       {% endif %}
 
 
@@ -2911,6 +2910,36 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+function togglePlayAudio(playerId, btnId) {
+  const audio = document.getElementById(playerId);
+  const btn = document.getElementById(btnId);
+  if (!audio) return;
+  if (audio.paused) {
+    document.querySelectorAll('audio').forEach(a => { if (a !== audio) a.pause(); });
+    audio.play().then(() => {
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-pause"></i> Tạm dừng';
+    }).catch(err => {
+      console.warn('Audio play error:', err);
+    });
+  } else {
+    audio.pause();
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i> Bấm để Nghe bài thu';
+  }
+}
+
+function speakScriptTTS(text) {
+  if (!('speechSynthesis' in window)) {
+    alert('Trình duyệt không hỗ trợ Web Speech Synthesis.');
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const cleanText = (text || '').trim();
+  if (!cleanText) return;
+  const utter = new SpeechSynthesisUtterance(cleanText);
+  utter.lang = 'en-US';
+  utter.rate = 0.95;
+  window.speechSynthesis.speak(utter);
+}
 </script>
 
 

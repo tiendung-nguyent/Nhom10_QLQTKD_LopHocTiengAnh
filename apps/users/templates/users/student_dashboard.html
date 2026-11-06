@@ -51,12 +51,12 @@
         <div class="step-circle">{% if current_step > 2 %}✓{% else %}2{% endif %}</div>
         <div class="step-label">2. Kiểm tra 105'<br>&amp; Duyệt điểm</div>
       </div>
-      <div class="step {% if current_step > 3 %}done{% elif current_step == 3 %}active{% endif %}">
-        <div class="step-circle">{% if current_step > 3 %}✓{% else %}3{% endif %}</div>
+      <div class="step {% if current_step > 3 or is_tuition_pending %}done{% elif current_step == 3 %}active{% endif %}">
+        <div class="step-circle">{% if current_step > 3 or is_tuition_pending %}✓{% else %}3{% endif %}</div>
         <div class="step-label">3. Tư vấn lộ trình<br>&amp; Nhận lớp</div>
       </div>
-      <div class="step {% if current_step == 4 %}done{% else %}{% endif %}">
-        <div class="step-circle">{% if current_step == 4 %}✓{% else %}4{% endif %}</div>
+      <div class="step {% if current_step == 4 and is_tuition_paid %}done{% elif current_step == 4 or is_tuition_pending %}active{% endif %}">
+        <div class="step-circle">{% if current_step == 4 and is_tuition_paid %}✓{% else %}4{% endif %}</div>
         <div class="step-label">4. Học phí<br>&amp; Nhập học</div>
       </div>
     </div>
@@ -75,6 +75,40 @@
       <a href="{% url 'placement_tests:test_room' %}" class="btn btn-primary" style="padding: 12px 24px; font-size: 14.5px; font-weight: 700; flex-shrink: 0; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);">
         Vào phòng thi ngay <i class="fa-solid fa-arrow-right"></i>
       </a>
+    </div>
+    {% elif is_tuition_paid %}
+    <div style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-left: 5px solid #16A34A; border-radius: var(--radius-md); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+      <div>
+        <div style="font-size: 15.5px; font-weight: 700; color: #15803D; margin-bottom: 3px;">Nhập học thành công · Điểm chính thức {{ display_score }}/100</div>
+        <div style="font-size: 13.5px; color: #166534; line-height: 1.5;">
+          Bạn đã hoàn tất học phí và được ghi danh chính thức vào lớp <strong>{{ assigned_lop_hoc.ten_lop|default:"tiếng Anh" }}</strong>{% if next_class_date %} (Khai giảng: <strong>{{ next_class_date|date:"d/m/Y" }}</strong>){% endif %}.
+        </div>
+      </div>
+      <a href="{% url 'placement_tests:test_result' %}" class="btn btn-emerald btn-sm" style="flex-shrink:0;">Xem bảng điểm</a>
+    </div>
+    {% elif is_tuition_pending %}
+    <div style="background: #EFF6FF; border: 1.5px solid #BFDBFE; border-left: 5px solid #2563EB; border-radius: var(--radius-md); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+      <div>
+        <div style="font-size: 15.5px; font-weight: 700; color: #1D4ED8; margin-bottom: 3px;">
+          <i class="fa-solid fa-clock-rotate-left"></i> Đã ghi nhận chuyển khoản · Đang chờ kế toán đối soát
+        </div>
+        <div style="font-size: 13.5px; color: #1E40AF; line-height: 1.5;">
+          Bạn đã xác nhận chuyển khoản học phí cho lớp <strong>{{ assigned_lop_hoc.ten_lop|default:"tiếng Anh" }}</strong>. Bộ phận Kế toán đang kiểm tra sao kê ngân hàng và sẽ duyệt hóa đơn cho bạn sớm nhất.
+        </div>
+      </div>
+      <a href="{% url 'billing:payment_detail' %}" class="btn btn-outline btn-sm" style="flex-shrink:0; font-weight: 600; background: #FFFFFF; color: #1D4ED8; border-color: #93C5FD;">
+        <i class="fa-solid fa-receipt"></i> Xem trạng thái học phí
+      </a>
+    </div>
+    {% elif has_assigned_class %}
+    <div style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-left: 5px solid #16A34A; border-radius: var(--radius-md); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+      <div>
+        <div style="font-size: 15.5px; font-weight: 700; color: #15803D; margin-bottom: 3px;">Đã duyệt điểm &amp; Xếp lớp: {{ assigned_lop_hoc.ten_lop|default:"Lớp chính thức" }}</div>
+        <div style="font-size: 13.5px; color: #166534; line-height: 1.5;">
+          Điểm chính thức: <strong>{{ display_score }}/100</strong> (Xếp loại: <strong>{{ trinh_do_du_kien }}</strong>). Vui lòng hoàn tất học phí để kích hoạt tài khoản lớp học.
+        </div>
+      </div>
+      <a href="{% url 'billing:payment_detail' %}" class="btn btn-primary btn-sm" style="flex-shrink:0; background: #EA580C; border: none;">Đóng học phí ngay</a>
     </div>
     {% elif is_teacher_approved %}
     <div style="background: #F0FDF4; border: 1.5px solid #BBF7D0; border-left: 5px solid #16A34A; border-radius: var(--radius-md); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
@@ -131,7 +165,7 @@
       {% endif %}
     </div>
     <div class="stats-strip-sub">
-      {% if is_teacher_approved %}Điểm GV đã duyệt{% elif test_completed %}Đang thẩm định{% else %}Chưa có điểm{% endif %}
+      {% if is_teacher_approved or has_assigned_class or is_tuition_paid %}Điểm GV đã duyệt{% elif test_completed %}Đang thẩm định{% else %}Chưa có điểm{% endif %}
     </div>
   </div>
 
@@ -164,7 +198,7 @@
     <div class="card-header">
       <div class="card-title">Bài test đầu vào</div>
       {% if test_completed %}
-        {% if is_teacher_approved %}
+        {% if is_teacher_approved or has_assigned_class or is_tuition_paid %}
         <span class="badge badge-emerald"><i class="fa-solid fa-check"></i> Điểm chính thức</span>
         {% else %}
         <span class="badge badge-purple">Chờ GV duyệt</span>
@@ -190,8 +224,8 @@
         </div>
         <div class="payment-meta-row">
           <span class="label">Điểm đánh giá</span>
-          <span class="value" style="color: {% if is_teacher_approved %}var(--accent-emerald){% else %}#7C3AED{% endif %};">
-            {{ display_score }}/100 {% if is_teacher_approved %}(GV duyệt){% else %}(Sơ bộ){% endif %}
+          <span class="value" style="color: {% if is_teacher_approved or has_assigned_class or is_tuition_paid %}var(--accent-emerald){% else %}#7C3AED{% endif %};">
+            {{ display_score }}/100 {% if is_teacher_approved or has_assigned_class or is_tuition_paid %}(Điểm chính thức){% else %}(Sơ bộ){% endif %}
           </span>
         </div>
       </div>
@@ -346,6 +380,8 @@
       <div class="card-title">Tình trạng tài chính &amp; học phí</div>
       {% if is_tuition_paid %}
       <span class="badge badge-emerald">Đã thanh toán</span>
+      {% elif is_tuition_pending %}
+      <span class="badge" style="background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE;"><i class="fa-solid fa-clock-rotate-left"></i> Chờ đối soát</span>
       {% else %}
       <span class="badge badge-coral">Chưa thanh toán</span>
       {% endif %}
@@ -363,14 +399,14 @@
         </div>
         <div class="payment-meta-row">
           <span class="label">Đã đóng</span>
-          <span class="value" style="color: {% if is_tuition_paid %}var(--accent-emerald){% else %}var(--text-secondary){% endif %};">
-            {{ hoc_phi_da_dong|floatformat:0 }} đ
+          <span class="value" style="color: {% if is_tuition_paid %}var(--accent-emerald){% elif is_tuition_pending %}#2563EB{% else %}var(--text-secondary){% endif %};">
+            {% if is_tuition_pending %}Đã báo chuyển {{ khoa_hoc_phi }} đ{% else %}{{ hoc_phi_da_dong|floatformat:0 }} đ{% endif %}
           </span>
         </div>
         <div class="payment-meta-row">
           <span class="label">Còn lại</span>
-          <span class="value" style="color: {% if is_tuition_paid %}var(--accent-emerald){% else %}#DC2626{% endif %};">
-            {% if is_tuition_paid %}0 đ{% else %}{{ khoa_hoc_phi }} đ{% endif %}
+          <span class="value" style="color: {% if is_tuition_paid %}var(--accent-emerald){% elif is_tuition_pending %}#2563EB{% else %}#DC2626{% endif %};">
+            {% if is_tuition_paid %}0 đ{% elif is_tuition_pending %}0 đ (đang đối soát){% else %}{{ khoa_hoc_phi }} đ{% endif %}
           </span>
         </div>
         <div class="payment-meta-row">
@@ -384,6 +420,10 @@
       {% if is_tuition_paid %}
       <a href="{% url 'billing:payment_detail' %}" class="btn btn-outline btn-sm btn-block" style="font-weight: 600;">
         <i class="fa-solid fa-receipt"></i> Xem biên lai thanh toán
+      </a>
+      {% elif is_tuition_pending %}
+      <a href="{% url 'billing:payment_detail' %}" class="btn btn-outline btn-sm btn-block" style="font-weight: 600; color: #1D4ED8; border-color: #BFDBFE; background: #F8FAFC; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <i class="fa-solid fa-clock-rotate-left"></i> Đang chờ kế toán đối soát →
       </a>
       {% else %}
       <a href="{% url 'billing:payment_detail' %}" class="btn btn-primary btn-sm btn-block" style="font-weight: 700; background: #EA580C; border: none; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25); display: flex; align-items: center; justify-content: center; gap: 6px;">

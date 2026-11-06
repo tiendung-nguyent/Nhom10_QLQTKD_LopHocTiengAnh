@@ -62,31 +62,62 @@ const Toast = (() => {
   }
 
   function show(msg, type = 'info', duration = 3500) {
+    if (!msg) return;
     const now = Date.now();
-    // Chặn hiển thị toast thông báo hoàn toàn trùng lặp trong vòng 1.5 giây
-    if (msg === lastToastMsg && (now - lastToastTime) < 1500) {
+    const s = getStack();
+
+    // 1. Chặn trùng lặp: Nếu thông báo cùng nội dung đang hiển thị trên màn hình -> Không tạo thêm
+    const activeToasts = Array.from(s.querySelectorAll('.toast:not(.out)'));
+    const isAlreadyShowing = activeToasts.some(t => {
+      const msgEl = t.querySelector('.toast-msg');
+      return msgEl && msgEl.textContent.trim() === String(msg).trim();
+    });
+    if (isAlreadyShowing) {
+      return;
+    }
+
+    // 2. Chặn gọi trùng lặp liên tục trong khoảng thời gian cooldown (3.5s)
+    if (msg === lastToastMsg && (now - lastToastTime) < Math.max(duration, 3500)) {
       return;
     }
     lastToastMsg = msg;
     lastToastTime = now;
 
     const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', ai: '✦' };
-    const s = getStack();
     const t = document.createElement('div');
     t.className = 'toast';
+    t.style.cursor = 'pointer';
+    t.title = 'Bấm để tắt thông báo này';
     t.innerHTML = `
       <span class="toast-icon" style="font-size: 16px;">${icons[type] || icons.info}</span>
       <span class="toast-msg" style="font-size: 13px;">${msg}</span>
     `;
     s.appendChild(t);
 
-    setTimeout(() => {
+    // Tự động tắt sau thời gian duration (chỉ hiện 1 lần rồi biến mất)
+    const timer = setTimeout(() => {
       t.classList.add('out');
       setTimeout(() => t.remove(), 350);
     }, duration);
+
+    // Bấm vào toast để đóng ngay lập tức
+    t.onclick = () => {
+      clearTimeout(timer);
+      t.classList.add('out');
+      setTimeout(() => t.remove(), 200);
+    };
   }
 
-  return { show };
+  function clear() {
+    const s = document.getElementById('toast-stack');
+    if (s) {
+      s.innerHTML = '';
+    }
+    lastToastMsg = '';
+    lastToastTime = 0;
+  }
+
+  return { show, clear };
 })();
 
 // ─── 3. SIDEBAR DI ĐỘNG TOGGLE ───────────────────────────────

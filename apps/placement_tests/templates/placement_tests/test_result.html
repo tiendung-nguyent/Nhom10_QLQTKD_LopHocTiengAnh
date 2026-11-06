@@ -247,68 +247,53 @@
 
 
 
-<!-- ─── LỊCH SỬ CÁC LẦN LÀM BÀI (CHỈ HIỂN THỊ KHI CÓ >= 2 PHIÊN) ── -->
-
+<!-- ─── LỊCH SỬ CÁC LẦN LÀM BÀI (HIỂN THỊ TỪ BÀI MỚI NHẤT RỒI CŨ SAU) ── -->
 {% if danh_sach_phien|length > 1 %}
-
 <div class="card" style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 18px 20px; margin-bottom: 20px;">
-
-  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #F1F5F9;">
-
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #F1F5F9; flex-wrap: wrap;">
     <div style="display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #0F172A;">
-
-      <i class="fa-solid fa-clock-rotate-left" style="color: #64748B;"></i>
-
-      <span>Lịch sử các lần làm bài ({{ danh_sach_phien|length }} phiên)</span>
-
+      <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-coral);"></i>
+      <span>Lịch sử các lần làm bài ({{ danh_sach_phien|length }} phiên · Hiển thị từ mới nhất đến cũ)</span>
     </div>
-
-    <span style="font-size: 12.5px; color: #64748B;">Bấm vào từng phiên để xem chi tiết</span>
-
+    <span style="font-size: 12.5px; color: #64748B;">Bấm vào từng phiên để xem chi tiết bài làm</span>
   </div>
 
-
-
-  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px;">
-
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 10px;">
     {% for ps in danh_sach_phien %}
-
-    <a href="?session={{ ps.id }}" style="text-decoration: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 6px; border: 1px solid {% if ps.is_selected %}#EA580C{% else %}#E2E8F0{% endif %}; background: {% if ps.is_selected %}#FFF7ED{% else %}#FFFFFF{% endif %}; color: inherit; transition: all 0.15s ease;">
-
-      <div style="min-width: 0;">
-
-        <div style="font-size: 13.5px; font-weight: 700; color: {% if ps.is_selected %}#EA580C{% else %}#0F172A{% endif %}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-
-          Phiên thi #{{ ps.ma_phien }}
-
-          {% if ps.is_selected %}<span style="font-size: 11px; font-weight: 600; color: #EA580C; margin-left: 4px;">(Đang xem)</span>{% endif %}
-
+    <a href="?session={{ ps.id }}" style="text-decoration: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 14px; border-radius: 8px; border: 1.5px solid {% if ps.is_selected %}var(--accent-coral){% elif ps.is_latest %}#FED7AA{% else %}#E2E8F0{% endif %}; background: {% if ps.is_selected %}#FFF7ED{% elif ps.is_latest %}#FFFAF5{% else %}#FFFFFF{% endif %}; color: inherit; transition: all 0.15s ease;">
+      <div style="min-width: 0; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <span style="font-size: 13.5px; font-weight: 700; color: {% if ps.is_selected %}#C2410C{% else %}#0F172A{% endif %};">
+            Phiên thi #{{ ps.ma_phien }}
+          </span>
+          {% if ps.is_latest %}
+          <span class="badge badge-coral" style="font-size: 10px; padding: 1px 6px; font-weight: 700;">Mới nhất</span>
+          {% endif %}
+          {% if ps.is_selected %}
+          <span style="font-size: 11px; font-weight: 600; color: #EA580C;">(Đang xem)</span>
+          {% endif %}
         </div>
-
-        <div style="font-size: 12px; color: #64748B; margin-top: 2px;">
-
-          {{ ps.ngay_hoan_thanh|date:"d/m/Y H:i" }}
-
+        <div style="font-size: 12px; color: #64748B; margin-top: 3px;">
+          <i class="fa-regular fa-calendar" style="font-size: 11px; margin-right: 3px;"></i>{{ ps.ngay_hoan_thanh|date:"d/m/Y H:i" }}
         </div>
-
       </div>
 
       <div style="text-align: right; flex-shrink: 0;">
-
-        <div style="font-size: 14px; font-weight: 700; color: #0F172A;">{{ ps.tong_diem }}đ</div>
-
-        <span style="font-size: 11px; font-weight: 500; color: #64748B;">{{ ps.status_label }}</span>
-
+        <div style="font-size: 14.5px; font-weight: 800; color: #0F172A;">{{ ps.tong_diem }}đ</div>
+        <div style="margin-top: 3px;">
+          {% if ps.trang_thai_duyet == 'GV_DA_DUYET' %}
+          <span class="badge badge-emerald" style="font-size: 10.5px; padding: 2px 7px;"><i class="fa-solid fa-check"></i> GV đã duyệt</span>
+          {% elif ps.is_archived or ps.trang_thai_duyet == 'LUU_TRU' %}
+          <span class="badge badge-gray" style="font-size: 10.5px; padding: 2px 7px; background: #F1F5F9; color: #64748B;"><i class="fa-solid fa-box-archive"></i> Lưu trữ</span>
+          {% else %}
+          <span class="badge badge-coral" style="font-size: 10.5px; padding: 2px 7px; background: #FFF7ED; color: #EA580C; border: 1px solid #FFEDD5;"><i class="fa-regular fa-clock"></i> Chờ duyệt</span>
+          {% endif %}
+        </div>
       </div>
-
     </a>
-
     {% endfor %}
-
   </div>
-
 </div>
-
 {% endif %}
 
 

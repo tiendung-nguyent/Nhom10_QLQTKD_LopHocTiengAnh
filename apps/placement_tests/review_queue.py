@@ -57,11 +57,18 @@ def build_review_rows(selected_session_id=None):
         'ho_so_tu_van__khach_hang', 'bai_kiem_tra', 'ket_qua_kiem_tra'
     ).prefetch_related(
         'bai_lam_ky_nangs'
-    ).order_by('-hoan_thanh', '-bat_dau', '-id')
+    )
+
+    def _phien_sort_key(p):
+        t = p.hoan_thanh or p.bat_dau or p.thoi_gian_hen
+        return (t.timestamp() if t else 0, p.id)
+
+    phiens_all = list(phiens_qs)
+    phiens_all.sort(key=_phien_sort_key, reverse=True)
 
     seen_student_goals = set()
     phiens = []
-    for p in phiens_qs:
+    for p in phiens_all:
         kh = p.ho_so_tu_van.khach_hang if p.ho_so_tu_van else None
         student_key = kh.id if kh else f"HSTV_{p.ho_so_tu_van_id}"
         pair_key = (student_key, detect_test_goal(p))
@@ -94,7 +101,12 @@ def build_review_rows(selected_session_id=None):
             if bl.ky_nang != 'TRAC_NGHIEM' and bl.trang_thai_cham != BaiLamKyNang.TrangThaiCham.GV_DA_DUYET:
                 has_any_pending = True
 
-        is_approved = bool(kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN) or (
+        # Kiểm tra nếu học viên đã được xếp lớp hoặc hoàn tất nhập học -> Đã được công nhận duyệt
+        is_assigned = False
+        if p.ho_so_tu_van:
+            is_assigned = p.ho_so_tu_van.ghi_danhs.exclude(trang_thai='HUY').exists()
+
+        is_approved = bool(kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN) or is_assigned or (
             has_any_skill and not has_any_pending
         )
 
@@ -135,5 +147,5 @@ def build_review_rows(selected_session_id=None):
             'is_selected': p.id == selected_session_id,
         })
 
-    rows.sort(key=lambda x: x['timestamp'], reverse=True)
+    rows.sort(key=lambda x: (x['timestamp'], x['id']), reverse=True)
     return rows
