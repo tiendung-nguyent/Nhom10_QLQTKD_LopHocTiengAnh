@@ -282,12 +282,17 @@ def parse_mcq_summary_structured(raw, goal_type='IELTS', adjustments=None):
 
         'total_questions': 25,
 
-        'questions': []
-
+        'questions': [],
+        'listening_audios': [
+            {'q_num': 1, 'title': 'Project Announcement', 'sub_title': 'Project Progress Review Announcement', 'audio_url': '/static/audio/listening_q1.wav'},
+            {'q_num': 2, 'title': 'Airport Notice', 'sub_title': 'Flight Pre-boarding Announcement', 'audio_url': '/static/audio/listening_q2.wav'},
+            {'q_num': 3, 'title': 'Science Lecture', 'sub_title': 'Environmental Science Lecture Snippet', 'audio_url': '/static/audio/listening_q3.wav'},
+            {'q_num': 4, 'title': 'Customer Delivery Notice', 'sub_title': 'Customer Service Delivery Notice', 'audio_url': '/static/audio/listening_q4.wav'},
+            {'q_num': 5, 'title': 'Library Guidance', 'sub_title': 'University Central Library Announcement', 'audio_url': '/static/audio/listening_q5.wav'},
+        ]
     }
 
     if not raw:
-
         return res
 
 
@@ -682,7 +687,22 @@ def parse_mcq_summary_structured(raw, goal_type='IELTS', adjustments=None):
 
                 q['correct_ans'] = fb_item.get('correct_option', 'A')
 
-
+        # Gán chính xác 5 file audio thật cho 5 câu hỏi Nghe hiểu đầu tiên (Listening 1 - 5)
+        listening_info_map = {
+            1: {'title': 'Project Announcement', 'sub_title': 'Project Progress Review Announcement', 'file': '/static/audio/listening_q1.wav'},
+            2: {'title': 'Airport Notice', 'sub_title': 'Flight Pre-boarding Announcement', 'file': '/static/audio/listening_q2.wav'},
+            3: {'title': 'Science Lecture', 'sub_title': 'Environmental Science Lecture Snippet', 'file': '/static/audio/listening_q3.wav'},
+            4: {'title': 'Customer Delivery Notice', 'sub_title': 'Customer Service Delivery Notice', 'file': '/static/audio/listening_q4.wav'},
+            5: {'title': 'Library Guidance', 'sub_title': 'University Central Library Announcement', 'file': '/static/audio/listening_q5.wav'},
+        }
+        if idx in listening_info_map:
+            l_info = listening_info_map[idx]
+            q['audio_url'] = l_info['file']
+            q['audio_title'] = l_info['title']
+            q['audio_sub_title'] = l_info['sub_title']
+            q['has_audio'] = True
+            if not q.get('category') or q.get('category') in ['GRAMMAR', 'Từ vựng', 'Ngữ pháp']:
+                q['category'] = 'Nghe hiểu'
 
         # Áp dụng điểm điều chỉnh từ Giáo viên nếu có
 
@@ -723,6 +743,14 @@ def parse_mcq_summary_structured(raw, goal_type='IELTS', adjustments=None):
         res['percentage'] = round((res['total_score'] / 40.0) * 100)
 
 
+
+    res['listening_audios'] = [
+        {'q_num': 1, 'title': 'Project Announcement', 'sub_title': 'Project Progress Review Announcement', 'audio_url': '/static/audio/listening_q1.wav'},
+        {'q_num': 2, 'title': 'Airport Notice', 'sub_title': 'Flight Pre-boarding Announcement', 'audio_url': '/static/audio/listening_q2.wav'},
+        {'q_num': 3, 'title': 'Science Lecture', 'sub_title': 'Environmental Science Lecture Snippet', 'audio_url': '/static/audio/listening_q3.wav'},
+        {'q_num': 4, 'title': 'Customer Delivery Notice', 'sub_title': 'Customer Service Delivery Notice', 'audio_url': '/static/audio/listening_q4.wav'},
+        {'q_num': 5, 'title': 'Library Guidance', 'sub_title': 'University Central Library Announcement', 'audio_url': '/static/audio/listening_q5.wav'},
+    ]
 
     return res
 
@@ -2680,12 +2708,18 @@ def _extract_writing_tasks(w_text, goal_type=None):
         prompt_t1 = "The chart below shows the number of films produced by five countries (A, B, C, D, E) in three years (2007, 2008, 2009). Summarize the information by selecting and reporting the main features, and make comparisons where relevant. (Write at least 150 words)."
         prompt_t2 = "Some people believe that unpaid community service should be a compulsory part of high school programmes. To what extent do you agree or disagree? Give reasons and examples from your own knowledge or experience. (Write at least 180 – 220 words)."
 
+    has_chart = ('IELTS' in goal or 'chart' in prompt_t1.lower())
+    image_url = '/static/images/ielts_task1_films_chart.png' if has_chart else ''
+    image_caption = 'Films produced by countries A, B, C, D, E in 2007, 2008, 2009' if has_chart else ''
+
     return [
         {
             'task_key': 'w_task1',
             'task_badge': 'Task 1 (Writing)',
             'task_title': 'Task 1: ' + ('Báo cáo số liệu biểu đồ học thuật (Academic Report on Chart)' if 'IELTS' in goal else 'Viết thư / Email nghiệp vụ'),
             'prompt_question': prompt_t1,
+            'image_url': image_url,
+            'image_caption': image_caption,
             'word_count': len(t1_text.split()) if t1_text and not t1_text.startswith("Học viên chưa") else 0,
             'answer': t1_text,
         },
@@ -5206,7 +5240,15 @@ def teacher_review(request):
 
         speaking_tasks = _extract_speaking_tasks(s_transcript, audio_url, phien_id=phien_db.id)
         writing_tasks = _extract_writing_tasks(w_answer, goal_type=candidate_goal)
+        listening_audios = [
+            {'q_num': 1, 'title': 'Project Announcement', 'sub_title': 'Project Progress Review Announcement', 'audio_url': '/static/audio/listening_q1.wav'},
+            {'q_num': 2, 'title': 'Airport Notice', 'sub_title': 'Flight Pre-boarding Announcement', 'audio_url': '/static/audio/listening_q2.wav'},
+            {'q_num': 3, 'title': 'Science Lecture', 'sub_title': 'Environmental Science Lecture Snippet', 'audio_url': '/static/audio/listening_q3.wav'},
+            {'q_num': 4, 'title': 'Customer Delivery Notice', 'sub_title': 'Customer Service Delivery Notice', 'audio_url': '/static/audio/listening_q4.wav'},
+            {'q_num': 5, 'title': 'Library Guidance', 'sub_title': 'University Central Library Announcement', 'audio_url': '/static/audio/listening_q5.wav'},
+        ]
         detail_data = {
+            'listening_audios': listening_audios,
 
             'hoc_vien_name': kh_obj.ho_ten if (kh_obj and kh_obj.ho_ten) else 'Học viên',
 
@@ -5298,6 +5340,8 @@ def teacher_review(request):
 
                 'speaking_tasks': speaking_tasks,
 
+                'listening_audios': listening_audios,
+
             },
 
             'cham_diem_ai': {
@@ -5339,6 +5383,8 @@ def teacher_review(request):
         'is_detail_view': is_detail_view,
 
         'detail': detail_data,
+
+        'listening_audios': listening_audios if is_detail_view else [],
 
         'page_obj': page_obj,
 

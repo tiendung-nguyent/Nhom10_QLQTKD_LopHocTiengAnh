@@ -53,7 +53,7 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = _env_list(
     'DJANGO_ALLOWED_HOSTS',
-    'localhost,127.0.0.1,nhom10-qlqtkd-lophoctienganh.onrender.com',
+    'localhost,127.0.0.1,testserver,nhom10-qlqtkd-lophoctienganh.onrender.com',
 )
 # Render sets this automatically for the service's public hostname
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
