@@ -4434,372 +4434,296 @@
 
   // ─── THU ÂM TỪNG CÂU SPEAKING + NHẬN DIỆN SPEECH-TO-TEXT + NGHE LẠI VOICE ───
 
+  const recordingMaxSeconds = { t1: 30, t2: 120, t3: 150 };
+
   const recordingState = {
-
-    t1: { isRecording: false, interval: null, remaining: 30 },
-
-    t2: { isRecording: false, interval: null, remaining: 120 },
-
-    t3: { isRecording: false, interval: null, remaining: 150 },
-
+    t1: { isRecording: false, isStarting: false, interval: null, remaining: 30 },
+    t2: { isRecording: false, isStarting: false, interval: null, remaining: 120 },
+    t3: { isRecording: false, isStarting: false, interval: null, remaining: 150 },
   };
 
-
-
   const taskMediaRecorders = { t1: null, t2: null, t3: null };
-
+  const taskStreams = { t1: null, t2: null, t3: null };
   const taskAudioChunks = { t1: [], t2: [], t3: [] };
-
   const taskSpeechTranscripts = { t1: '', t2: '', t3: '' };
-
   const taskSpeechRecs = { t1: null, t2: null, t3: null };
 
-
-
   async function toggleTaskRecording(taskId, maxSeconds) {
-
+    if (testAlreadyCompleted) return;
     const state = recordingState[taskId];
+    if (!state) return;
+
+    // Chặn bấm liên tục (race condition)
+    if (state.isStarting) return;
 
     const btn = document.getElementById(`btn-rec-${taskId}`);
-
     const label = document.getElementById(`label-rec-${taskId}`);
-
     const timer = document.getElementById(`timer-${taskId}`);
-
     const card = document.getElementById(`spk-card-task${taskId.slice(1)}`);
-
     const status = document.getElementById(`status-${taskId}`);
-
     const playbackWrap = document.getElementById(`playback-wrap-${taskId}`);
-
     const audioPlayer = document.getElementById(`audio-player-${taskId}`);
-
-
 
     if (!state.isRecording) {
-
-      try {
-
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-        taskAudioChunks[taskId] = [];
-
-        const mediaRecorder = new MediaRecorder(stream);
-
-        taskMediaRecorders[taskId] = mediaRecorder;
-
-
-
-        mediaRecorder.ondataavailable = e => {
-
-          if (e.data.size > 0) taskAudioChunks[taskId].push(e.data);
-
-        };
-
-
-
-        mediaRecorder.onstop = () => {
-
-          stream.getTracks().forEach(track => track.stop());
-
-          const audioBlob = new Blob(taskAudioChunks[taskId], { type: 'audio/webm' });
-
-          const audioUrl = URL.createObjectURL(audioBlob);
-
-          if (audioPlayer && playbackWrap) {
-
-            audioPlayer.src = audioUrl;
-
-            playbackWrap.style.display = 'block';
-
-          }
-
-        };
-
-
-
-        // Kích hoạt nhận diện giọng nói tiếng Anh trực tiếp qua Web Speech API có đo đạc khoảng dừng ngập ngừng
-
-        taskSpeechTranscripts[taskId] = '';
-
-        let lastSpeechTime = Date.now();
-
-        let taskPauseCount = 0;
-
-        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        if (SpeechRec) {
-
-          try {
-
-            const rec = new SpeechRec();
-
-            rec.continuous = true;
-
-            rec.interimResults = true;
-
-            rec.lang = 'en-US';
-
-            rec.onresult = (ev) => {
-
-              const curTime = Date.now();
-
-              if (curTime - lastSpeechTime > 1800) {
-
-                taskPauseCount++;
-
-              }
-
-              lastSpeechTime = curTime;
-
-
-
-              let liveTxt = '';
-
-              for (let i = 0; i < ev.results.length; ++i) {
-
-                liveTxt += ev.results[i][0].transcript + ' ';
-
-              }
-
-              let baseTranscript = liveTxt.trim();
-
-              if (taskPauseCount > 0) {
-
-                taskSpeechTranscripts[taskId] = baseTranscript + ` [Khoảng dừng ngập ngừng: ${taskPauseCount} lần]`;
-
-              } else {
-
-                taskSpeechTranscripts[taskId] = baseTranscript;
-
-              }
-
-              const liveBox = document.getElementById(`live-speech-${taskId}`);
-
-              if (liveBox) {
-
-                liveBox.style.display = 'block';
-
-                liveBox.innerHTML = `<strong>🗣️ Lời nói được nhận diện:</strong> <em>"${baseTranscript}"</em>` +
-
-                  (taskPauseCount > 0 ? ` <span class="badge badge-coral" style="font-size:11px; margin-left:6px;"><i class="fa-solid fa-pause"></i> Phát hiện ${taskPauseCount} khoảng dừng ngập ngừng</span>` : '');
-
-              }
-
-            };
-
-            rec.onerror = (err) => console.log('SpeechRec info:', err);
-
-            rec.start();
-
-            taskSpeechRecs[taskId] = rec;
-
-          } catch (e) {
-
-            console.warn('Speech recognition start note:', e);
-
-          }
-
+      // 1. Dừng ngay bất kỳ task nào khác đang ghi âm (tránh 2 task cùng chạy)
+      ['t1', 't2', 't3'].forEach(otherId => {
+        if (otherId !== taskId && recordingState[otherId]?.isRecording) {
+          stopTaskRecording(otherId, recordingMaxSeconds[otherId] || 30);
         }
+      });
 
-
-
-        mediaRecorder.start();
-
-        state.isRecording = true;
-
-        state.remaining = maxSeconds;
-
-        card?.classList.add('active-recording');
-
-        btn.className = 'btn btn-primary btn-sm';
-
-        label.textContent = 'Dừng thu âm ngay';
-
-        timer.style.display = 'inline-block';
-
-        timer.textContent = formatTime(state.remaining);
-
-        status.innerHTML = `<span style="color:var(--accent-coral); font-weight:700;"><i class="fa-solid fa-record-vinyl fa-beat"></i> Đang thu âm... (Tự động dừng sau ${maxSeconds}s)</span>`;
-
-
-
-        state.interval = setInterval(() => {
-
-          state.remaining--;
-
-          timer.textContent = formatTime(state.remaining);
-
-          if (state.remaining <= 0) {
-
-            stopTaskRecording(taskId, maxSeconds);
-
-            Toast.show(`Đã đủ thời gian thu âm Task ${taskId.slice(1)}. Bản thu đã được lưu tự động!`, 'success');
-
-          }
-
-        }, 1000);
-
-      } catch (err) {
-
-        console.warn('Microphone error or not available, fallback simulation:', err);
-
-        state.isRecording = true;
-
-        state.remaining = maxSeconds;
-
-        card?.classList.add('active-recording');
-
-        btn.className = 'btn btn-primary btn-sm';
-
-        label.textContent = 'Dừng thu âm ngay';
-
-        timer.style.display = 'inline-block';
-
-        timer.textContent = formatTime(state.remaining);
-
-        status.innerHTML = `<span style="color:var(--accent-coral); font-weight:700;"><i class="fa-solid fa-record-vinyl fa-beat"></i> Đang thu âm (Mô phỏng)...</span>`;
-
-
-
-        state.interval = setInterval(() => {
-
-          state.remaining--;
-
-          timer.textContent = formatTime(state.remaining);
-
-          if (state.remaining <= 0) {
-
-            stopTaskRecording(taskId, maxSeconds);
-
-          }
-
-        }, 1000);
-
-
-
-        if (audioPlayer && playbackWrap) {
-
-          audioPlayer.src = 'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg';
-
-          playbackWrap.style.display = 'block';
-
-        }
-
+      // 2. Dọn dẹp interval cũ nếu còn sót
+      if (state.interval) {
+        clearInterval(state.interval);
+        state.interval = null;
       }
 
+      state.isStarting = true;
+      if (btn) btn.disabled = true;
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        taskStreams[taskId] = stream;
+        taskAudioChunks[taskId] = [];
+        const mediaRecorder = new MediaRecorder(stream);
+        taskMediaRecorders[taskId] = mediaRecorder;
+
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) taskAudioChunks[taskId].push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          try {
+            stream.getTracks().forEach(track => track.stop());
+          } catch(e) {}
+          const audioBlob = new Blob(taskAudioChunks[taskId], { type: 'audio/webm' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          if (audioPlayer && playbackWrap) {
+            audioPlayer.src = audioUrl;
+            playbackWrap.style.display = 'block';
+          }
+        };
+
+        // Kích hoạt nhận diện giọng nói tiếng Anh trực tiếp qua Web Speech API
+        taskSpeechTranscripts[taskId] = '';
+        let lastSpeechTime = Date.now();
+        let taskPauseCount = 0;
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRec) {
+          try {
+            // Dừng speech recognition của các task khác nếu còn
+            ['t1', 't2', 't3'].forEach(oId => {
+              if (taskSpeechRecs[oId]) {
+                try { taskSpeechRecs[oId].stop(); } catch(e) {}
+                taskSpeechRecs[oId] = null;
+              }
+            });
+
+            const rec = new SpeechRec();
+            rec.continuous = true;
+            rec.interimResults = true;
+            rec.lang = 'en-US';
+            rec.onresult = (ev) => {
+              const curTime = Date.now();
+              if (curTime - lastSpeechTime > 1800) {
+                taskPauseCount++;
+              }
+              lastSpeechTime = curTime;
+
+              let liveTxt = '';
+              for (let i = 0; i < ev.results.length; ++i) {
+                liveTxt += ev.results[i][0].transcript + ' ';
+              }
+              let baseTranscript = liveTxt.trim();
+              if (taskPauseCount > 0) {
+                taskSpeechTranscripts[taskId] = baseTranscript + ` [Khoảng dừng ngập ngừng: ${taskPauseCount} lần]`;
+              } else {
+                taskSpeechTranscripts[taskId] = baseTranscript;
+              }
+              const liveBox = document.getElementById(`live-speech-${taskId}`);
+              if (liveBox) {
+                liveBox.style.display = 'block';
+                liveBox.innerHTML = `<strong>🗣️ Lời nói được nhận diện:</strong> <em>"${baseTranscript}"</em>` +
+                  (taskPauseCount > 0 ? ` <span class="badge badge-coral" style="font-size:11px; margin-left:6px;"><i class="fa-solid fa-pause"></i> Phát hiện ${taskPauseCount} khoảng dừng ngập ngừng</span>` : '');
+              }
+            };
+            rec.onerror = (err) => console.log('SpeechRec info:', err);
+            rec.start();
+            taskSpeechRecs[taskId] = rec;
+          } catch (e) {
+            console.warn('Speech recognition start note:', e);
+          }
+        }
+
+        mediaRecorder.start();
+        state.isRecording = true;
+        state.isStarting = false;
+        state.remaining = maxSeconds;
+
+        card?.classList.add('active-recording');
+        if (btn) {
+          btn.disabled = false;
+          btn.className = 'btn btn-primary btn-sm';
+        }
+        if (label) label.textContent = 'Dừng thu âm ngay';
+        if (timer) {
+          timer.style.display = 'inline-block';
+          timer.textContent = formatTime(state.remaining);
+        }
+        if (status) {
+          status.innerHTML = `<span style="color:var(--accent-coral); font-weight:700;"><i class="fa-solid fa-record-vinyl fa-beat"></i> Đang thu âm... (Tự động dừng sau ${maxSeconds}s)</span>`;
+        }
+
+        const timerId = setInterval(() => {
+          if (testAlreadyCompleted || !state.isRecording) {
+            clearInterval(timerId);
+            if (state.interval === timerId) state.interval = null;
+            return;
+          }
+
+          state.remaining--;
+          if (timer) timer.textContent = formatTime(Math.max(0, state.remaining));
+
+          if (state.remaining <= 0) {
+            clearInterval(timerId);
+            if (state.interval === timerId) state.interval = null;
+            stopTaskRecording(taskId, maxSeconds);
+            Toast.show(`Đã đủ thời gian thu âm Task ${taskId.slice(1)}. Bản thu đã được lưu tự động!`, 'success');
+          }
+        }, 1000);
+        state.interval = timerId;
+
+      } catch (err) {
+        console.warn('Microphone error or not available, fallback simulation:', err);
+        state.isRecording = true;
+        state.isStarting = false;
+        state.remaining = maxSeconds;
+
+        card?.classList.add('active-recording');
+        if (btn) {
+          btn.disabled = false;
+          btn.className = 'btn btn-primary btn-sm';
+        }
+        if (label) label.textContent = 'Dừng thu âm ngay';
+        if (timer) {
+          timer.style.display = 'inline-block';
+          timer.textContent = formatTime(state.remaining);
+        }
+        if (status) {
+          status.innerHTML = `<span style="color:var(--accent-coral); font-weight:700;"><i class="fa-solid fa-record-vinyl fa-beat"></i> Đang thu âm (Mô phỏng)...</span>`;
+        }
+
+        const timerId = setInterval(() => {
+          if (testAlreadyCompleted || !state.isRecording) {
+            clearInterval(timerId);
+            if (state.interval === timerId) state.interval = null;
+            return;
+          }
+
+          state.remaining--;
+          if (timer) timer.textContent = formatTime(Math.max(0, state.remaining));
+
+          if (state.remaining <= 0) {
+            clearInterval(timerId);
+            if (state.interval === timerId) state.interval = null;
+            stopTaskRecording(taskId, maxSeconds);
+            Toast.show(`Đã đủ thời gian thu âm Task ${taskId.slice(1)}. Bản thu đã được lưu tự động!`, 'success');
+          }
+        }, 1000);
+        state.interval = timerId;
+
+        if (audioPlayer && playbackWrap) {
+          audioPlayer.src = 'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg';
+          playbackWrap.style.display = 'block';
+        }
+      }
     } else {
-
+      state.isStarting = false;
+      if (btn) btn.disabled = false;
       stopTaskRecording(taskId, maxSeconds);
-
       Toast.show(`Đã hoàn tất thu âm Task ${taskId.slice(1)}! Bạn có thể bấm nghe lại voice bên dưới.`, 'success');
-
     }
-
   }
-
-
 
   function stopTaskRecording(taskId, maxSeconds) {
-
     const state = recordingState[taskId];
+    if (!state) return;
 
-    if (state.interval) clearInterval(state.interval);
-
+    if (state.interval) {
+      clearInterval(state.interval);
+      state.interval = null;
+    }
     state.isRecording = false;
+    state.isStarting = false;
 
+    // Dừng stream microphone phần cứng
+    if (taskStreams[taskId]) {
+      try {
+        taskStreams[taskId].getTracks().forEach(track => track.stop());
+      } catch(e) {}
+      taskStreams[taskId] = null;
+    }
 
-
+    // Dừng Speech Recognition
     if (taskSpeechRecs[taskId]) {
-
       try { taskSpeechRecs[taskId].stop(); } catch(e) {}
-
+      taskSpeechRecs[taskId] = null;
     }
 
-
-
-    if (taskMediaRecorders[taskId] && taskMediaRecorders[taskId].state === 'recording') {
-
-      try { taskMediaRecorders[taskId].stop(); } catch(e) {}
-
+    // Dừng Media Recorder
+    if (taskMediaRecorders[taskId]) {
+      try {
+        if (taskMediaRecorders[taskId].state !== 'inactive') {
+          taskMediaRecorders[taskId].stop();
+        }
+      } catch(e) {}
+      taskMediaRecorders[taskId] = null;
     }
-
-
 
     const btn = document.getElementById(`btn-rec-${taskId}`);
-
     const label = document.getElementById(`label-rec-${taskId}`);
-
     const card = document.getElementById(`spk-card-task${taskId.slice(1)}`);
-
     const status = document.getElementById(`status-${taskId}`);
-
+    const timer = document.getElementById(`timer-${taskId}`);
     const hiddenData = document.getElementById(`spk-task${taskId.slice(1)}-data`);
 
-
-
     card?.classList.remove('active-recording');
+    if (btn) {
+      btn.disabled = false;
+      btn.className = 'btn btn-outline btn-sm';
+    }
+    if (label) label.textContent = `Thu âm lại Task ${taskId.slice(1)}`;
+    if (timer) timer.style.display = 'none';
 
-    btn.className = 'btn btn-outline btn-sm';
-
-    label.textContent = `Thu âm lại Task ${taskId.slice(1)}`;
-
-    const duration = maxSeconds - state.remaining;
-
-
+    const duration = maxSeconds - Math.max(0, state.remaining);
 
     const transcriptText = taskSpeechTranscripts[taskId]?.trim() || '';
-
     if (duration >= 3 && transcriptText) {
-
       if (hiddenData) hiddenData.value = transcriptText;
-
-      status.innerHTML = `<span style="color:var(--accent-emerald); font-weight:700;"><i class="fa-solid fa-circle-check"></i> Đã thu âm & nhận diện giọng nói (${duration}s) · Hãy nghe lại bên dưới</span>`;
-
+      if (status) status.innerHTML = `<span style="color:var(--accent-emerald); font-weight:700;"><i class="fa-solid fa-circle-check"></i> Đã thu âm & nhận diện giọng nói (${duration}s) · Hãy nghe lại bên dưới</span>`;
     } else if (duration >= 3) {
-
       // Có thu âm âm thanh thực tế
-
       if (hiddenData) hiddenData.value = `Task ${taskId.slice(1)} spoken response recorded for ${duration} seconds.`;
-
-      status.innerHTML = `<span style="color:var(--accent-emerald); font-weight:700;"><i class="fa-solid fa-circle-check"></i> Đã thu âm (${duration}s) · Hãy nghe lại bên dưới</span>`;
-
+      if (status) status.innerHTML = `<span style="color:var(--accent-emerald); font-weight:700;"><i class="fa-solid fa-circle-check"></i> Đã thu âm (${duration}s) · Hãy nghe lại bên dưới</span>`;
     } else {
-
       // Dưới 3s -> Không tính là có giọng nói
-
       if (hiddenData) hiddenData.value = '';
-
-      status.innerHTML = `<span style="color:var(--accent-coral); font-weight:700;"><i class="fa-solid fa-triangle-exclamation"></i> Thời lượng nói quá ngắn (< 3s). Chưa phát hiện lời nói.</span>`;
-
+      if (status) status.innerHTML = `<span style="color:var(--accent-coral); font-weight:700;"><i class="fa-solid fa-triangle-exclamation"></i> Thời lượng nói quá ngắn (< 3s). Chưa phát hiện lời nói.</span>`;
     }
-
   }
-
-
 
   function retakeTaskAudio(taskId, maxSeconds) {
-
+    stopTaskRecording(taskId, maxSeconds);
     const playbackWrap = document.getElementById(`playback-wrap-${taskId}`);
-
     const audioPlayer = document.getElementById(`audio-player-${taskId}`);
-
     if (audioPlayer) { audioPlayer.pause(); audioPlayer.src = ''; }
-
     if (playbackWrap) playbackWrap.style.display = 'none';
-
     const status = document.getElementById(`status-${taskId}`);
-
     if (status) status.innerHTML = `<i class="fa-solid fa-circle-stop"></i> Hệ thống tự động ngắt thu âm sau ${maxSeconds}s`;
-
     toggleTaskRecording(taskId, maxSeconds);
-
   }
 
-
-
   // ─── ĐIỀU HƯỚNG TAB XEM LẠI BÀI ĐÃ NỘP (TRẮC NGHIỆM / VIẾT / NÓI) ───
-
   function switchReviewTab(tab) {
 
     document.querySelectorAll('.review-tab-btn').forEach(b => b.classList.remove('active'));
@@ -5635,6 +5559,14 @@
   // ─── NỘP TOÀN BỘ WRITING & SPEAKING GỘP CHO GEMINI AI ───────
 
   async function submitCombinedWritingSpeaking() {
+    // Dừng toàn bộ các tác vụ thu âm và timer trước khi nộp bài
+    ['t1', 't2', 't3'].forEach(id => {
+      stopTaskRecording(id, recordingMaxSeconds[id] || 30);
+    });
+    if (activeTimerInterval) {
+      clearInterval(activeTimerInterval);
+      activeTimerInterval = null;
+    }
 
     const btn = document.getElementById('btn-submit-combined');
 
@@ -5809,22 +5741,25 @@
 
 
         testAlreadyCompleted = true;
-
+        ['t1', 't2', 't3'].forEach(id => {
+          stopTaskRecording(id, recordingMaxSeconds[id] || 30);
+        });
+        if (activeTimerInterval) {
+          clearInterval(activeTimerInterval);
+          activeTimerInterval = null;
+        }
         mcqSubmitted = false;
-
         sessionStorage.removeItem('mcq_started');
-
         sessionStorage.removeItem('ws_started');
-
         sessionStorage.removeItem('placement_timer_mcq');
-
         sessionStorage.removeItem('placement_timer_ws');
-
         localStorage.removeItem('placement_draft');
-
         updateTimerText();
 
-
+        // Xóa sạch mọi toast thông báo cũ (như toast thu âm task) trước khi mở popup kết quả
+        if (typeof Toast !== 'undefined' && Toast.clear) {
+          Toast.clear();
+        }
 
         openModal('result-feedback-modal');
 
@@ -5952,6 +5887,51 @@
 
       return;
 
+    }
+
+    // Kiểm tra tính hợp lệ của ngày sinh: không ở tương lai và phải từ 2 tuổi trở lên
+    const birthParts = ngaySinh.split('-');
+    if (birthParts.length === 3) {
+      const birthYear = parseInt(birthParts[0], 10);
+      const birthMonth = parseInt(birthParts[1], 10) - 1;
+      const birthDay = parseInt(birthParts[2], 10);
+      const birthDate = new Date(birthYear, birthMonth, birthDay);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (isNaN(birthDate.getTime())) {
+        Toast.show('Định dạng Ngày sinh không hợp lệ. Vui lòng chọn lại!', 'warning');
+        document.getElementById('gate-ngaysinh')?.focus();
+        return;
+      }
+
+      if (birthDate > today) {
+        Toast.show('Ngày sinh không hợp lệ! Ngày sinh không thể nằm trong tương lai. Vui lòng chọn lại!', 'warning');
+        const inp = document.getElementById('gate-ngaysinh');
+        if (inp) {
+          inp.focus();
+          inp.style.borderColor = 'var(--accent-coral)';
+          setTimeout(() => { inp.style.borderColor = ''; }, 3000);
+        }
+        return;
+      }
+
+      let age = today.getFullYear() - birthYear;
+      const m = today.getMonth() - birthMonth;
+      if (m < 0 || (m === 0 && today.getDate() < birthDay)) {
+        age--;
+      }
+
+      if (age < 2) {
+        Toast.show('Học viên phải từ 2 tuổi trở lên mới được tham gia bài kiểm tra đầu vào. Vui lòng kiểm tra lại ngày sinh!', 'warning');
+        const inp = document.getElementById('gate-ngaysinh');
+        if (inp) {
+          inp.focus();
+          inp.style.borderColor = 'var(--accent-coral)';
+          setTimeout(() => { inp.style.borderColor = ''; }, 3000);
+        }
+        return;
+      }
     }
 
 
