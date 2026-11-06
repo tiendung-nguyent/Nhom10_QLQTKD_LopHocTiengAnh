@@ -2619,7 +2619,8 @@ def _extract_speaking_tasks(s_transcript, audio_url, phien_id=None):
             'task_key': 'task1',
             'task_badge': 'Task 1 (30 giây)',
             'task_title': 'Task 1: Giới thiệu bản thân & Mục tiêu học tập',
-            'prompt_desc': 'Trả lời câu hỏi ngắn cá nhân: Giới thiệu bản thân, mục tiêu cải thiện tiếng Anh, hoặc thói quen học tập hàng ngày.',
+            'prompt_desc': 'Part 1 (Personal Interview - 30s): Trả lời câu hỏi ngắn cá nhân. Giới thiệu bản thân, mục tiêu cải thiện tiếng Anh, hoặc thói quen học tập hàng ngày.',
+            'prompt_question': 'Part 1 (Personal Interview - 30 seconds): Answer personal introduction questions. Talk about yourself, your English learning background, and why you want to improve your English skills.',
             'transcript': t1_text,
             'audio_url': t1_audio,
             'has_audio': bool(t1_audio),
@@ -2628,13 +2629,75 @@ def _extract_speaking_tasks(s_transcript, audio_url, phien_id=None):
             'task_key': 'task2',
             'task_badge': 'Task 2 (120 giây)',
             'task_title': 'Task 2: Thuyết trình theo chủ đề chuyên sâu',
-            'prompt_desc': 'Thuyết trình chuyên sâu theo chủ đề được giao: Trình bày quan điểm cá nhân, cấu trúc lập luận và ví dụ thực tế.',
+            'prompt_desc': 'Part 2 (Topic Presentation - 120s): Thuyết trình chuyên sâu theo chủ đề được giao. Trình bày quan điểm cá nhân, cấu trúc lập luận và ví dụ thực tế.',
+            'prompt_question': 'Part 2 (Topic Presentation - 120 seconds): Describe a memorable project or experience that you successfully accomplished during your work or academic studies. You should say: what the project was, who you worked with, what challenges you encountered, and explain why this project was meaningful to you.',
             'transcript': t2_text,
             'audio_url': t2_audio,
             'has_audio': bool(t2_audio),
         }
     ]
     return tasks
+
+
+def _extract_writing_tasks(w_text, goal_type=None):
+    """
+    Tách bài viết Writing thành 2 Task (Task 1 và Task 2)
+    kèm đề bài chuẩn tương ứng theo mục tiêu học tập.
+    """
+    import re
+
+    t1_text = ""
+    t2_text = ""
+
+    if w_text:
+        w_str = str(w_text).strip()
+        m1 = re.search(r'(?:\[TASK 1\]|Task 1:)[\s]*([\s\S]*?)(?=(?:\[TASK 2\]|Task 2:)|$)', w_str, re.IGNORECASE)
+        m2 = re.search(r'(?:\[TASK 2\]|Task 2:)[\s]*([\s\S]*?)$', w_str, re.IGNORECASE)
+        if m1:
+            t1_text = m1.group(1).strip()
+        if m2:
+            t2_text = m2.group(1).strip()
+
+        if not t1_text and not t2_text:
+            t1_text = w_str
+
+    if not t1_text:
+        t1_text = "Học viên chưa nộp bài viết cho Task 1."
+    if not t2_text:
+        t2_text = "Học viên chưa nộp bài viết cho Task 2."
+
+    goal = (goal_type or 'IELTS').upper()
+    if 'GIAO_TIEP' in goal:
+        prompt_t1 = "You are a project officer at a foreign trade company. Write an email to an international client: (1) Updating them on current progress of quarterly deliverables; (2) Requesting a brief 15-minute clarification call regarding contract specifications. (Write between 80 and 120 words)."
+        prompt_t2 = "In modern workplaces, many companies have transitioned to flexible hybrid remote working arrangements. Write an essay discussing the advantages and disadvantages of remote working for employees and employers. (Write between 150 and 200 words)."
+    elif 'DAU_RA' in goal or 'DH' in goal:
+        prompt_t1 = "You are a senior undergraduate preparing your graduation portfolio. Write an email to your academic department advisor requesting confirmation of completed elective credits and thesis defense schedule. (Write between 80 and 120 words)."
+        prompt_t2 = "Some university students prefer part-time jobs during their degree programmes, while others believe full-time academic commitment is essential. Discuss both views and give your opinion. (Write between 180 and 220 words)."
+    elif 'MAT_GOC' in goal:
+        prompt_t1 = "Write a short friendly email to your new English tutor introducing your name, occupation, available study time, and what you find most challenging when learning English. (Write between 80 and 120 words)."
+        prompt_t2 = "Learning a foreign language requires daily dedication. Write a short paragraph explaining why English is important for your personal growth or future job prospects. (Write between 100 and 150 words)."
+    else:  # IELTS
+        prompt_t1 = "The chart below shows the number of films produced by five countries (A, B, C, D, E) in three years (2007, 2008, 2009). Summarize the information by selecting and reporting the main features, and make comparisons where relevant. (Write at least 150 words)."
+        prompt_t2 = "Some people believe that unpaid community service should be a compulsory part of high school programmes. To what extent do you agree or disagree? Give reasons and examples from your own knowledge or experience. (Write at least 180 – 220 words)."
+
+    return [
+        {
+            'task_key': 'w_task1',
+            'task_badge': 'Task 1 (Writing)',
+            'task_title': 'Task 1: ' + ('Báo cáo số liệu biểu đồ học thuật (Academic Report on Chart)' if 'IELTS' in goal else 'Viết thư / Email nghiệp vụ'),
+            'prompt_question': prompt_t1,
+            'word_count': len(t1_text.split()) if t1_text and not t1_text.startswith("Học viên chưa") else 0,
+            'answer': t1_text,
+        },
+        {
+            'task_key': 'w_task2',
+            'task_badge': 'Task 2 (Writing)',
+            'task_title': 'Task 2: Viết bài luận nghị luận xã hội (Academic Essay)',
+            'prompt_question': prompt_t2,
+            'word_count': len(t2_text.split()) if t2_text and not t2_text.startswith("Học viên chưa") else 0,
+            'answer': t2_text,
+        }
+    ]
 
 
 def submit_writing_speaking(request):
@@ -3421,7 +3484,7 @@ def test_result(request):
     if kh:
         sync_student_test_sessions(kh)
 
-        db_phiens_qs = PhienLamBai.objects.filter(
+        db_phiens = PhienLamBai.objects.filter(
             ho_so_tu_van__khach_hang=kh
         ).filter(
             models.Q(trang_thai=PhienLamBai.TrangThai.HOAN_THANH) | models.Q(bai_lam_ky_nangs__isnull=False)
@@ -3429,28 +3492,30 @@ def test_result(request):
             'bai_lam_ky_nangs',
             'cau_tra_lois__cham_diem_ais',
             'cau_tra_lois__cau_hoi'
-        )
+        ).order_by('-id')
 
-        def _phien_sort_key(p):
-            t = p.hoan_thanh or p.bat_dau or p.thoi_gian_hen
-            return (t.timestamp() if t else 0, p.id)
-
-        db_phiens = list(db_phiens_qs)
-        db_phiens.sort(key=_phien_sort_key, reverse=True)
+        latest_phien_id = db_phiens.first().id if db_phiens.exists() else None
 
         for idx, p in enumerate(db_phiens):
             tot_sc = 0.0
             is_approved = False
             is_archived = False
-            is_latest = (idx == 0)
+            is_latest = (p.id == latest_phien_id or idx == 0)
 
             kq = getattr(p, 'ket_qua_kiem_tra', None)
             if kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
                 is_approved = True
-            elif kq and kq.trang_thai == KetQuaKiemTra.TrangThai.LUU_TRU:
+            elif not is_latest and kq and kq.trang_thai == KetQuaKiemTra.TrangThai.LUU_TRU:
                 is_archived = True
             elif not is_latest and not is_approved:
                 is_archived = True
+
+            # Bài làm mới nhất tuyệt đối không bị hiển thị thành Lưu trữ; nếu chưa duyệt thì phải là Chờ GV duyệt
+            if is_latest and not is_approved:
+                is_archived = False
+                if kq and kq.trang_thai == KetQuaKiemTra.TrangThai.LUU_TRU:
+                    kq.trang_thai = KetQuaKiemTra.TrangThai.CHO_DUYET
+                    kq.save(update_fields=['trang_thai'])
 
             for bl in p.bai_lam_ky_nangs.all():
                 bl_score = float(bl.diem_dieu_chinh if bl.diem_dieu_chinh is not None else (bl.diem_tu_dong or 0.0))
@@ -3471,7 +3536,9 @@ def test_result(request):
                 st_label = 'Lưu trữ'
             else:
                 st_key = 'CHO_DUYET'
-                st_label = 'Chờ duyệt'
+                st_label = 'Chờ GV duyệt'
+
+
 
             danh_sach_phien.append({
                 'id': p.id,
@@ -5138,7 +5205,7 @@ def teacher_review(request):
 
 
         speaking_tasks = _extract_speaking_tasks(s_transcript, audio_url, phien_id=phien_db.id)
-
+        writing_tasks = _extract_writing_tasks(w_answer, goal_type=candidate_goal)
         detail_data = {
 
             'hoc_vien_name': kh_obj.ho_ten if (kh_obj and kh_obj.ho_ten) else 'Học viên',
@@ -5220,6 +5287,8 @@ def teacher_review(request):
                 'transcript': s_transcript,
 
                 'writing_text': w_answer,
+
+                'writing_tasks': writing_tasks,
 
                 'mcq_summary': mcq_summary,
 
