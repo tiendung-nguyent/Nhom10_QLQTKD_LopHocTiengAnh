@@ -61,8 +61,4 @@ Biến môi trường khai báo ở **Render → service → Environment**. Khô
 
 Đổi `DJANGO_SECRET_KEY` sẽ làm mọi phiên đăng nhập hiện tại hết hạn, người dùng chỉ cần đăng nhập lại. Cookie session và CSRF chỉ được gửi qua HTTPS.
 
-## Ghi chú thiết kế
 
-- **Danh sách chờ duyệt**: `apps/placement_tests/review_queue.py::build_review_rows()` là nguồn dữ liệu duy nhất cho cả Dashboard GV và trang Duyệt bài AI. Danh sách chỉ giữ bài mới nhất theo từng học viên và mục tiêu, và bỏ các kết quả "Lưu trữ". Một bài được coi là đã duyệt khi kết quả đã xác nhận, hoặc khi mọi kỹ năng tự luận (Speaking, Writing) đều đã được GV duyệt.
-- **Mục tiêu học**: `detect_test_goal()` xác định IELTS / DAU_RA_DH / GIAO_TIEP / MAT_GOC từ tên bài test. Mọi view dùng chung hàm này.
-- **Hướng tách tiếp `placement_tests/views.py`** (hiện còn khoảng 5.800 dòng): đưa phần phòng thi (`test_room`, `submit_*`, `reset_*`), phần duyệt bài (`teacher_review`, `approve_skill`, `update_mcq_score`, `finalize_test_result`) và phần dựng dữ liệu kết quả thành các module riêng trong package `views/`, giữ nguyên `urls.py`.
