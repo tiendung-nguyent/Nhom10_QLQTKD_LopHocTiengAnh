@@ -246,6 +246,41 @@ def student_auth(request, default_tab='login'):
                     except ValueError:
                         pass
 
+                if not ngay_sinh:
+                    return render(request, 'users/login_standalone.html', {
+                        'error': 'Định dạng ngày sinh không hợp lệ. Vui lòng chọn lại!',
+                        'tab': 'register',
+                        'email': email,
+                        'ho_ten': ho_ten,
+                        'so_dien_thoai': so_dien_thoai,
+                        'next': next_target,
+                        'sample_accounts': get_sample_accounts(),
+                    })
+
+                today = timezone.now().date()
+                if ngay_sinh > today:
+                    return render(request, 'users/login_standalone.html', {
+                        'error': 'Ngày sinh không hợp lệ! Ngày sinh không thể nằm trong tương lai. Vui lòng chọn lại!',
+                        'tab': 'register',
+                        'email': email,
+                        'ho_ten': ho_ten,
+                        'so_dien_thoai': so_dien_thoai,
+                        'next': next_target,
+                        'sample_accounts': get_sample_accounts(),
+                    })
+
+                age = today.year - ngay_sinh.year - ((today.month, today.day) < (ngay_sinh.month, ngay_sinh.day))
+                if age < 2:
+                    return render(request, 'users/login_standalone.html', {
+                        'error': 'Học viên phải từ 2 tuổi trở lên để đăng ký tài khoản. Vui lòng kiểm tra lại ngày sinh!',
+                        'tab': 'register',
+                        'email': email,
+                        'ho_ten': ho_ten,
+                        'so_dien_thoai': so_dien_thoai,
+                        'next': next_target,
+                        'sample_accounts': get_sample_accounts(),
+                    })
+
             # Tạo khách hàng học viên mới
             kh = KhachHang.objects.create(
                 email=email,
@@ -434,6 +469,20 @@ def quick_profile_api(request):
                 'message': 'Vui lòng chọn Ngày sinh của học viên (bắt buộc)!'
             }, status=400)
 
+        today = timezone.now().date()
+        if ngay_sinh > today:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Ngày sinh không hợp lệ! Ngày sinh không thể nằm trong tương lai. Vui lòng chọn lại!'
+            }, status=400)
+
+        age = today.year - ngay_sinh.year - ((today.month, today.day) < (ngay_sinh.month, ngay_sinh.day))
+        if age < 2:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Học viên phải từ 2 tuổi trở lên mới được tham gia bài kiểm tra đầu vào. Vui lòng kiểm tra lại ngày sinh!'
+            }, status=400)
+
         if existing_kh:
             existing_kh.ho_ten = ho_ten
             existing_kh.so_dien_thoai = so_dien_thoai
@@ -591,10 +640,24 @@ def student_dashboard(request):
             if phien_hen:
                 appointment_time = phien_hen.thoi_gian_hen
 
-            latest_phien = PhienLamBai.objects.filter(
+            # Đồng bộ trạng thái bài test nhiều lần: bài mới nhất là chờ duyệt, bài cũ lưu trữ
+            try:
+                from apps.placement_tests.views import sync_student_test_sessions
+                sync_student_test_sessions(student_obj)
+            except Exception:
+                pass
+
+            phiens_list = list(PhienLamBai.objects.filter(
                 ho_so_tu_van=hstv_obj,
                 trang_thai=PhienLamBai.TrangThai.HOAN_THANH
-            ).order_by('-hoan_thanh', '-id').first()
+            ).select_related('ket_qua_kiem_tra').prefetch_related('bai_lam_ky_nangs'))
+
+            def _phien_sort_key(p):
+                t = p.hoan_thanh or p.bat_dau or p.thoi_gian_hen
+                return (t.timestamp() if t else 0, p.id)
+
+            phiens_list.sort(key=_phien_sort_key, reverse=True)
+            latest_phien = phiens_list[0] if phiens_list else None
 
             if latest_phien:
                 test_completed = True
@@ -641,15 +704,22 @@ def student_dashboard(request):
     hoc_phi_phai_dong = 0.0
     hoc_phi_da_dong = 0.0
     is_tuition_paid = False
+    is_tuition_pending = False
 
     if has_assigned_class and assigned_ghi_danh:
         phieu_hp = PhieuHocPhi.objects.filter(ghi_danh=assigned_ghi_danh).first()
         if phieu_hp:
             has_tuition_bill = True
             hoc_phi_phai_dong = float(phieu_hp.so_tien)
-            if phieu_hp.trang_thai in [PhieuHocPhi.TrangThai.DA_TT, PhieuHocPhi.TrangThai.DU]:
+            from apps.billing.models import GiaoDichThanhToan
+            has_success_tx = GiaoDichThanhToan.objects.filter(phieu_hoc_phi=phieu_hp, trang_thai='THANH_CONG').exists()
+            if (phieu_hp.trang_thai in [PhieuHocPhi.TrangThai.DA_TT, PhieuHocPhi.TrangThai.DU]) or has_success_tx:
                 hoc_phi_da_dong = hoc_phi_phai_dong
                 is_tuition_paid = True
+            else:
+                has_pending_tx = GiaoDichThanhToan.objects.filter(phieu_hoc_phi=phieu_hp, trang_thai='CHO_DUYET').exists()
+                if phieu_hp.hoc_vien_da_xac_nhan or phieu_hp.trang_thai == PhieuHocPhi.TrangThai.CHO_XAC_NHAN or has_pending_tx:
+                    is_tuition_pending = True
 
     # 4. ĐỒNG BỘ TRẠNG THÁI DUYỆT ĐIỂM BÀI TEST:
     # Khi học viên đã được xếp lớp hoặc đã đóng học phí / hoàn tất nhập học, hoặc kết quả kiểm tra
@@ -686,6 +756,10 @@ def student_dashboard(request):
         ho_so_status = 'Đã hoàn tất nhập học'
         current_step = 4
         current_step_label = 'Bước 4 · Đã nhập học chính thức'
+    elif is_tuition_pending:
+        ho_so_status = 'Chờ đối soát học phí'
+        current_step = 4
+        current_step_label = f'Bước 4 · Đã báo chuyển khoản {assigned_lop_hoc.ten_lop if assigned_lop_hoc else ""}, chờ đối soát'
     elif has_assigned_class:
         ho_so_status = 'Đã xếp lớp (Chờ học phí)'
         current_step = 3
@@ -756,6 +830,7 @@ def student_dashboard(request):
         'hoc_phi_phai_dong': hoc_phi_phai_dong,
         'hoc_phi_da_dong': hoc_phi_da_dong,
         'is_tuition_paid': is_tuition_paid,
+        'is_tuition_pending': is_tuition_pending,
         'khoa_hoc_phi': f"{int(hoc_phi_phai_dong):,}".replace(',', '.') if hoc_phi_phai_dong else '0',
         'next_class_date': (assigned_lop_hoc.ngay_khai_giang if assigned_lop_hoc else None),
 

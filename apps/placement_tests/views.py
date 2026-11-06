@@ -2,7 +2,7 @@ import json
 
 import logging
 
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from django.shortcuts import render, redirect
 
@@ -68,6 +68,79 @@ def _normalize_goal(bai_ten):
     if 'MAT_GOC' in b or 'FOUNDATION' in b: return 'MAT_GOC'
 
     return ''
+
+
+def sync_student_test_sessions(student):
+    """
+    Quy tắc nghiệp vụ: Một thí sinh có thể làm bài test nhiều lần.
+    - Sắp xếp tất cả các bài thi từ MỚI NHẤT đến CŨ NHẤT (theo thời gian hoàn thành/bắt đầu/ID).
+    - Bài MỚI NHẤT:
+      + Nếu chưa được giáo viên duyệt (DA_XAC_NHAN): Trạng thái là CHO_DUYET ('Chờ duyệt').
+    - Các bài CŨ HƠN:
+      + Nếu chưa được giáo viên duyệt (DA_XAC_NHAN): Tự động chuyển thành LUU_TRU ('Lưu trữ').
+      + Nếu đã được duyệt (DA_XAC_NHAN): Giữ nguyên điểm và trạng thái duyệt.
+    """
+    if not student:
+        return
+
+    from apps.placement_tests.models import PhienLamBai, KetQuaKiemTra, BaiLamKyNang
+
+    phiens_qs = PhienLamBai.objects.filter(
+        ho_so_tu_van__khach_hang=student
+    ).filter(
+        models.Q(trang_thai=PhienLamBai.TrangThai.HOAN_THANH) | models.Q(bai_lam_ky_nangs__isnull=False)
+    ).distinct().select_related('ket_qua_kiem_tra').prefetch_related('bai_lam_ky_nangs')
+
+    phiens = list(phiens_qs)
+    if not phiens:
+        return
+
+    def _sort_key(p):
+        t = p.hoan_thanh or p.bat_dau or p.thoi_gian_hen
+        return (t.timestamp() if t else 0, p.id)
+
+    phiens.sort(key=_sort_key, reverse=True)
+
+    # 1. Bài mới nhất (index 0)
+    p_latest = phiens[0]
+    kq_latest = getattr(p_latest, 'ket_qua_kiem_tra', None)
+    if kq_latest:
+        if kq_latest.trang_thai not in [KetQuaKiemTra.TrangThai.DA_XAC_NHAN, KetQuaKiemTra.TrangThai.CHO_DUYET]:
+            kq_latest.trang_thai = KetQuaKiemTra.TrangThai.CHO_DUYET
+            kq_latest.save(update_fields=['trang_thai'])
+    else:
+        tot = 0.0
+        for bl in p_latest.bai_lam_ky_nangs.all():
+            tot += float(bl.diem_dieu_chinh if bl.diem_dieu_chinh is not None else (bl.diem_tu_dong or 0.0))
+        cefr = 'B1'
+        if tot >= 75: cefr = 'B2'
+        elif tot >= 55: cefr = 'B1'
+        elif tot > 0: cefr = 'A2'
+        KetQuaKiemTra.objects.create(
+            phien_lam_bai=p_latest,
+            tong_diem=round(tot, 1),
+            trinh_do=cefr,
+            trang_thai=KetQuaKiemTra.TrangThai.CHO_DUYET
+        )
+
+    # 2. Các bài cũ hơn (index > 0): nếu chưa duyệt -> LUU_TRU
+    for p_old in phiens[1:]:
+        kq_old = getattr(p_old, 'ket_qua_kiem_tra', None)
+        if kq_old:
+            if kq_old.trang_thai != KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
+                if kq_old.trang_thai != KetQuaKiemTra.TrangThai.LUU_TRU:
+                    kq_old.trang_thai = KetQuaKiemTra.TrangThai.LUU_TRU
+                    kq_old.save(update_fields=['trang_thai'])
+        else:
+            tot = 0.0
+            for bl in p_old.bai_lam_ky_nangs.all():
+                tot += float(bl.diem_dieu_chinh if bl.diem_dieu_chinh is not None else (bl.diem_tu_dong or 0.0))
+            KetQuaKiemTra.objects.create(
+                phien_lam_bai=p_old,
+                tong_diem=round(tot, 1),
+                trinh_do='A1',
+                trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
+            )
 
 
 
@@ -967,7 +1040,26 @@ def test_room(request):
 
     has_prior_phien = bool(student and PhienLamBai.objects.filter(ho_so_tu_van__khach_hang=student).exists())
 
-    if student and student.ho_ten and (sdt_valid or has_prior_phien) and (student.ngay_sinh or has_prior_phien):
+    today_dt = timezone.now().date()
+    dob_valid = False
+    if student and student.ngay_sinh and student.ngay_sinh <= today_dt:
+        c_age = today_dt.year - student.ngay_sinh.year - ((today_dt.month, today_dt.day) < (student.ngay_sinh.month, student.ngay_sinh.day))
+        if c_age >= 2:
+            dob_valid = True
+
+    session_dob_valid = False
+    sess_dob_str = request.session.get('student_dob')
+    if sess_dob_str:
+        try:
+            sess_dob = datetime.strptime(sess_dob_str, '%Y-%m-%d').date()
+            if sess_dob <= today_dt:
+                s_age = today_dt.year - sess_dob.year - ((today_dt.month, today_dt.day) < (sess_dob.month, sess_dob.day))
+                if s_age >= 2:
+                    session_dob_valid = True
+        except Exception:
+            pass
+
+    if student and student.ho_ten and (sdt_valid or has_prior_phien) and (dob_valid or has_prior_phien):
 
         can_take_test = True
 
@@ -985,7 +1077,7 @@ def test_room(request):
 
         }
 
-    elif request.session.get('profile_completed') and request.session.get('student_dob'):
+    elif request.session.get('profile_completed') and session_dob_valid:
 
         can_take_test = True
 
@@ -2970,71 +3062,23 @@ def submit_writing_speaking(request):
 
 
 
-            # Chuyển tất cả các bài test cũ hơn chưa duyệt chính thức của CÙNG MỤC TIÊU sang trạng thái LƯU TRỮ (LUU_TRU)
-
-            old_phiens = PhienLamBai.objects.filter(
-
-                ho_so_tu_van=hstv
-
-            ).exclude(id=phien_obj.id).select_related('bai_kiem_tra', 'ket_qua_kiem_tra')
-
-            for op in old_phiens:
-
-                op_goal = _normalize_goal(op.bai_kiem_tra.ten_bai if op.bai_kiem_tra else '')
-
-                if op_goal == goal_type:
-
-                    kq_old = getattr(op, 'ket_qua_kiem_tra', None)
-
-                    if kq_old and kq_old.trang_thai != KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
-
-                        kq_old.trang_thai = KetQuaKiemTra.TrangThai.LUU_TRU
-
-                        kq_old.save(update_fields=['trang_thai'])
-
-                    elif not kq_old:
-
-                        KetQuaKiemTra.objects.create(
-
-                            phien_lam_bai=op,
-
-                            tong_diem=0.0,
-
-                            trinh_do='A1',
-
-                            trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
-
-                        )
-
-
-
             # Khởi tạo bản ghi Kết quả kiểm tra phiên mới nhất chờ GV phê duyệt
-
             kq_obj = KetQuaKiemTra.objects.filter(phien_lam_bai=phien_obj).first()
-
             if kq_obj:
-
                 kq_obj.tong_diem = total_exam_score
-
                 kq_obj.trinh_do = cefr_overall
-
                 kq_obj.trang_thai = KetQuaKiemTra.TrangThai.CHO_DUYET
-
                 kq_obj.save(update_fields=['tong_diem', 'trinh_do', 'trang_thai'])
-
             else:
-
                 KetQuaKiemTra.objects.create(
-
                     phien_lam_bai=phien_obj,
-
                     tong_diem=total_exam_score,
-
                     trinh_do=cefr_overall,
-
                     trang_thai=KetQuaKiemTra.TrangThai.CHO_DUYET,
-
                 )
+
+            # Đồng bộ toàn bộ các bài thi của học viên: bài mới nhất là CHO_DUYET, các bài cũ chưa duyệt chuyển thành LUU_TRU
+            sync_student_test_sessions(kh)
 
         except Exception as ws_db_err:
 
@@ -3375,123 +3419,79 @@ def test_result(request):
 
 
     if kh:
+        sync_student_test_sessions(kh)
 
-        db_phiens = PhienLamBai.objects.filter(
-
+        db_phiens_qs = PhienLamBai.objects.filter(
             ho_so_tu_van__khach_hang=kh
-
         ).filter(
-
             models.Q(trang_thai=PhienLamBai.TrangThai.HOAN_THANH) | models.Q(bai_lam_ky_nangs__isnull=False)
-
         ).distinct().select_related('bai_kiem_tra', 'ho_so_tu_van', 'ket_qua_kiem_tra').prefetch_related(
-
             'bai_lam_ky_nangs',
-
             'cau_tra_lois__cham_diem_ais',
-
             'cau_tra_lois__cau_hoi'
+        )
 
-        ).order_by('-hoan_thanh', '-id')
+        def _phien_sort_key(p):
+            t = p.hoan_thanh or p.bat_dau or p.thoi_gian_hen
+            return (t.timestamp() if t else 0, p.id)
 
-
+        db_phiens = list(db_phiens_qs)
+        db_phiens.sort(key=_phien_sort_key, reverse=True)
 
         for idx, p in enumerate(db_phiens):
-
             tot_sc = 0.0
-
             is_approved = False
-
             is_archived = False
-
-
+            is_latest = (idx == 0)
 
             kq = getattr(p, 'ket_qua_kiem_tra', None)
-
             if kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
-
                 is_approved = True
-
             elif kq and kq.trang_thai == KetQuaKiemTra.TrangThai.LUU_TRU:
-
                 is_archived = True
-
-            elif idx > 0 and not is_approved:
-
+            elif not is_latest and not is_approved:
                 is_archived = True
-
-
 
             for bl in p.bai_lam_ky_nangs.all():
-
                 bl_score = float(bl.diem_dieu_chinh if bl.diem_dieu_chinh is not None else (bl.diem_tu_dong or 0.0))
-
                 tot_sc += bl_score
-
                 if bl.trang_thai_cham == BaiLamKyNang.TrangThaiCham.GV_DA_DUYET:
-
                     is_approved = True
 
             # Khi học viên đã được xếp lớp chính thức -> Bài test hoàn thành được công nhận đã duyệt
-            if has_assigned_class and (idx == 0 or p.trang_thai == PhienLamBai.TrangThai.HOAN_THANH):
+            if has_assigned_class and (is_latest or p.trang_thai == PhienLamBai.TrangThai.HOAN_THANH):
                 is_approved = True
                 is_archived = False
 
-
-
             if is_approved:
-
                 st_key = 'GV_DA_DUYET'
-
                 st_label = 'GV đã duyệt'
-
             elif is_archived:
-
                 st_key = 'LUU_TRU'
-
                 st_label = 'Lưu trữ'
-
             else:
-
-                st_key = 'AI_DA_CHAM'
-
-                st_label = 'Chờ GV duyệt'
-
-
+                st_key = 'CHO_DUYET'
+                st_label = 'Chờ duyệt'
 
             danh_sach_phien.append({
-
                 'id': p.id,
-
                 'ma_phien': f"{p.id:03d}",
-
-                'ngay_hoan_thanh': p.hoan_thanh or p.bat_dau or now,
-
+                'ngay_hoan_thanh': p.hoan_thanh or p.bat_dau or p.thoi_gian_hen or now,
                 'tong_diem': round(tot_sc, 1),
-
                 'trang_thai_duyet': st_key,
-
                 'status_label': st_label,
-
+                'is_latest': is_latest,
                 'is_archived': is_archived,
-
+                'is_approved': is_approved,
                 'can_request_review': (is_archived and not is_approved),
-
                 'ten_bai': p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else 'Placement Test',
-
             })
 
-
-
             if session_param and str(p.id) == str(session_param):
-
                 selected_phien = p
 
-
-
-        if not selected_phien and db_phiens.exists():
-
-            selected_phien = db_phiens.first()
+        if not selected_phien and db_phiens:
+            selected_phien = db_phiens[0]
 
 
 
