@@ -42,7 +42,7 @@ python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-cp .env.example .env               # DJANGO_DEBUG=True khi chạy local
+echo "DJANGO_DEBUG=True" > .env    # thêm các biến khác ở bảng bên dưới khi cần
 python manage.py migrate
 python manage.py seed_demo_data    # dữ liệu mẫu cho cả 4 vai trò
 python manage.py runserver
@@ -52,7 +52,7 @@ Mở http://127.0.0.1:8000/ và đăng nhập bằng một email mẫu ở trang
 
 ## Biến môi trường
 
-Danh sách đầy đủ nằm trong `.env.example`. Không commit file `.env` hay bất kỳ khóa bí mật nào.
+Khai báo trong file `.env` ở thư mục gốc (đã nằm trong `.gitignore`). Không commit file `.env` hay bất kỳ khóa bí mật nào.
 
 | Biến | Bắt buộc | Ý nghĩa |
 |---|---|---|
