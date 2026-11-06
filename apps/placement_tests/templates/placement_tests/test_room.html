@@ -4445,6 +4445,7 @@
   const taskMediaRecorders = { t1: null, t2: null, t3: null };
   const taskStreams = { t1: null, t2: null, t3: null };
   const taskAudioChunks = { t1: [], t2: [], t3: [] };
+  const taskAudioBase64 = { t1: '', t2: '', t3: '' };
   const taskSpeechTranscripts = { t1: '', t2: '', t3: '' };
   const taskSpeechRecs = { t1: null, t2: null, t3: null };
 
@@ -4502,6 +4503,13 @@
             audioPlayer.src = audioUrl;
             playbackWrap.style.display = 'block';
           }
+          try {
+            const reader = new FileReader();
+            reader.onloadend = function() {
+              taskAudioBase64[taskId] = reader.result;
+            };
+            reader.readAsDataURL(audioBlob);
+          } catch(e) {}
         };
 
         // Kích hoạt nhận diện giọng nói tiếng Anh trực tiếp qua Web Speech API
@@ -5633,6 +5641,10 @@
           speaking_task2: t2,
 
           speaking_task3: t3,
+
+          speaking_audio_task1: taskAudioBase64['t1'] || '',
+
+          speaking_audio_task2: taskAudioBase64['t2'] || '',
 
           speaking_transcript: fullTranscript
 

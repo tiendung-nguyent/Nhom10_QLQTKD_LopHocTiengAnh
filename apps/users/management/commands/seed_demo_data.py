@@ -242,6 +242,15 @@ class Command(BaseCommand):
             phien_lam_bai=phien_a, ky_nang='SPEAKING',
             defaults={'diem_tu_dong': 22.5, 'diem_dieu_chinh': 23.0, 'trang_thai_cham': BaiLamKyNang.TrangThaiCham.GV_DA_DUYET}
         )
+        CauTraLoi.objects.update_or_create(
+            phien_lam_bai=phien_a,
+            cau_hoi=q_speak,
+            defaults={
+                'noi_dung_tra_loi': '[Task 1]: Good morning. My name is Nguyen Van A. I am currently preparing for my English qualification to support my academic studies and future career.\n[Task 2]: Today I would like to describe a significant project that I completed recently during my academic studies.',
+                'diem_tu_dong': 22.5,
+                'audio_url': '{"task1": "/media/speaking_audios/phien_1_task1.wav", "task2": "/media/speaking_audios/phien_1_task2.wav"}'
+            }
+        )
         KetQuaKiemTra.objects.update_or_create(
             phien_lam_bai=phien_a,
             defaults={
@@ -441,7 +450,7 @@ class Command(BaseCommand):
             defaults={
                 'noi_dung_tra_loi': 'Thí sinh trình bày lưu loát về dự án khoa học thời sinh viên, phát âm rõ ràng, nhịp điệu tự nhiên, từ vựng mạch lạc.',
                 'diem_tu_dong': 25.0,
-                'audio_url': 'https://actions.google.com/sounds/v1/speech/sample_speech_1.mp3'
+                'audio_url': '{"task1": "/media/speaking_audios/phien_2_task1.wav", "task2": "/media/speaking_audios/phien_2_task2.wav"}'
             }
         )
         ChamDiemAI.objects.get_or_create(
@@ -530,6 +539,15 @@ class Command(BaseCommand):
                 'nhan_xet': 'Diễn đạt dễ hiểu, đúng trọng tâm đề tài. Ngữ pháp có một số lỗi câu đơn giản, vốn từ đạt mức B1. Phù hợp xếp lớp B1 IELTS Foundation.'
             }
         )
+        CauTraLoi.objects.update_or_create(
+            phien_lam_bai=phien_yen,
+            cau_hoi=q_speak,
+            defaults={
+                'noi_dung_tra_loi': '[Task 1]: Hello teacher, my name is Le Hoang Yen. I want to improve my communication skills for my international business job.\n[Task 2]: I would like to talk about my graduation thesis on international marketing strategies.',
+                'diem_tu_dong': 20.0,
+                'audio_url': '{"task1": "/media/speaking_audios/phien_3_task1.wav", "task2": "/media/speaking_audios/phien_3_task2.wav"}'
+            }
+        )
 
         # ─── KỊCH BẢN 6: BÀI THI CHỜ GIÁO VIÊN DUYỆT #3 – Trần Quốc Bảo (Đầu ra ĐH A2) ───
         kh_bao, _ = KhachHang.objects.update_or_create(
@@ -570,6 +588,15 @@ class Command(BaseCommand):
             phien_lam_bai=phien_bao, ky_nang='SPEAKING',
             defaults={'diem_tu_dong': 15.0, 'trang_thai_cham': BaiLamKyNang.TrangThaiCham.AI_DA_CHAM}
         )
+        CauTraLoi.objects.update_or_create(
+            phien_lam_bai=phien_bao,
+            cau_hoi=q_speak,
+            defaults={
+                'noi_dung_tra_loi': '[Task 1]: Hello, I am Tran Quoc Bao. I am studying computer science and need English for reading technical papers.\n[Task 2]: The most memorable project I had was building a web application with my university classmates.',
+                'diem_tu_dong': 15.0,
+                'audio_url': '{"task1": "/media/speaking_audios/phien_4_task1.wav", "task2": "/media/speaking_audios/phien_4_task2.wav"}'
+            }
+        )
 
         # ─── KỊCH BẢN 7: BÀI THI ĐÃ ĐƯỢC GIÁO VIÊN DUYỆT THẨM ĐỊNH (Phạm Quỳnh Anh) ───
         kh_qa, _ = KhachHang.objects.update_or_create(
@@ -609,6 +636,15 @@ class Command(BaseCommand):
         BaiLamKyNang.objects.update_or_create(
             phien_lam_bai=phien_qa, ky_nang='SPEAKING',
             defaults={'diem_tu_dong': 23.5, 'diem_dieu_chinh': 23.5, 'nhan_xet_gv': 'Phát âm tự nhiên, phản xạ nhanh.', 'trang_thai_cham': BaiLamKyNang.TrangThaiCham.GV_DA_DUYET}
+        )
+        CauTraLoi.objects.update_or_create(
+            phien_lam_bai=phien_qa,
+            cau_hoi=q_speak,
+            defaults={
+                'noi_dung_tra_loi': '[Task 1]: Hi, I am Pham Quynh Anh. I love learning English and practice every day through listening to podcasts.\n[Task 2]: I want to talk about my volunteer experience organizing an environmental campaign in our local community.',
+                'diem_tu_dong': 23.5,
+                'audio_url': '{"task1": "/media/speaking_audios/phien_5_task1.wav", "task2": "/media/speaking_audios/phien_5_task2.wav"}'
+            }
         )
         KetQuaKiemTra.objects.update_or_create(
             phien_lam_bai=phien_qa,
