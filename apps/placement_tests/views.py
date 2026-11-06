@@ -620,6 +620,10 @@ def parse_mcq_summary_structured(raw, goal_type='IELTS', adjustments=None):
 
                 'question_text': fb_item.get('question_text', ''),
 
+                'audio_file': fb_item.get('audio_file') or (f"audio/listening_q{idx}.wav" if idx <= 5 else ""),
+
+                'audio_title': fb_item.get('audio_title', ''),
+
                 'options_list': [{'key': k, 'text': v} for k, v in fb_item.get('options', {}).items()],
 
                 'explanation': fb_item.get('explanation', ''),
@@ -682,6 +686,40 @@ def parse_mcq_summary_structured(raw, goal_type='IELTS', adjustments=None):
 
                 q['correct_ans'] = fb_item.get('correct_option', 'A')
 
+            if fb_item.get('audio_file'):
+
+                q['audio_file'] = fb_item.get('audio_file')
+
+            if fb_item.get('audio_title'):
+
+                q['audio_title'] = fb_item.get('audio_title')
+
+
+
+        # Gán audio mặc định cho các câu Nghe hiểu (câu 1 -> 5 hoặc category là LISTENING/Nghe hiểu)
+
+        if not q.get('audio_file') and (idx <= 5 or q.get('category') in ['Nghe hiểu', 'LISTENING']):
+
+            q['audio_file'] = f"audio/listening_q{idx}.wav" if idx <= 5 else "audio/listening_q1.wav"
+
+            if not q.get('audio_title'):
+
+                listening_titles = {
+
+                    1: "Project Progress Review Announcement",
+
+                    2: "Flight Pre-boarding Announcement",
+
+                    3: "Environmental Science Lecture Snippet",
+
+                    4: "Customer Service Delivery Notice",
+
+                    5: "University Central Library Announcement",
+
+                }
+
+                q['audio_title'] = listening_titles.get(idx, f"Đoạn ghi âm câu #{idx}")
+
 
 
         # Áp dụng điểm điều chỉnh từ Giáo viên nếu có
@@ -722,7 +760,16 @@ def parse_mcq_summary_structured(raw, goal_type='IELTS', adjustments=None):
 
         res['percentage'] = round((res['total_score'] / 40.0) * 100)
 
-
+    # Danh sách các file audio nghe hiểu để Giáo viên đối chiếu
+    res['listening_audios'] = [
+        {
+            'num': q['num'],
+            'title': q.get('audio_title') or f"Bài nghe câu #{q['num']}",
+            'file': q['audio_file']
+        }
+        for q in res['questions'] if q.get('audio_file')
+    ]
+    res['has_listening'] = len(res['listening_audios']) > 0
 
     return res
 
@@ -2667,6 +2714,8 @@ def _extract_writing_tasks(w_text, goal_type=None):
         t2_text = "Học viên chưa nộp bài viết cho Task 2."
 
     goal = (goal_type or 'IELTS').upper()
+    has_chart = ('IELTS' in goal) or (not any(k in goal for k in ['GIAO_TIEP', 'DAU_RA', 'DH', 'MAT_GOC']))
+
     if 'GIAO_TIEP' in goal:
         prompt_t1 = "You are a project officer at a foreign trade company. Write an email to an international client: (1) Updating them on current progress of quarterly deliverables; (2) Requesting a brief 15-minute clarification call regarding contract specifications. (Write between 80 and 120 words)."
         prompt_t2 = "In modern workplaces, many companies have transitioned to flexible hybrid remote working arrangements. Write an essay discussing the advantages and disadvantages of remote working for employees and employers. (Write between 150 and 200 words)."
@@ -2677,15 +2726,17 @@ def _extract_writing_tasks(w_text, goal_type=None):
         prompt_t1 = "Write a short friendly email to your new English tutor introducing your name, occupation, available study time, and what you find most challenging when learning English. (Write between 80 and 120 words)."
         prompt_t2 = "Learning a foreign language requires daily dedication. Write a short paragraph explaining why English is important for your personal growth or future job prospects. (Write between 100 and 150 words)."
     else:  # IELTS
-        prompt_t1 = "The chart below shows the number of films produced by five countries (A, B, C, D, E) in three years (2007, 2008, 2009). Summarize the information by selecting and reporting the main features, and make comparisons where relevant. (Write at least 150 words)."
+        prompt_t1 = "The chart below shows the number of films produced by five countries in three years. Summarize the information by selecting and reporting the main features, and make comparisons where relevant. (Write at least 150 words)."
         prompt_t2 = "Some people believe that unpaid community service should be a compulsory part of high school programmes. To what extent do you agree or disagree? Give reasons and examples from your own knowledge or experience. (Write at least 180 – 220 words)."
 
     return [
         {
             'task_key': 'w_task1',
             'task_badge': 'Task 1 (Writing)',
-            'task_title': 'Task 1: ' + ('Báo cáo số liệu biểu đồ học thuật (Academic Report on Chart)' if 'IELTS' in goal else 'Viết thư / Email nghiệp vụ'),
+            'task_title': 'Task 1: ' + ('Báo cáo số liệu biểu đồ học thuật (Academic Report on Chart)' if has_chart else 'Viết thư / Email nghiệp vụ'),
             'prompt_question': prompt_t1,
+            'image_url': '/static/images/ielts_task1_films_chart.png' if has_chart else None,
+            'image_caption': 'Films produced by countries A, B, C, D, E in 2007, 2008, 2009' if has_chart else None,
             'word_count': len(t1_text.split()) if t1_text and not t1_text.startswith("Học viên chưa") else 0,
             'answer': t1_text,
         },
@@ -2694,6 +2745,7 @@ def _extract_writing_tasks(w_text, goal_type=None):
             'task_badge': 'Task 2 (Writing)',
             'task_title': 'Task 2: Viết bài luận nghị luận xã hội (Academic Essay)',
             'prompt_question': prompt_t2,
+            'image_url': None,
             'word_count': len(t2_text.split()) if t2_text and not t2_text.startswith("Học viên chưa") else 0,
             'answer': t2_text,
         }
@@ -3084,25 +3136,16 @@ def submit_writing_speaking(request):
 
             )
 
-            # Lưu file âm thanh ghi âm nếu có dữ liệu base64 từ trình duyệt
-            spk_audio_1 = data.get('speaking_audio_task1', '')
-            spk_audio_2 = data.get('speaking_audio_task2', '')
-            saved_url_1 = _save_base64_audio(spk_audio_1, phien_obj.id, 'task1') if spk_audio_1 else ""
-            saved_url_2 = _save_base64_audio(spk_audio_2, phien_obj.id, 'task2') if spk_audio_2 else ""
-            
-            combined_audio_json = ""
-            if saved_url_1 or saved_url_2:
-                combined_audio_json = json.dumps({
-                    'task1': saved_url_1,
-                    'task2': saved_url_2
-                })
-
             tl_s = CauTraLoi.objects.create(
+
                 phien_lam_bai=phien_obj,
+
                 cau_hoi=cau_s,
+
                 noi_dung_tra_loi=speaking_transcript if has_speaking else "Chưa thực hiện thu âm Speaking",
-                audio_url=combined_audio_json,
+
                 diem_tu_dong=speaking_scaled if has_speaking else 0.0
+
             )
 
             ChamDiemAI.objects.create(
@@ -3484,7 +3527,7 @@ def test_result(request):
     if kh:
         sync_student_test_sessions(kh)
 
-        db_phiens = PhienLamBai.objects.filter(
+        db_phiens_qs = PhienLamBai.objects.filter(
             ho_so_tu_van__khach_hang=kh
         ).filter(
             models.Q(trang_thai=PhienLamBai.TrangThai.HOAN_THANH) | models.Q(bai_lam_ky_nangs__isnull=False)
@@ -3492,9 +3535,15 @@ def test_result(request):
             'bai_lam_ky_nangs',
             'cau_tra_lois__cham_diem_ais',
             'cau_tra_lois__cau_hoi'
-        ).order_by('-id')
+        )
 
-        latest_phien_id = db_phiens.first().id if db_phiens.exists() else None
+        def _phien_sort_key(p):
+            t = p.hoan_thanh or p.bat_dau or p.thoi_gian_hen
+            return (t.timestamp() if t else 0, p.id)
+
+        db_phiens = list(db_phiens_qs)
+        db_phiens.sort(key=_phien_sort_key, reverse=True)
+        latest_phien_id = db_phiens[0].id if db_phiens else None
 
         for idx, p in enumerate(db_phiens):
             tot_sc = 0.0
@@ -3537,8 +3586,6 @@ def test_result(request):
             else:
                 st_key = 'CHO_DUYET'
                 st_label = 'Chờ GV duyệt'
-
-
 
             danh_sach_phien.append({
                 'id': p.id,
@@ -5295,8 +5342,6 @@ def teacher_review(request):
                 'mcq_parsed': mcq_parsed,
 
                 'audio_url': audio_url,
-
-                'speaking_tasks': speaking_tasks,
 
             },
 
