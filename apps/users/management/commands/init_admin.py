@@ -18,7 +18,7 @@ class Command(BaseCommand):
             pass
 
         email = os.getenv('ADMIN_EMAIL', 'academixenglishcenter@gmail.com').strip().lower()
-        password = os.getenv('ADMIN_PASSWORD', 'AdminAcademix2026!')
+        password = os.getenv('ADMIN_PASSWORD', '')
         username = os.getenv('ADMIN_USERNAME', 'admin_academix').strip()
 
         user = User.objects.filter(email__iexact=email).first()
@@ -26,6 +26,11 @@ class Command(BaseCommand):
             user = User.objects.filter(username=username).first()
 
         has_role_field = any(f.name == 'role' for f in User._meta.fields)
+
+        if not user and not password:
+            # Never fall back to a password stored in the repository
+            self.stdout.write(self.style.WARNING('[INIT ADMIN] ADMIN_PASSWORD is not set, skipping superuser creation.'))
+            return
 
         if not user:
             create_kwargs = {

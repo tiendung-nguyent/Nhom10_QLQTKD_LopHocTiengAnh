@@ -4,3 +4,12 @@ db.sqlite3
 
 __pycache__/
 *.py[cod]
+
+# Local tooling and scratch files
+.idea/
+.vscode/
+scratch/
+venv/
+.venv/
+staticfiles/
+.DS_Store
