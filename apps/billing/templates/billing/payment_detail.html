@@ -20,6 +20,10 @@
       <span class="badge badge-emerald" id="invoice-status-badge" style="font-size: 13px; padding: 8px 14px;">
         <i class="fa-solid fa-circle-check"></i> Đã thanh toán đủ
       </span>
+      {% elif is_pending_confirmation or phieu.hoc_vien_da_xac_nhan or phieu.trang_thai == 'CHO_XAC_NHAN' %}
+      <span class="badge" id="invoice-status-badge" style="font-size: 13px; padding: 8px 14px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE;">
+        <i class="fa-solid fa-clock-rotate-left"></i> Chờ kế toán đối soát
+      </span>
       {% else %}
       <span class="badge badge-coral" id="invoice-status-badge" style="font-size: 13px; padding: 8px 14px;">
         <i class="fa-regular fa-clock"></i> Chưa thanh toán
@@ -51,6 +55,23 @@
     </div>
   </div>
   <span class="badge badge-emerald" style="font-size: 12px;"><i class="fa-solid fa-circle-check"></i> Đã hoàn tất</span>
+</div>
+{% elif is_pending_confirmation or phieu.hoc_vien_da_xac_nhan or phieu.trang_thai == 'CHO_XAC_NHAN' %}
+<div style="background: #EFF6FF; border: 1.5px solid #BFDBFE; border-radius: var(--radius-lg); padding: 14px 20px; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+  <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+    <div style="width: 38px; height: 38px; border-radius: 8px; background: #DBEAFE; display: flex; align-items: center; justify-content: center; color: #1D4ED8; font-size: 17px; flex-shrink: 0;">
+      <i class="fa-solid fa-clock-rotate-left"></i>
+    </div>
+    <div>
+      <div style="font-size: 13.5px; font-weight: 700; color: #1E40AF;">
+        Phiếu học phí #{{ phieu.ma_tham_chieu }} · Đã ghi nhận chuyển khoản (Đang đối soát)
+      </div>
+      <div style="font-size: 12.5px; color: #1D4ED8; margin-top: 2px;">
+        Học viên đã bấm xác nhận chuyển khoản. Bộ phận kế toán đang kiểm tra sao kê ngân hàng và sẽ duyệt hóa đơn cho bạn sớm nhất.
+      </div>
+    </div>
+  </div>
+  <span class="badge" style="font-size: 12px; background: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE;"><i class="fa-solid fa-hourglass-half"></i> Đang đối soát</span>
 </div>
 {% else %}
 <div style="background: #FFF7ED; border: 1.5px solid #FFEDD5; border-radius: var(--radius-lg); padding: 14px 20px; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
@@ -335,22 +356,43 @@
         </div>
       </div>
 
-      <!-- FORM NÚT "TÔI ĐÃ CHUYỂN KHOẢN" (Brand orange primary CTA) -->
-      <form id="payment-confirm-form" method="post" action="{% url 'billing:confirm_payment' %}" style="margin-top: auto;">
-        {% csrf_token %}
-        <input type="hidden" name="ma_phieu" value="{{ phieu.pk|default:1 }}">
-
-        <div style="padding: 10px 14px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius-md); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-          <i class="fa-solid fa-circle-info" style="color: #D97706; font-size: 15px; flex-shrink: 0;"></i>
-          <div style="font-size: 11.5px; color: #92400E; line-height: 1.5;">
-            Sau khi chuyển khoản, bấm nút bên dưới để chúng tôi xác nhận thanh toán.
+      <!-- FORM HOẶC TRẠNG THÁI NÚT "TÔI ĐÃ CHUYỂN KHOẢN" -->
+      {% if is_pending_confirmation or phieu.hoc_vien_da_xac_nhan or phieu.trang_thai == 'CHO_XAC_NHAN' %}
+      <div id="confirmed-transfer-box" style="margin-top: auto;">
+        <div style="padding: 11px 14px; background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: var(--radius-md); margin-bottom: 12px; display: flex; align-items: flex-start; gap: 10px;">
+          <i class="fa-solid fa-circle-check" style="color: #059669; font-size: 18px; margin-top: 2px; flex-shrink: 0;"></i>
+          <div>
+            <div style="font-size: 13px; font-weight: 700; color: #065F46; margin-bottom: 2px;">
+              Đã ghi nhận thông báo chuyển khoản
+            </div>
+            <div style="font-size: 12px; color: #047857; line-height: 1.5;">
+              Bạn đã xác nhận chuyển khoản thành công. Bộ phận kế toán đang kiểm tra sao kê ngân hàng và sẽ duyệt hóa đơn cho bạn.
+            </div>
           </div>
         </div>
-
-        <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-confirm-transfer" style="font-weight: 700; font-size: 15px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-          <i class="fa-solid fa-check"></i> Tôi đã chuyển khoản
+        <button type="button" class="btn btn-emerald btn-block btn-lg" disabled style="opacity: 0.95; cursor: not-allowed; font-weight: 700; font-size: 14.5px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <i class="fa-solid fa-check-double"></i> Đã ghi nhận chuyển khoản (Đang đối soát)
         </button>
-      </form>
+      </div>
+      {% else %}
+      <div id="transfer-action-container" style="margin-top: auto;">
+        <form id="payment-confirm-form" method="post" action="{% url 'billing:confirm_payment' %}">
+          {% csrf_token %}
+          <input type="hidden" name="ma_phieu" value="{{ phieu.pk|default:1 }}">
+
+          <div style="padding: 10px 14px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius-md); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-circle-info" style="color: #D97706; font-size: 15px; flex-shrink: 0;"></i>
+            <div style="font-size: 11.5px; color: #92400E; line-height: 1.5;">
+              Sau khi chuyển khoản, bấm nút bên dưới để chúng tôi xác nhận thanh toán.
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-confirm-transfer" style="font-weight: 700; font-size: 15px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i class="fa-solid fa-check"></i> Tôi đã chuyển khoản
+          </button>
+        </form>
+      </div>
+      {% endif %}
 
     </div>
   </div>
@@ -466,14 +508,37 @@
         });
         const data = await res.json();
 
-        btn.innerHTML = '<i class="fa-solid fa-check-double"></i> Đã ghi nhận chuyển khoản!';
-        btn.classList.remove('btn-primary');
-        btn.classList.add('btn-emerald');
+        const container = document.getElementById('transfer-action-container');
+        if (container) {
+          container.innerHTML = `
+            <div id="confirmed-transfer-box" style="margin-top: auto;">
+              <div style="padding: 11px 14px; background: #ECFDF5; border: 1.5px solid #A7F3D0; border-radius: var(--radius-md); margin-bottom: 12px; display: flex; align-items: flex-start; gap: 10px;">
+                <i class="fa-solid fa-circle-check" style="color: #059669; font-size: 18px; margin-top: 2px; flex-shrink: 0;"></i>
+                <div>
+                  <div style="font-size: 13px; font-weight: 700; color: #065F46; margin-bottom: 2px;">
+                    Đã ghi nhận thông báo chuyển khoản
+                  </div>
+                  <div style="font-size: 12px; color: #047857; line-height: 1.5;">
+                    Bạn đã xác nhận chuyển khoản thành công. Bộ phận kế toán đang kiểm tra sao kê ngân hàng và sẽ duyệt hóa đơn cho bạn.
+                  </div>
+                </div>
+              </div>
+              <button type="button" class="btn btn-emerald btn-block btn-lg" disabled style="opacity: 0.95; cursor: not-allowed; font-weight: 700; font-size: 14.5px; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <i class="fa-solid fa-check-double"></i> Đã ghi nhận chuyển khoản (Đang đối soát)
+              </button>
+            </div>
+          `;
+        } else if (btn) {
+          btn.innerHTML = '<i class="fa-solid fa-check-double"></i> Đã ghi nhận chuyển khoản!';
+          btn.classList.remove('btn-primary');
+          btn.classList.add('btn-emerald');
+        }
 
         const statusBadge = document.getElementById('invoice-status-badge');
         if (statusBadge) {
-          statusBadge.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> Chờ đối soát';
-          statusBadge.className = 'badge badge-gray';
+          statusBadge.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> Chờ kế toán đối soát';
+          statusBadge.className = 'badge';
+          statusBadge.style.cssText = 'font-size: 13px; padding: 8px 14px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE;';
         }
 
         Toast.show(data.message || 'Cảm ơn bạn! Trung tâm sẽ đối soát và gửi biên lai qua email.', 'success', 5000);
