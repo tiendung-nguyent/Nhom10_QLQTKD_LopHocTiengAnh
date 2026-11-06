@@ -2417,6 +2417,200 @@ def reset_full_test(request):
 
 
 
+<<<<<<< Updated upstream
+=======
+def _save_base64_audio(base64_data, phien_id, task_name):
+    """
+    Lưu dữ liệu audio base64 (data:audio/...;base64,xxx) thành file thật trên đĩa.
+    Trả về URL tương đối /media/speaking_audios/...
+    """
+    import base64
+    from pathlib import Path
+    from django.conf import settings
+
+    if not base64_data or not isinstance(base64_data, str):
+        return ""
+
+    try:
+        if ',' in base64_data:
+            _, encoded = base64_data.split(',', 1)
+        else:
+            encoded = base64_data
+
+        audio_bytes = base64.b64decode(encoded)
+        if len(audio_bytes) < 100:
+            return ""
+
+        media_spk_dir = Path(settings.MEDIA_ROOT) / 'speaking_audios'
+        media_spk_dir.mkdir(parents=True, exist_ok=True)
+
+        filename = f"phien_{phien_id}_{task_name}.webm"
+        file_path = media_spk_dir / filename
+        with open(file_path, 'wb') as f:
+            f.write(audio_bytes)
+
+        return f"{settings.MEDIA_URL}speaking_audios/{filename}"
+    except Exception:
+        return ""
+
+
+def _extract_speaking_tasks(s_transcript, audio_url, phien_id=None):
+    """
+    Tách bài thi Speaking thành 2 task riêng biệt (Task 1 và Task 2)
+    cho Giáo viên thẩm định, đồng thời gắn file audio thật tương ứng.
+    """
+    import json
+    import re
+    from pathlib import Path
+    from django.conf import settings
+
+    t1_text = ""
+    t2_text = ""
+    t1_audio = ""
+    t2_audio = ""
+
+    # 1. Parse transcript
+    if s_transcript:
+        s_transcript_str = str(s_transcript).strip()
+        if s_transcript_str.startswith('{') and s_transcript_str.endswith('}'):
+            try:
+                pj = json.loads(s_transcript_str)
+                t1_text = pj.get('task1') or pj.get('t1') or ""
+                t2_text = pj.get('task2') or pj.get('t2') or ""
+            except Exception:
+                pass
+
+        if not t1_text and not t2_text:
+            m1 = re.search(r'(?:Task 1|\[TASK 1\])[\s:]*([\s\S]*?)(?=(?:Task 2|\[TASK 2\])|$)', s_transcript_str, re.IGNORECASE)
+            m2 = re.search(r'(?:Task 2|\[TASK 2\])[\s:]*([\s\S]*?)(?=(?:Task 3|\[TASK 3\])|$)', s_transcript_str, re.IGNORECASE)
+            if m1:
+                t1_text = m1.group(1).strip()
+            if m2:
+                t2_text = m2.group(1).strip()
+
+            if not t1_text and not t2_text:
+                t1_text = s_transcript_str
+
+    if not t1_text:
+        t1_text = "Chưa có bản ghi âm / transcript cho Task 1."
+    if not t2_text:
+        t2_text = "Chưa có bản ghi âm / transcript cho Task 2."
+
+    # 2. Xử lý audio_url từ database
+    if audio_url:
+        audio_url_str = str(audio_url).strip()
+        if audio_url_str.startswith('{') and audio_url_str.endswith('}'):
+            try:
+                aj = json.loads(audio_url_str)
+                t1_audio = aj.get('task1') or aj.get('t1') or ""
+                t2_audio = aj.get('task2') or aj.get('t2') or ""
+            except Exception:
+                pass
+        elif not t1_audio and not t2_audio:
+            if 'task2' in audio_url_str:
+                t2_audio = audio_url_str
+            else:
+                t1_audio = audio_url_str
+
+    # 3. Quét file audio thật trong media/speaking_audios/ nếu có phien_id
+    if phien_id:
+        media_spk_dir = Path(settings.MEDIA_ROOT) / 'speaking_audios'
+        if media_spk_dir.exists():
+            for ext in ['.wav', '.webm', '.mp3', '.ogg', '.m4a']:
+                f1 = media_spk_dir / f"phien_{phien_id}_task1{ext}"
+                if f1.exists() and not t1_audio:
+                    t1_audio = f"{settings.MEDIA_URL}speaking_audios/phien_{phien_id}_task1{ext}"
+                f2 = media_spk_dir / f"phien_{phien_id}_task2{ext}"
+                if f2.exists() and not t2_audio:
+                    t2_audio = f"{settings.MEDIA_URL}speaking_audios/phien_{phien_id}_task2{ext}"
+
+    tasks = [
+        {
+            'task_key': 'task1',
+            'task_badge': 'Task 1 (30 giây)',
+            'task_title': 'Task 1: Giới thiệu bản thân & Mục tiêu học tập',
+            'prompt_desc': 'Part 1 (Personal Interview - 30s): Trả lời câu hỏi ngắn cá nhân. Giới thiệu bản thân, mục tiêu cải thiện tiếng Anh, hoặc thói quen học tập hàng ngày.',
+            'prompt_question': 'Part 1 (Personal Interview - 30 seconds): Answer personal introduction questions. Talk about yourself, your English learning background, and why you want to improve your English skills.',
+            'transcript': t1_text,
+            'audio_url': t1_audio,
+            'has_audio': bool(t1_audio),
+        },
+        {
+            'task_key': 'task2',
+            'task_badge': 'Task 2 (120 giây)',
+            'task_title': 'Task 2: Thuyết trình theo chủ đề chuyên sâu',
+            'prompt_desc': 'Part 2 (Topic Presentation - 120s): Thuyết trình chuyên sâu theo chủ đề được giao. Trình bày quan điểm cá nhân, cấu trúc lập luận và ví dụ thực tế.',
+            'prompt_question': 'Part 2 (Topic Presentation - 120 seconds): Describe a memorable project or experience that you successfully accomplished during your work or academic studies. You should say: what the project was, who you worked with, what challenges you encountered, and explain why this project was meaningful to you.',
+            'transcript': t2_text,
+            'audio_url': t2_audio,
+            'has_audio': bool(t2_audio),
+        }
+    ]
+    return tasks
+
+
+def _extract_writing_tasks(w_text, goal_type=None):
+    """
+    Tách bài viết Writing thành 2 Task (Task 1 và Task 2)
+    kèm đề bài chuẩn tương ứng theo mục tiêu học tập.
+    """
+    import re
+
+    t1_text = ""
+    t2_text = ""
+
+    if w_text:
+        w_str = str(w_text).strip()
+        m1 = re.search(r'(?:\[TASK 1\]|Task 1:)[\s]*([\s\S]*?)(?=(?:\[TASK 2\]|Task 2:)|$)', w_str, re.IGNORECASE)
+        m2 = re.search(r'(?:\[TASK 2\]|Task 2:)[\s]*([\s\S]*?)$', w_str, re.IGNORECASE)
+        if m1:
+            t1_text = m1.group(1).strip()
+        if m2:
+            t2_text = m2.group(1).strip()
+
+        if not t1_text and not t2_text:
+            t1_text = w_str
+
+    if not t1_text:
+        t1_text = "Học viên chưa nộp bài viết cho Task 1."
+    if not t2_text:
+        t2_text = "Học viên chưa nộp bài viết cho Task 2."
+
+    goal = (goal_type or 'IELTS').upper()
+    if 'GIAO_TIEP' in goal:
+        prompt_t1 = "You are a project officer at a foreign trade company. Write an email to an international client: (1) Updating them on current progress of quarterly deliverables; (2) Requesting a brief 15-minute clarification call regarding contract specifications. (Write between 80 and 120 words)."
+        prompt_t2 = "In modern workplaces, many companies have transitioned to flexible hybrid remote working arrangements. Write an essay discussing the advantages and disadvantages of remote working for employees and employers. (Write between 150 and 200 words)."
+    elif 'DAU_RA' in goal or 'DH' in goal:
+        prompt_t1 = "You are a senior undergraduate preparing your graduation portfolio. Write an email to your academic department advisor requesting confirmation of completed elective credits and thesis defense schedule. (Write between 80 and 120 words)."
+        prompt_t2 = "Some university students prefer part-time jobs during their degree programmes, while others believe full-time academic commitment is essential. Discuss both views and give your opinion. (Write between 180 and 220 words)."
+    elif 'MAT_GOC' in goal:
+        prompt_t1 = "Write a short friendly email to your new English tutor introducing your name, occupation, available study time, and what you find most challenging when learning English. (Write between 80 and 120 words)."
+        prompt_t2 = "Learning a foreign language requires daily dedication. Write a short paragraph explaining why English is important for your personal growth or future job prospects. (Write between 100 and 150 words)."
+    else:  # IELTS
+        prompt_t1 = "The chart below shows the number of films produced by five countries (A, B, C, D, E) in three years (2007, 2008, 2009). Summarize the information by selecting and reporting the main features, and make comparisons where relevant. (Write at least 150 words)."
+        prompt_t2 = "Some people believe that unpaid community service should be a compulsory part of high school programmes. To what extent do you agree or disagree? Give reasons and examples from your own knowledge or experience. (Write at least 180 – 220 words)."
+
+    return [
+        {
+            'task_key': 'w_task1',
+            'task_badge': 'Task 1 (Writing)',
+            'task_title': 'Task 1: ' + ('Báo cáo số liệu biểu đồ học thuật (Academic Report on Chart)' if 'IELTS' in goal else 'Viết thư / Email nghiệp vụ'),
+            'prompt_question': prompt_t1,
+            'word_count': len(t1_text.split()) if t1_text and not t1_text.startswith("Học viên chưa") else 0,
+            'answer': t1_text,
+        },
+        {
+            'task_key': 'w_task2',
+            'task_badge': 'Task 2 (Writing)',
+            'task_title': 'Task 2: Viết bài luận nghị luận xã hội (Academic Essay)',
+            'prompt_question': prompt_t2,
+            'word_count': len(t2_text.split()) if t2_text and not t2_text.startswith("Học viên chưa") else 0,
+            'answer': t2_text,
+        }
+    ]
+
+
+>>>>>>> Stashed changes
 def submit_writing_speaking(request):
 
     """
@@ -3240,84 +3434,57 @@ def test_result(request):
     if kh:
 
         db_phiens = PhienLamBai.objects.filter(
-
             ho_so_tu_van__khach_hang=kh
-
         ).filter(
-
             models.Q(trang_thai=PhienLamBai.TrangThai.HOAN_THANH) | models.Q(bai_lam_ky_nangs__isnull=False)
-
         ).distinct().select_related('bai_kiem_tra', 'ho_so_tu_van', 'ket_qua_kiem_tra').prefetch_related(
-
             'bai_lam_ky_nangs',
-
             'cau_tra_lois__cham_diem_ais',
-
             'cau_tra_lois__cau_hoi'
+        ).order_by('-id')
 
-        ).order_by('-hoan_thanh', '-id')
-
-
+        latest_phien_id = db_phiens.first().id if db_phiens.exists() else None
 
         for idx, p in enumerate(db_phiens):
-
             tot_sc = 0.0
-
             is_approved = False
-
             is_archived = False
-
-
+            is_latest = (p.id == latest_phien_id or idx == 0)
 
             kq = getattr(p, 'ket_qua_kiem_tra', None)
-
             if kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
-
                 is_approved = True
-
-            elif kq and kq.trang_thai == KetQuaKiemTra.TrangThai.LUU_TRU:
-
+            elif not is_latest and kq and kq.trang_thai == KetQuaKiemTra.TrangThai.LUU_TRU:
+                is_archived = True
+            elif not is_latest and not is_approved:
                 is_archived = True
 
-            elif idx > 0 and not is_approved:
-
-                is_archived = True
-
-
+            # Bài làm mới nhất tuyệt đối không bị hiển thị thành Lưu trữ; nếu chưa duyệt thì phải là Chờ GV duyệt
+            if is_latest and not is_approved:
+                is_archived = False
+                if kq and kq.trang_thai == KetQuaKiemTra.TrangThai.LUU_TRU:
+                    kq.trang_thai = KetQuaKiemTra.TrangThai.CHO_DUYET
+                    kq.save(update_fields=['trang_thai'])
 
             for bl in p.bai_lam_ky_nangs.all():
-
                 bl_score = float(bl.diem_dieu_chinh if bl.diem_dieu_chinh is not None else (bl.diem_tu_dong or 0.0))
-
                 tot_sc += bl_score
-
                 if bl.trang_thai_cham == BaiLamKyNang.TrangThaiCham.GV_DA_DUYET:
-
                     is_approved = True
 
             # Khi học viên đã được xếp lớp chính thức -> Bài test hoàn thành được công nhận đã duyệt
-            if has_assigned_class and (idx == 0 or p.trang_thai == PhienLamBai.TrangThai.HOAN_THANH):
+            if has_assigned_class and (is_latest or p.trang_thai == PhienLamBai.TrangThai.HOAN_THANH):
                 is_approved = True
                 is_archived = False
 
-
-
             if is_approved:
-
                 st_key = 'GV_DA_DUYET'
-
                 st_label = 'GV đã duyệt'
-
             elif is_archived:
-
                 st_key = 'LUU_TRU'
-
                 st_label = 'Lưu trữ'
-
             else:
-
-                st_key = 'AI_DA_CHAM'
-
+                st_key = 'CHO_DUYET'
                 st_label = 'Chờ GV duyệt'
 
 
@@ -5000,6 +5167,12 @@ def teacher_review(request):
 
 
 
+<<<<<<< Updated upstream
+=======
+        speaking_tasks = _extract_speaking_tasks(s_transcript, audio_url, phien_id=phien_db.id)
+        writing_tasks = _extract_writing_tasks(w_answer, goal_type=candidate_goal)
+
+>>>>>>> Stashed changes
         detail_data = {
 
             'hoc_vien_name': kh_obj.ho_ten if (kh_obj and kh_obj.ho_ten) else 'Học viên',
@@ -5081,6 +5254,8 @@ def teacher_review(request):
                 'transcript': s_transcript,
 
                 'writing_text': w_answer,
+
+                'writing_tasks': writing_tasks,
 
                 'mcq_summary': mcq_summary,
 
