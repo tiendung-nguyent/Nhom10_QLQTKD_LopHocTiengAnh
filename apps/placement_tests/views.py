@@ -2417,8 +2417,6 @@ def reset_full_test(request):
 
 
 
-<<<<<<< Updated upstream
-=======
 def _save_base64_audio(base64_data, phien_id, task_name):
     """
     Lưu dữ liệu audio base64 (data:audio/...;base64,xxx) thành file thật trên đĩa.
@@ -2610,7 +2608,6 @@ def _extract_writing_tasks(w_text, goal_type=None):
     ]
 
 
->>>>>>> Stashed changes
 def submit_writing_speaking(request):
 
     """
@@ -5167,12 +5164,8 @@ def teacher_review(request):
 
 
 
-<<<<<<< Updated upstream
-=======
         speaking_tasks = _extract_speaking_tasks(s_transcript, audio_url, phien_id=phien_db.id)
         writing_tasks = _extract_writing_tasks(w_answer, goal_type=candidate_goal)
-
->>>>>>> Stashed changes
         detail_data = {
 
             'hoc_vien_name': kh_obj.ho_ten if (kh_obj and kh_obj.ho_ten) else 'Học viên',
