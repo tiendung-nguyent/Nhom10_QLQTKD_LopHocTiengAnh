@@ -4678,12 +4678,8 @@
 
 
 
-        if (audioPlayer && playbackWrap) {
-
-          audioPlayer.src = 'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg';
-
-          playbackWrap.style.display = 'block';
-
+        if (playbackWrap) {
+          playbackWrap.style.display = 'none';
         }
 
       }
@@ -5674,38 +5670,43 @@
 
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
 
-
+    async function getAudioBase64(taskId) {
+      if (taskAudioChunks[taskId] && taskAudioChunks[taskId].length > 0) {
+        try {
+          const blob = new Blob(taskAudioChunks[taskId], { type: 'audio/webm' });
+          return await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = () => resolve('');
+            reader.readAsDataURL(blob);
+          });
+        } catch(e) {
+          return '';
+        }
+      }
+      return '';
+    }
 
     try {
+      const audioBase64_t1 = await getAudioBase64('t1');
+      const audioBase64_t2 = await getAudioBase64('t2');
 
       const res = await fetch("{% url 'placement_tests:submit_writing_speaking' %}", {
-
         method: 'POST',
-
         headers: {
-
           'Content-Type': 'application/json',
-
           'X-CSRFToken': csrfToken
-
         },
-
         body: JSON.stringify({
-
           task1_text: w1,
-
           task2_text: w2,
-
           speaking_task1: t1,
-
           speaking_task2: t2,
-
           speaking_task3: t3,
-
+          speaking_audio_task1: audioBase64_t1,
+          speaking_audio_task2: audioBase64_t2,
           speaking_transcript: fullTranscript
-
         })
-
       });
 
       const data = await res.json();

@@ -2417,6 +2417,134 @@ def reset_full_test(request):
 
 
 
+def _save_base64_audio(base64_data, phien_id, task_name):
+    """
+    Lưu dữ liệu audio base64 (data:audio/...;base64,xxx) thành file thật trên đĩa.
+    Trả về URL tương đối /media/speaking_audios/...
+    """
+    import base64
+    from pathlib import Path
+    from django.conf import settings
+
+    if not base64_data or not isinstance(base64_data, str):
+        return ""
+
+    try:
+        if ',' in base64_data:
+            _, encoded = base64_data.split(',', 1)
+        else:
+            encoded = base64_data
+
+        audio_bytes = base64.b64decode(encoded)
+        if len(audio_bytes) < 100:
+            return ""
+
+        media_spk_dir = Path(settings.MEDIA_ROOT) / 'speaking_audios'
+        media_spk_dir.mkdir(parents=True, exist_ok=True)
+
+        filename = f"phien_{phien_id}_{task_name}.webm"
+        file_path = media_spk_dir / filename
+        with open(file_path, 'wb') as f:
+            f.write(audio_bytes)
+
+        return f"{settings.MEDIA_URL}speaking_audios/{filename}"
+    except Exception:
+        return ""
+
+
+def _extract_speaking_tasks(s_transcript, audio_url, phien_id=None):
+    """
+    Tách bài thi Speaking thành 2 task riêng biệt (Task 1 và Task 2)
+    cho Giáo viên thẩm định, đồng thời gắn file audio thật tương ứng.
+    """
+    import json
+    import re
+    from pathlib import Path
+    from django.conf import settings
+
+    t1_text = ""
+    t2_text = ""
+    t1_audio = ""
+    t2_audio = ""
+
+    # 1. Parse transcript
+    if s_transcript:
+        s_transcript_str = str(s_transcript).strip()
+        if s_transcript_str.startswith('{') and s_transcript_str.endswith('}'):
+            try:
+                pj = json.loads(s_transcript_str)
+                t1_text = pj.get('task1') or pj.get('t1') or ""
+                t2_text = pj.get('task2') or pj.get('t2') or ""
+            except Exception:
+                pass
+
+        if not t1_text and not t2_text:
+            m1 = re.search(r'(?:Task 1|\[TASK 1\])[\s:]*([\s\S]*?)(?=(?:Task 2|\[TASK 2\])|$)', s_transcript_str, re.IGNORECASE)
+            m2 = re.search(r'(?:Task 2|\[TASK 2\])[\s:]*([\s\S]*?)(?=(?:Task 3|\[TASK 3\])|$)', s_transcript_str, re.IGNORECASE)
+            if m1:
+                t1_text = m1.group(1).strip()
+            if m2:
+                t2_text = m2.group(1).strip()
+
+            if not t1_text and not t2_text:
+                t1_text = s_transcript_str
+
+    if not t1_text:
+        t1_text = "Chưa có bản ghi âm / transcript cho Task 1."
+    if not t2_text:
+        t2_text = "Chưa có bản ghi âm / transcript cho Task 2."
+
+    # 2. Xử lý audio_url từ database
+    if audio_url:
+        audio_url_str = str(audio_url).strip()
+        if audio_url_str.startswith('{') and audio_url_str.endswith('}'):
+            try:
+                aj = json.loads(audio_url_str)
+                t1_audio = aj.get('task1') or aj.get('t1') or ""
+                t2_audio = aj.get('task2') or aj.get('t2') or ""
+            except Exception:
+                pass
+        elif not t1_audio and not t2_audio:
+            if 'task2' in audio_url_str:
+                t2_audio = audio_url_str
+            else:
+                t1_audio = audio_url_str
+
+    # 3. Quét file audio thật trong media/speaking_audios/ nếu có phien_id
+    if phien_id:
+        media_spk_dir = Path(settings.MEDIA_ROOT) / 'speaking_audios'
+        if media_spk_dir.exists():
+            for ext in ['.wav', '.webm', '.mp3', '.ogg', '.m4a']:
+                f1 = media_spk_dir / f"phien_{phien_id}_task1{ext}"
+                if f1.exists() and not t1_audio:
+                    t1_audio = f"{settings.MEDIA_URL}speaking_audios/phien_{phien_id}_task1{ext}"
+                f2 = media_spk_dir / f"phien_{phien_id}_task2{ext}"
+                if f2.exists() and not t2_audio:
+                    t2_audio = f"{settings.MEDIA_URL}speaking_audios/phien_{phien_id}_task2{ext}"
+
+    tasks = [
+        {
+            'task_key': 'task1',
+            'task_badge': 'Task 1 (30 giây)',
+            'task_title': 'Task 1: Giới thiệu bản thân & Mục tiêu học tập',
+            'prompt_desc': 'Trả lời câu hỏi ngắn cá nhân: Giới thiệu bản thân, mục tiêu cải thiện tiếng Anh, hoặc thói quen học tập hàng ngày.',
+            'transcript': t1_text,
+            'audio_url': t1_audio,
+            'has_audio': bool(t1_audio),
+        },
+        {
+            'task_key': 'task2',
+            'task_badge': 'Task 2 (120 giây)',
+            'task_title': 'Task 2: Thuyết trình theo chủ đề chuyên sâu',
+            'prompt_desc': 'Thuyết trình chuyên sâu theo chủ đề được giao: Trình bày quan điểm cá nhân, cấu trúc lập luận và ví dụ thực tế.',
+            'transcript': t2_text,
+            'audio_url': t2_audio,
+            'has_audio': bool(t2_audio),
+        }
+    ]
+    return tasks
+
+
 def submit_writing_speaking(request):
 
     """
@@ -2801,16 +2929,25 @@ def submit_writing_speaking(request):
 
             )
 
+            # Lưu file âm thanh ghi âm nếu có dữ liệu base64 từ trình duyệt
+            spk_audio_1 = data.get('speaking_audio_task1', '')
+            spk_audio_2 = data.get('speaking_audio_task2', '')
+            saved_url_1 = _save_base64_audio(spk_audio_1, phien_obj.id, 'task1') if spk_audio_1 else ""
+            saved_url_2 = _save_base64_audio(spk_audio_2, phien_obj.id, 'task2') if spk_audio_2 else ""
+            
+            combined_audio_json = ""
+            if saved_url_1 or saved_url_2:
+                combined_audio_json = json.dumps({
+                    'task1': saved_url_1,
+                    'task2': saved_url_2
+                })
+
             tl_s = CauTraLoi.objects.create(
-
                 phien_lam_bai=phien_obj,
-
                 cau_hoi=cau_s,
-
                 noi_dung_tra_loi=speaking_transcript if has_speaking else "Chưa thực hiện thu âm Speaking",
-
+                audio_url=combined_audio_json,
                 diem_tu_dong=speaking_scaled if has_speaking else 0.0
-
             )
 
             ChamDiemAI.objects.create(
@@ -5000,6 +5137,8 @@ def teacher_review(request):
 
 
 
+        speaking_tasks = _extract_speaking_tasks(s_transcript, audio_url, phien_id=phien_db.id)
+
         detail_data = {
 
             'hoc_vien_name': kh_obj.ho_ten if (kh_obj and kh_obj.ho_ten) else 'Học viên',
@@ -5087,6 +5226,8 @@ def teacher_review(request):
                 'mcq_parsed': mcq_parsed,
 
                 'audio_url': audio_url,
+
+                'speaking_tasks': speaking_tasks,
 
             },
 
