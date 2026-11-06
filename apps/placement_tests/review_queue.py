@@ -94,7 +94,12 @@ def build_review_rows(selected_session_id=None):
             if bl.ky_nang != 'TRAC_NGHIEM' and bl.trang_thai_cham != BaiLamKyNang.TrangThaiCham.GV_DA_DUYET:
                 has_any_pending = True
 
-        is_approved = bool(kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN) or (
+        # Kiểm tra nếu học viên đã được xếp lớp hoặc hoàn tất nhập học -> Đã được công nhận duyệt
+        is_assigned = False
+        if p.ho_so_tu_van:
+            is_assigned = p.ho_so_tu_van.ghi_danhs.exclude(trang_thai='HUY').exists()
+
+        is_approved = bool(kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN) or is_assigned or (
             has_any_skill and not has_any_pending
         )
 

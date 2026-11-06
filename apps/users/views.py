@@ -651,6 +651,36 @@ def student_dashboard(request):
                 hoc_phi_da_dong = hoc_phi_phai_dong
                 is_tuition_paid = True
 
+    # 4. ĐỒNG BỘ TRẠNG THÁI DUYỆT ĐIỂM BÀI TEST:
+    # Khi học viên đã được xếp lớp hoặc đã đóng học phí / hoàn tất nhập học, hoặc kết quả kiểm tra
+    # đã được giáo viên duyệt (DA_XAC_NHAN), bài test đương nhiên được công nhận điểm chính thức.
+    kq_obj = getattr(latest_phien, 'ket_qua_kiem_tra', None) if latest_phien else None
+    if kq_obj and kq_obj.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
+        is_teacher_approved = True
+
+    if has_assigned_class or is_tuition_paid:
+        is_teacher_approved = True
+
+    if is_teacher_approved:
+        if official_score_val is None:
+            if kq_obj and kq_obj.tong_diem is not None:
+                official_score_val = float(kq_obj.tong_diem)
+            elif ai_score_val > 0:
+                official_score_val = ai_score_val
+            else:
+                official_score_val = 0.0
+
+    # Cập nhật lại điểm & trình độ xếp loại hiển thị nếu đã duyệt điểm
+    total_display = official_score_val if (is_teacher_approved and official_score_val is not None) else ai_score_val
+    if total_display >= 75:
+        trinh_do = 'B2'
+    elif total_display >= 55:
+        trinh_do = 'B1'
+    elif total_display > 0:
+        trinh_do = 'A2'
+    elif assigned_lop_hoc and assigned_lop_hoc.khoa_hoc and assigned_lop_hoc.khoa_hoc.trinh_do:
+        trinh_do = assigned_lop_hoc.khoa_hoc.trinh_do
+
     # Xác định trạng thái hồ sơ & Bước tiến trình theo BPMN
     if is_tuition_paid:
         ho_so_status = 'Đã hoàn tất nhập học'
@@ -691,6 +721,7 @@ def student_dashboard(request):
 
     # Chuẩn bị dữ liệu hiển thị thông tin học viên
     student_data = {
+        'id': f"{student_obj.id:03d}" if student_obj else "089",
         'ho_ten': student_obj.ho_ten if (student_obj and student_obj.ho_ten) else request.session.get('student_name', 'Học viên mới'),
         'email': student_obj.email if student_obj else request.session.get('student_email', 'chua_dang_ky@email.com'),
         'so_dien_thoai': student_obj.so_dien_thoai if (student_obj and student_obj.so_dien_thoai) else 'Chưa cập nhật',
