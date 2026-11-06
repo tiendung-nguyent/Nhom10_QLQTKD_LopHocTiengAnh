@@ -181,7 +181,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+WHITENOISE_USE_FINDERS = True
 # Site ID cấu hình cho Django Sites & allauth
 # Site 2 = 127.0.0.1:8000, Site 3 = nhom10-qlqtkd-lophoctienganh.onrender.com
 if 'RENDER' in os.environ:
