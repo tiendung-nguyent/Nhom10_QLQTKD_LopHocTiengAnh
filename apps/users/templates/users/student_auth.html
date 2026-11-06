@@ -860,6 +860,47 @@
       document.getElementById('reg-sdt')?.focus();
       return false;
     }
+
+    const ngaySinh = document.getElementById('reg-ngaysinh')?.value;
+    if (!ngaySinh) {
+      Toast.show('Vui lòng chọn Ngày sinh của học viên (bắt buộc)!', 'warning');
+      document.getElementById('reg-ngaysinh')?.focus();
+      return false;
+    }
+    const birthParts = ngaySinh.split('-');
+    if (birthParts.length === 3) {
+      const birthYear = parseInt(birthParts[0], 10);
+      const birthMonth = parseInt(birthParts[1], 10) - 1;
+      const birthDay = parseInt(birthParts[2], 10);
+      const birthDate = new Date(birthYear, birthMonth, birthDay);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (isNaN(birthDate.getTime())) {
+        Toast.show('Định dạng Ngày sinh không hợp lệ. Vui lòng chọn lại!', 'warning');
+        document.getElementById('reg-ngaysinh')?.focus();
+        return false;
+      }
+
+      if (birthDate > today) {
+        Toast.show('Ngày sinh không hợp lệ! Ngày sinh không thể nằm trong tương lai. Vui lòng chọn lại!', 'warning');
+        document.getElementById('reg-ngaysinh')?.focus();
+        return false;
+      }
+
+      let age = today.getFullYear() - birthYear;
+      const m = today.getMonth() - birthMonth;
+      if (m < 0 || (m === 0 && today.getDate() < birthDay)) {
+        age--;
+      }
+
+      if (age < 2) {
+        Toast.show('Học viên phải từ 2 tuổi trở lên để đăng ký tài khoản. Vui lòng kiểm tra lại ngày sinh!', 'warning');
+        document.getElementById('reg-ngaysinh')?.focus();
+        return false;
+      }
+    }
+
     if (!agree) {
       Toast.show('Vui lòng tích chọn đồng ý cam kết thi trung thực!', 'warning');
       return false;
@@ -872,6 +913,18 @@
     }
     return true;
   }
+  // Đặt giới hạn ngày sinh (tối đa hiện tại - 2 năm)
+  (function initRegDobLimits() {
+    const inp = document.getElementById('reg-ngaysinh');
+    if (inp) {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() - 2);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      inp.max = ${yyyy}--;
+    }
+  })();
 </script>
 {% endblock %}
 
