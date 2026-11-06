@@ -181,7 +181,6 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-# Serve files straight from STATICFILES_DIRS so CSS/JS load even when collectstatic was skipped
 WHITENOISE_USE_FINDERS = True
 # Site ID cấu hình cho Django Sites & allauth
 # Site 2 = 127.0.0.1:8000, Site 3 = nhom10-qlqtkd-lophoctienganh.onrender.com
