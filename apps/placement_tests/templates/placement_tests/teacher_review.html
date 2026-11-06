@@ -1696,6 +1696,13 @@
 
 {% if not is_detail_view %}
 
+{% if session_error %}
+<div role="alert" style="background: #FEF2F2; border: 1.5px solid #FECACA; border-radius: var(--radius-xl); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; color: #991B1B;">
+  <i class="fa-solid fa-circle-exclamation" style="font-size: 20px;"></i>
+  <div>{{ session_error }}</div>
+</div>
+{% endif %}
+
 <div class="page-header">
 
   <div class="page-breadcrumb"><span>Giáo viên</span> / Duyệt bài AI</div>

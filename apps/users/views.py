@@ -741,131 +741,72 @@ def teacher_dashboard(request):
     if not request.session.get('user_email') and not (hasattr(request, 'user') and request.user.is_authenticated):
         return redirect('users:student_login')
     now = timezone.now()
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    local_now = timezone.localtime(now)
+    today_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start = local_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    from apps.placement_tests.models import PhienLamBai, BaiLamKyNang, KetQuaKiemTra, ChamDiemAI
+    from apps.placement_tests.models import BaiLamKyNang, KetQuaKiemTra
+    from apps.placement_tests.review_queue import REVIEW_PAGE_SIZE, build_review_rows
 
-    # 1. Thống kê bài chờ duyệt hôm nay & bài mới nộp gần đây
-    all_phiens_qs = PhienLamBai.objects.select_related(
-        'ho_so_tu_van__khach_hang', 'bai_kiem_tra', 'ket_qua_kiem_tra'
-    ).prefetch_related(
-        'bai_lam_ky_nangs'
-    ).order_by('-hoan_thanh', '-bat_dau', '-id')
+    # 1. Pending list comes from the same source as the AI review page (filter=pending)
+    pending_rows = [r for r in build_review_rows() if r['trang_thai'] == 'pending']
 
-    # Đếm bài thi chờ duyệt (loại trừ các bài đã được phê duyệt)
-    pending_today_count = PhienLamBai.objects.filter(
-        ho_so_tu_van__isnull=False,
-        bai_lam_ky_nangs__trang_thai_cham=BaiLamKyNang.TrangThaiCham.AI_DA_CHAM,
-        hoan_thanh__gte=today_start
-    ).exclude(
-        ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN
-    ).distinct().count()
+    pending_count = len(pending_rows)
+    pending_today_count = len([r for r in pending_rows if r['thoi_gian'] >= today_start])
 
-    total_pending = PhienLamBai.objects.filter(
-        ho_so_tu_van__isnull=False,
-        bai_lam_ky_nangs__trang_thai_cham=BaiLamKyNang.TrangThaiCham.AI_DA_CHAM
-    ).exclude(
-        ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN
-    ).distinct().count()
+    # 2. Approved results (archived results have their own status, so they are never counted here)
+    approved_qs = KetQuaKiemTra.objects.filter(trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN)
+    approved_month_count = approved_qs.filter(ngay_xac_nhan__gte=month_start).count()
+    approved_total_count = approved_qs.count()
 
-    if pending_today_count == 0:
-        pending_today_count = total_pending if total_pending > 0 else 0
-
-    recent_count = PhienLamBai.objects.filter(
-        ho_so_tu_van__isnull=False,
-        hoan_thanh__gte=now - timedelta(days=2)
-    ).distinct().count()
-    if recent_count == 0:
-        recent_count = 3
-
-    # 2. Thống kê bài đã phê duyệt trong tháng này
-    approved_count = KetQuaKiemTra.objects.filter(
-        trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN,
-        ngay_xac_nhan__gte=month_start
-    ).count()
-    if approved_count == 0:
-        approved_count = KetQuaKiemTra.objects.filter(
-            trang_thai=KetQuaKiemTra.TrangThai.DA_XAC_NHAN
-        ).count()
-    if approved_count == 0:
-        approved_count = 12
-
-    # Tính độ tương đồng điểm AI & GV từ dữ liệu thật trong CSDL
+    # AI vs teacher score similarity, only from real adjusted scores of non-archived sessions
     evaluated_skills = BaiLamKyNang.objects.filter(
         diem_dieu_chinh__isnull=False,
         diem_tu_dong__isnull=False
+    ).exclude(
+        phien_lam_bai__ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
     )
-    if evaluated_skills.exists():
-        diffs = []
-        similarities = []
-        for bl in evaluated_skills:
-            max_s = 40.0 if bl.ky_nang == 'TRAC_NGHIEM' else 30.0
-            d = abs(float(bl.diem_dieu_chinh) - float(bl.diem_tu_dong))
-            diffs.append(d)
-            sim = max(0.0, 100.0 - (d / max_s * 100.0))
-            similarities.append(sim)
-
+    ai_accuracy = None
+    avg_diff = None
+    diffs = []
+    similarities = []
+    for bl in evaluated_skills:
+        max_s = 40.0 if bl.ky_nang == 'TRAC_NGHIEM' else 30.0
+        d = abs(float(bl.diem_dieu_chinh) - float(bl.diem_tu_dong))
+        diffs.append(d)
+        similarities.append(max(0.0, 100.0 - (d / max_s * 100.0)))
+    if diffs:
         avg_diff = round(sum(diffs) / len(diffs), 1)
         ai_accuracy = round(sum(similarities) / len(similarities), 1)
-    else:
-        avg_diff = 1.2
-        ai_accuracy = 92.0
 
-    # 3. Danh sách bài thi thật AI đã chấm sơ bộ chờ duyệt từ CSDL
-    real_reviews = []
-    for p in all_phiens_qs:
-        kh = p.ho_so_tu_van.khach_hang if p.ho_so_tu_van else None
-        kq = getattr(p, 'ket_qua_kiem_tra', None)
-
-        spk_sc = 0.0
-        wri_sc = 0.0
-        mcq_sc = 0.0
-        is_approved = False
-
-        if kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
-            is_approved = True
-
-        b_list = list(p.bai_lam_ky_nangs.all())
-        if b_list and all(b.trang_thai_cham == BaiLamKyNang.TrangThaiCham.GV_DA_DUYET for b in b_list):
-            is_approved = True
-
-        # Bài đã duyệt -> Không hiển thị ở danh sách "Chờ Giáo viên duyệt" này nữa
-        if is_approved:
-            continue
-
-        for b in b_list:
-            val = float(b.diem_dieu_chinh if b.diem_dieu_chinh is not None else (b.diem_tu_dong or 0.0))
-            if b.ky_nang == 'SPEAKING':
-                spk_sc = val
-            elif b.ky_nang == 'WRITING':
-                wri_sc = val
-            elif b.ky_nang == 'TRAC_NGHIEM':
-                mcq_sc = val
-
-        nt = p.hoan_thanh or p.bat_dau or now
-        real_reviews.append({
-            'id': p.id,
-            'ma_phien': f"{p.id:03d}",
-            'ten_hoc_vien': kh.ho_ten if (kh and kh.ho_ten) else (kh.email if kh else 'Học viên'),
-            'email': kh.email if kh else '',
-            'ten_bai': p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else 'Placement Test',
-            'ngay_thi': nt,
-            'timestamp': int(nt.timestamp()),
-            'speaking_score': round(spk_sc, 1),
-            'writing_score': round(wri_sc, 1),
-            'mcq_score': round(mcq_sc, 1),
+    # 3. Pending reviews, in the same order as the first page of the AI review page
+    real_reviews = [
+        {
+            'id': r['id'],
+            'ma_phien': r['ma_phien'],
+            'ten_hoc_vien': r['ten_hoc_vien'],
+            'email': r['email'],
+            'ten_bai': r['ten_bai'],
+            'ngay_thi': r['thoi_gian'],
+            'timestamp': r['timestamp'],
+            'speaking_score': round(r['speaking_score'], 1),
+            'writing_score': round(r['writing_score'], 1),
+            'mcq_score': round(r['mcq_score'], 1),
             'trang_thai': 'CHO_DUYET',
-        })
+        }
+        for r in pending_rows
+    ]
 
     context = {
         'today': now,
+        'pending_count': pending_count,
         'pending_today_count': pending_today_count,
-        'recent_count': recent_count,
-        'approved_count': approved_count,
+        'approved_month_count': approved_month_count,
+        'approved_total_count': approved_total_count,
         'ai_accuracy': ai_accuracy,
         'avg_diff': avg_diff,
-        'review_list': real_reviews[:15],
+        'evaluated_count': len(diffs),
+        'review_list': real_reviews[:REVIEW_PAGE_SIZE],
     }
     return render(request, 'users/teacher_dashboard.html', context)
 

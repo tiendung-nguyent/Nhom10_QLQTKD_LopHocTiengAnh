@@ -43,6 +43,9 @@ from apps.placement_tests.services import (
     get_goal_placement_info,
     round_to_half,
 )
+from apps.placement_tests.review_queue import (
+    REVIEW_PAGE_SIZE, build_review_rows, detect_test_goal, parse_session_id,
+)
 
 import re
 
@@ -4457,6 +4460,14 @@ def teacher_review(request):
 
     session_param = request.GET.get('session', '').strip()
 
+    session_id = parse_session_id(session_param)
+
+    session_error = ''
+
+    if session_param and session_id is None:
+
+        session_error = 'Mã phiên không hợp lệ. Vui lòng chọn bài thi từ danh sách.'
+
     skill_param = request.GET.get('skill', 'SPEAKING').upper()
 
     filter_type = request.GET.get('filter', 'all').lower()
@@ -4471,237 +4482,8 @@ def teacher_review(request):
 
 
 
-    # 1. TRUY VẤN TẤT CẢ CÁC BÀI THI HỌC VIÊN ĐÃ LÀM TỪ CSDL (Loại bỏ các bài ở trạng thái Lưu trữ)
-
-    all_phiens_qs = PhienLamBai.objects.exclude(
-
-        ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
-
-    ).select_related(
-
-        'ho_so_tu_van__khach_hang', 'bai_kiem_tra', 'ket_qua_kiem_tra'
-
-    ).prefetch_related(
-
-        'bai_lam_ky_nangs',
-
-        'cau_tra_lois__cham_diem_ais',
-
-        'cau_tra_lois__cau_hoi'
-
-    ).order_by('-hoan_thanh', '-bat_dau', '-id')
-
-
-
-    # LỌC DUYỆT BÀI THI: CHỈ HIỂN THỊ BÀI MỚI NHẤT CỦA MỖI MỤC TIÊU CHO TỪNG HỌC VIÊN
-
-    seen_student_goals = set()
-
-    all_phiens = []
-
-    for p in all_phiens_qs:
-
-        kh = p.ho_so_tu_van.khach_hang if p.ho_so_tu_van else None
-
-        student_key = kh.id if kh else f"HSTV_{p.ho_so_tu_van_id}"
-
-        bai_ten = p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else ''
-
-        if 'IELTS' in bai_ten:
-
-            g_key = 'IELTS'
-
-        elif 'DAU_RA' in bai_ten or 'DH' in bai_ten or 'VSTEP' in bai_ten:
-
-            g_key = 'DAU_RA_DH'
-
-        elif 'GIAO_TIEP' in bai_ten:
-
-            g_key = 'GIAO_TIEP'
-
-        elif 'MAT_GOC' in bai_ten:
-
-            g_key = 'MAT_GOC'
-
-        else:
-
-            g_key = 'IELTS'
-
-
-
-        pair_key = (student_key, g_key)
-
-        # Giữ lại bài mới nhất của mục tiêu đó, hoặc phiên thi đang được chọn trực tiếp ?session=X
-
-        if (session_param and str(p.id) == str(session_param)) or pair_key not in seen_student_goals:
-
-            seen_student_goals.add(pair_key)
-
-            all_phiens.append(p)
-
-
-
-    formatted_tests = []
-
-    for p in all_phiens:
-
-        kh = p.ho_so_tu_van.khach_hang if p.ho_so_tu_van else None
-
-        kq = getattr(p, 'ket_qua_kiem_tra', None)
-
-
-
-        spk_ai_score = None
-
-        wri_ai_score = None
-
-        mcq_ai_score = None
-
-        spk_adj_score = None
-
-        wri_adj_score = None
-
-        mcq_adj_score = None
-
-        spk_status = 'CHO_CHAM'
-
-        wri_status = 'CHO_CHAM'
-
-        mcq_status = 'CHO_CHAM'
-
-        has_any_pending = False
-
-        has_any_skill = False
-
-
-
-        for bl in p.bai_lam_ky_nangs.all():
-
-            has_any_skill = True
-
-            auto_sc = float(bl.diem_tu_dong) if bl.diem_tu_dong is not None else 0.0
-
-            adj_sc = float(bl.diem_dieu_chinh) if bl.diem_dieu_chinh is not None else None
-
-
-
-            if bl.ky_nang == 'SPEAKING':
-
-                spk_ai_score = auto_sc
-
-                spk_adj_score = adj_sc
-
-                spk_status = bl.trang_thai_cham
-
-            elif bl.ky_nang == 'WRITING':
-
-                wri_ai_score = auto_sc
-
-                wri_adj_score = adj_sc
-
-                wri_status = bl.trang_thai_cham
-
-            elif bl.ky_nang == 'TRAC_NGHIEM':
-
-                mcq_ai_score = auto_sc
-
-                mcq_adj_score = adj_sc
-
-                mcq_status = bl.trang_thai_cham
-
-
-
-            # Chỉ tính các kỹ năng tự luận cần GV chấm duyệt thủ công (Speaking, Writing)
-            if bl.ky_nang != 'TRAC_NGHIEM' and bl.trang_thai_cham != BaiLamKyNang.TrangThaiCham.GV_DA_DUYET:
-
-                has_any_pending = True
-
-
-
-        # Trạng thái duyệt tổng quát của bài thi
-
-        is_approved = False
-
-        if kq and kq.trang_thai == KetQuaKiemTra.TrangThai.DA_XAC_NHAN:
-
-            is_approved = True
-
-        elif has_any_skill and not has_any_pending:
-
-            is_approved = True
-
-
-
-        status_key = 'approved' if is_approved else 'pending'
-
-        status_label = 'GV đã duyệt' if is_approved else 'Chờ GV duyệt'
-
-
-
-        eff_spk = spk_adj_score if spk_adj_score is not None else (spk_ai_score or 0.0)
-
-        eff_wri = wri_adj_score if wri_adj_score is not None else (wri_ai_score or 0.0)
-
-        eff_mcq = mcq_adj_score if mcq_adj_score is not None else (mcq_ai_score or 0.0)
-
-        total_sc = round(eff_spk + eff_wri + eff_mcq, 1)
-
-
-
-        formatted_tests.append({
-
-            'id': p.id,
-
-            'ma_phien': f"{p.id:03d}",
-
-            'ten_hoc_vien': kh.ho_ten if (kh and kh.ho_ten) else (kh.email if kh else 'Học viên'),
-
-            'email': kh.email if kh else '',
-
-            'so_dien_thoai': kh.so_dien_thoai if kh else 'Chưa có SĐT',
-
-            'ten_bai': p.bai_kiem_tra.ten_bai if p.bai_kiem_tra else 'Placement Test',
-
-            'thoi_gian': p.hoan_thanh or p.bat_dau or now,
-
-            'timestamp': int((p.hoan_thanh or p.bat_dau or now).timestamp()),
-
-            'speaking_score': eff_spk,
-
-            'writing_score': eff_wri,
-
-            'mcq_score': eff_mcq,
-
-            'speaking_ai': spk_ai_score,
-
-            'writing_ai': wri_ai_score,
-
-            'mcq_ai': mcq_ai_score,
-
-            'speaking_adj': spk_adj_score,
-
-            'writing_adj': wri_adj_score,
-
-            'mcq_adj': mcq_adj_score,
-
-            'speaking_status': spk_status,
-
-            'writing_status': wri_status,
-
-            'mcq_status': mcq_status,
-
-            'tong_diem': total_sc,
-
-            'trang_thai': status_key,
-
-            'trang_thai_label': status_label,
-
-            'is_approved': is_approved,
-
-            'is_selected': (session_param and str(p.id) == str(session_param)),
-
-        })
-
+    # 1. Build the shared review list (same source as the teacher dashboard)
+    formatted_tests = build_review_rows(selected_session_id=session_id)
 
 
     # Tìm kiếm theo thông tin học viên (Tên, SĐT, Email, Mã phiên / ID, Đề thi)
@@ -4770,7 +4552,7 @@ def teacher_review(request):
 
     # Phân trang: 20 bài / trang
 
-    paginator = Paginator(filtered_tests, 20)
+    paginator = Paginator(filtered_tests, REVIEW_PAGE_SIZE)
 
     try:
 
@@ -4824,9 +4606,13 @@ def teacher_review(request):
 
 
 
-    if session_param:
+    if session_id is not None:
 
-        phien_db = PhienLamBai.objects.filter(pk=session_param).select_related(
+        phien_db = PhienLamBai.objects.filter(pk=session_id).exclude(
+
+            ket_qua_kiem_tra__trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU
+
+        ).select_related(
 
             'ho_so_tu_van__khach_hang', 'bai_kiem_tra', 'ket_qua_kiem_tra'
 
@@ -4839,6 +4625,16 @@ def teacher_review(request):
             'cau_tra_lois__cau_hoi'
 
         ).first()
+
+        if phien_db is None:
+
+            if KetQuaKiemTra.objects.filter(phien_lam_bai_id=session_id, trang_thai=KetQuaKiemTra.TrangThai.LUU_TRU).exists():
+
+                session_error = f'Phiên làm bài #{session_id} đã được lưu trữ nên không hiển thị trong danh sách duyệt.'
+
+            else:
+
+                session_error = f'Không tìm thấy phiên làm bài #{session_id}.'
 
 
 
@@ -4974,37 +4770,7 @@ def teacher_review(request):
 
         # Nhận diện mục tiêu học tập của bài thi
 
-        bai_ten = phien_db.bai_kiem_tra.ten_bai if phien_db.bai_kiem_tra else ''
-
-        if 'IELTS' in bai_ten:
-
-            candidate_goal = 'IELTS'
-
-        elif 'DAU_RA' in bai_ten or 'DH' in bai_ten or 'VSTEP' in bai_ten:
-
-            candidate_goal = 'DAU_RA_DH'
-
-        elif 'GIAO_TIEP' in bai_ten:
-
-            candidate_goal = 'GIAO_TIEP'
-
-        elif 'MAT_GOC' in bai_ten:
-
-            candidate_goal = 'MAT_GOC'
-
-        elif phien_db.ho_so_tu_van and phien_db.ho_so_tu_van.khoa_de_xuat:
-
-            kd_name = phien_db.ho_so_tu_van.khoa_de_xuat.ten_khoa.upper()
-
-            if 'IELTS' in kd_name: candidate_goal = 'IELTS'
-
-            elif 'GIAO TIEP' in kd_name or 'COMMUNICATION' in kd_name: candidate_goal = 'GIAO_TIEP'
-
-            else: candidate_goal = 'IELTS'
-
-        else:
-
-            candidate_goal = 'IELTS'
+        candidate_goal = detect_test_goal(phien_db, use_course_fallback=True)
 
 
 
@@ -5379,6 +5145,7 @@ def teacher_review(request):
         'approved_tests_count': approved_tests_count,
 
         'is_approved_now': is_approved_now,
+        'session_error': session_error,
 
         'levels': placement_info['levels_list'] if is_detail_view else [
 
@@ -5548,21 +5315,7 @@ def update_mcq_score(request):
 
 
 
-    bai_ten = phien_db.bai_kiem_tra.ten_bai if phien_db.bai_kiem_tra else ''
-
-    candidate_goal = 'IELTS'
-
-    if 'DAU_RA' in bai_ten or 'DH' in bai_ten or 'VSTEP' in bai_ten:
-
-        candidate_goal = 'DAU_RA_DH'
-
-    elif 'GIAO_TIEP' in bai_ten:
-
-        candidate_goal = 'GIAO_TIEP'
-
-    elif 'MAT_GOC' in bai_ten:
-
-        candidate_goal = 'MAT_GOC'
+    candidate_goal = detect_test_goal(phien_db)
 
 
 
@@ -5901,37 +5654,7 @@ def finalize_test_result(request):
 
     # Nhận diện mục tiêu học tập của bài thi
 
-    bai_ten = phien_db.bai_kiem_tra.ten_bai if phien_db.bai_kiem_tra else ''
-
-    if 'IELTS' in bai_ten:
-
-        candidate_goal = 'IELTS'
-
-    elif 'DAU_RA' in bai_ten or 'DH' in bai_ten or 'VSTEP' in bai_ten:
-
-        candidate_goal = 'DAU_RA_DH'
-
-    elif 'GIAO_TIEP' in bai_ten:
-
-        candidate_goal = 'GIAO_TIEP'
-
-    elif 'MAT_GOC' in bai_ten:
-
-        candidate_goal = 'MAT_GOC'
-
-    elif phien_db.ho_so_tu_van and phien_db.ho_so_tu_van.khoa_de_xuat:
-
-        kd_name = phien_db.ho_so_tu_van.khoa_de_xuat.ten_khoa.upper()
-
-        if 'IELTS' in kd_name: candidate_goal = 'IELTS'
-
-        elif 'GIAO TIEP' in kd_name or 'COMMUNICATION' in kd_name: candidate_goal = 'GIAO_TIEP'
-
-        else: candidate_goal = 'IELTS'
-
-    else:
-
-        candidate_goal = 'IELTS'
+    candidate_goal = detect_test_goal(phien_db, use_course_fallback=True)
 
 
 

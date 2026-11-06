@@ -24,13 +24,36 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-8j8ea8m&c5(oa91o#85-yvkchitg99z9#pi07ktf(g2ul5pdnn'
+
+def _env_bool(name, default=False):
+    return os.environ.get(name, str(default)).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def _env_list(name, default=''):
+    return [item.strip() for item in os.environ.get(name, default).split(',') if item.strip()]
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Off by default; enable locally with DJANGO_DEBUG=True in .env
+DEBUG = _env_bool('DJANGO_DEBUG', False)
 
-ALLOWED_HOSTS = ['nhom10-qlqtkd-lophoctienganh.onrender.com', 'localhost', '127.0.0.1', '*']
+# SECURITY WARNING: keep the secret key used in production secret!
+# Never commit the real key; the placeholder below is only accepted for local DEBUG runs
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
+if not SECRET_KEY:
+    if not DEBUG:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is off.')
+    SECRET_KEY = 'django-insecure-local-development-only'
+
+ALLOWED_HOSTS = _env_list(
+    'DJANGO_ALLOWED_HOSTS',
+    'localhost,127.0.0.1,nhom10-qlqtkd-lophoctienganh.onrender.com',
+)
+# Render sets this automatically for the service's public hostname
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
@@ -42,6 +65,11 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # Application definition
 
@@ -192,14 +220,6 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'academixenglishcenter@gmail.com'
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = 'Academix English Center <academixenglishcenter@gmail.com>'
-import os
-from pathlib import Path
-import dj_database_url
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Lấy key (sẽ tự động đọc từ .env ở Local hoặc từ Render Environment khi deploy)
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         # Khai báo trực tiếp APP để không bị lỗi DoesNotExist khi DB chưa có record
