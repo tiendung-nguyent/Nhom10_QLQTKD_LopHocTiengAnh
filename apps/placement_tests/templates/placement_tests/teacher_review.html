@@ -976,47 +976,58 @@
 
 
       {% else %}
+      <!-- NỘI DUNG BÀI GHI ÂM SPEAKING (CHIA 2 BÀI: TASK 1 & TASK 2) -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        {% for spk in detail.cau_tra_loi.speaking_tasks %}
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+          <!-- Header của Task -->
+          <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <span class="badge" style="background: #e0e7ff; color: #4338ca; font-weight: 700; font-size: 12px; padding: 4px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-microphone-lines"></i>{{ spk.task_badge }}
+              </span>
+              {% if spk.has_audio %}
+              <span class="badge" style="background: #ecfdf5; color: #047857; font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="fa-solid fa-check-circle"></i>Có file ghi âm
+              </span>
+              {% else %}
+              <span class="badge" style="background: #fef3c7; color: #b45309; font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="fa-solid fa-triangle-exclamation"></i>Chưa có file audio
+              </span>
+              {% endif %}
+            </div>
+            <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); line-height: 1.5; letter-spacing: 0.2px;">
+              {{ spk.task_title }}
+            </div>
+          </div>
 
-      <!-- NỘI DUNG BÀI GHI ÂM SPEAKING -->
-
-      <div style="margin-bottom: 18px;">
-
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
-
-          <i class="fa-solid fa-microphone" style="color: var(--accent-purple); margin-right: 5px;"></i> File Audio ghi âm &amp; Bản dịch Speech-to-Text:
-
+          <!-- Trình phát Audio của thí sinh -->
+          <div>
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
+              <i class="fa-solid fa-headphones" style="color: var(--accent-purple); margin-right: 5px;"></i>Nghe bài ghi âm của học viên:
+            </div>
+            {% if spk.has_audio %}
+            <audio controls style="width: 100%; border-radius: 8px; margin-bottom: 6px; outline: none;">
+              <source src="{{ spk.audio_url }}">
+              Trình duyệt của bạn không hỗ trợ phát audio.
+            </audio>
+            <div style="font-size: 11px; color: #059669; font-style: italic; display: flex; align-items: center; gap: 4px;">
+              <i class="fa-solid fa-circle-check"></i> File audio thật được lưu từ phiên làm bài của thí sinh.
+            </div>
+            {% else %}
+            <div style="padding: 10px 14px; background: #fffbeb; border: 1px dashed #f59e0b; border-radius: 8px; color: #b45309; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-triangle-exclamation"></i> Phiên thi này chưa có file audio trực tiếp của học viên.
+            </div>
+            {% endif %}
+          </div>
         </div>
-
-        <audio controls style="width: 100%; border-radius: 8px; margin-bottom: 10px;">
-
-          <source src="{{ detail.cau_tra_loi.audio_url|default:'https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg' }}" type="audio/ogg">
-
-          Trình duyệt không hỗ trợ audio.
-
-        </audio>
-
-        <div style="font-size: 11px; color: var(--text-muted); font-style: italic;">
-
-          Bấm play để nghe toàn bộ phần ghi âm câu trả lời Speaking của thí sinh.
-
+        {% empty %}
+        <!-- Fallback nếu không có task -->
+        <div style="padding: 16px; background: #fffbeb; border: 1px dashed #f59e0b; border-radius: 8px; color: #b45309; font-size: 13px;">
+          <i class="fa-solid fa-triangle-exclamation" style="margin-right: 6px;"></i>Chưa có bài thi ghi âm Speaking của học viên.
         </div>
-
+        {% endfor %}
       </div>
-
-
-
-      <div>
-
-        <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;">
-
-          <i class="fa-solid fa-file-lines" style="color: var(--accent-purple); margin-right: 5px;"></i> Transcript lời nói ghi âm:
-
-        </div>
-
-        <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; font-size: 13px; line-height: 1.7; color: var(--text-primary); max-height: 300px; overflow-y: auto; white-space: pre-wrap;">{{ detail.cau_tra_loi.transcript }}</div>
-
-      </div>
-
       {% endif %}
 
 
