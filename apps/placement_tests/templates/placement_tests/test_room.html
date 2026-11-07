@@ -4445,6 +4445,7 @@
   const taskMediaRecorders = { t1: null, t2: null, t3: null };
   const taskStreams = { t1: null, t2: null, t3: null };
   const taskAudioChunks = { t1: [], t2: [], t3: [] };
+  const taskAudioBlobs = { t1: null, t2: null, t3: null };
   const taskAudioBase64 = { t1: '', t2: '', t3: '' };
   const taskSpeechTranscripts = { t1: '', t2: '', t3: '' };
   const taskSpeechRecs = { t1: null, t2: null, t3: null };
@@ -4498,6 +4499,7 @@
             stream.getTracks().forEach(track => track.stop());
           } catch(e) {}
           const audioBlob = new Blob(taskAudioChunks[taskId], { type: 'audio/webm' });
+          taskAudioBlobs[taskId] = audioBlob;
           const audioUrl = URL.createObjectURL(audioBlob);
           if (audioPlayer && playbackWrap) {
             audioPlayer.src = audioUrl;
@@ -5611,6 +5613,20 @@
     const fullTranscript = spkParts.join('\n');
 
 
+
+    // Đảm bảo dữ liệu base64 của audio hoàn tất nếu học viên vừa kết thúc thu âm
+    for (const tid of ['t1', 't2', 't3']) {
+      if (taskAudioBlobs[tid] && !taskAudioBase64[tid]) {
+        try {
+          taskAudioBase64[tid] = await new Promise((resolve) => {
+            const r = new FileReader();
+            r.onloadend = () => resolve(r.result || '');
+            r.onerror = () => resolve('');
+            r.readAsDataURL(taskAudioBlobs[tid]);
+          });
+        } catch (e) {}
+      }
+    }
 
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
 

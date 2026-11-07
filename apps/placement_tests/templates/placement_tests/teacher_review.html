@@ -1142,7 +1142,7 @@
               </span>
               {% else %}
               <span class="badge" style="background: #FEF3C7; color: #B45309; border: 1px solid #FDE68A; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-triangle-exclamation"></i> Chưa có file audio
+                <i class="fa-solid fa-microphone-slash"></i> Chưa thu âm
               </span>
               {% endif %}
             </div>
@@ -1198,8 +1198,12 @@
               <i class="fa-solid fa-circle-check"></i> File audio thật được lưu từ phiên làm bài của thí sinh.
             </div>
             {% else %}
-            <div style="padding: 10px 14px; background: #fffbeb; border: 1px dashed #f59e0b; border-radius: 8px; color: #b45309; font-size: 12px; display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-              <i class="fa-solid fa-triangle-exclamation"></i> Phiên thi này chưa có file audio trực tiếp của học viên.
+            <div style="padding: 12px 14px; background: #fffbeb; border: 1px dashed #f59e0b; border-radius: 8px; color: #b45309; font-size: 12.5px; display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+              <i class="fa-solid fa-microphone-slash" style="font-size: 16px; color: #d97706;"></i>
+              <div>
+                <strong style="display: block; margin-bottom: 2px;">Học viên chưa thực hiện thu âm bài nói này.</strong>
+                <span style="font-size: 11.5px; color: #92400e;">Không có file âm thanh để phát.</span>
+              </div>
             </div>
             {% endif %}
           </div>
@@ -1214,7 +1218,7 @@
                 (Bản ghi lời nói thí sinh)
               </span>
             </div>
-            <div id="script-text-{{ spk.task_key }}" style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; font-size: 13.5px; line-height: 1.65; color: var(--text-primary); max-height: 220px; overflow-y: auto; white-space: pre-wrap; font-family: inherit;">{{ spk.transcript }}</div>
+            <div id="script-text-{{ spk.task_key }}" style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; font-size: 13.5px; line-height: 1.65; color: {% if not spk.has_audio %}var(--text-muted){% else %}var(--text-primary){% endif %}; max-height: 220px; overflow-y: auto; white-space: pre-wrap; font-family: inherit; font-style: {% if not spk.has_audio %}italic{% else %}normal{% endif %};">{{ spk.transcript }}</div>
           </div>
         </div>
         {% empty %}

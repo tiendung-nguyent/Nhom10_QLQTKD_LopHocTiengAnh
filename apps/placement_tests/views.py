@@ -2609,10 +2609,12 @@ def _extract_speaking_tasks(s_transcript, audio_url, phien_id=None):
             if not t1_text and not t2_text:
                 t1_text = s_transcript_str
 
-    if not t1_text or t1_text.startswith("Chưa có"):
-        t1_text = "Good morning. My name is Nguyen Van A. I am currently preparing for my English qualification to support my academic studies and future career. In my daily routine, I dedicate around one hour each evening to practicing listening comprehension and expanding my vocabulary."
-    if not t2_text or t2_text.startswith("Chưa có"):
-        t2_text = "I would like to describe a significant project that I completed recently. During my last semester at university, our group was tasked with developing an academic presentation on renewable energy trends. We encountered various obstacles with scheduling and data analysis, but through clear communication and collaborative effort, we successfully delivered the final report on schedule."
+    # Nếu học viên chưa thu âm hoặc transcript trống -> Giữ thông báo rõ ràng, không tạo text giả
+    placeholder_text = "Học viên chưa thực hiện thu âm bài nói này."
+    if not t1_text or t1_text.lower().startswith("chưa có") or t1_text.lower().startswith("chưa thực hiện"):
+        t1_text = placeholder_text
+    if not t2_text or t2_text.lower().startswith("chưa có") or t2_text.lower().startswith("chưa thực hiện"):
+        t2_text = placeholder_text
 
     # 2. Xử lý audio_url từ database
     if audio_url:
@@ -2630,43 +2632,35 @@ def _extract_speaking_tasks(s_transcript, audio_url, phien_id=None):
             else:
                 t1_audio = audio_url_str
 
-    # 3. Quét file audio thật trong media/speaking_audios/
+    # 3. Quét file audio thật trong media/speaking_audios/ đúng theo phien_id
     media_spk_dir = Path(settings.MEDIA_ROOT) / 'speaking_audios'
-    if media_spk_dir.exists():
-        if phien_id:
+    if media_spk_dir.exists() and phien_id:
+        if not t1_audio:
             for ext in ['.wav', '.webm', '.mp3', '.ogg', '.m4a']:
                 f1 = media_spk_dir / f"phien_{phien_id}_task1{ext}"
                 if f1.exists():
                     t1_audio = f"{settings.MEDIA_URL}speaking_audios/phien_{phien_id}_task1{ext}"
                     break
+        if not t2_audio:
             for ext in ['.wav', '.webm', '.mp3', '.ogg', '.m4a']:
                 f2 = media_spk_dir / f"phien_{phien_id}_task2{ext}"
                 if f2.exists():
                     t2_audio = f"{settings.MEDIA_URL}speaking_audios/phien_{phien_id}_task2{ext}"
                     break
 
-        # Đảm bảo luôn có file âm thanh thật để giáo viên nghe và thẩm định
-        sample_num = ((int(phien_id) - 1) % 6) + 1 if phien_id else 1
-        if not t1_audio or not (t1_audio.startswith('/media/') or t1_audio.startswith('/static/')):
-            cand1 = media_spk_dir / f"phien_{sample_num}_task1.wav"
-            if cand1.exists():
-                t1_audio = f"{settings.MEDIA_URL}speaking_audios/phien_{sample_num}_task1.wav"
-            else:
-                avail1 = sorted(list(media_spk_dir.glob("*task1*")))
-                t1_audio = f"{settings.MEDIA_URL}speaking_audios/{avail1[0].name}" if avail1 else "/static/audio/listening_q1.wav"
+    # 4. Xác thực file audio tồn tại: nếu đường dẫn trỏ tới /media/ nhưng file không tồn tại trên ổ cứng thì hủy
+    if t1_audio and t1_audio.startswith(settings.MEDIA_URL):
+        rel1 = t1_audio[len(settings.MEDIA_URL):]
+        if not (Path(settings.MEDIA_ROOT) / rel1).exists():
+            t1_audio = ""
 
-        if not t2_audio or not (t2_audio.startswith('/media/') or t2_audio.startswith('/static/')):
-            cand2 = media_spk_dir / f"phien_{sample_num}_task2.wav"
-            if cand2.exists():
-                t2_audio = f"{settings.MEDIA_URL}speaking_audios/phien_{sample_num}_task2.wav"
-            else:
-                avail2 = sorted(list(media_spk_dir.glob("*task2*")))
-                t2_audio = f"{settings.MEDIA_URL}speaking_audios/{avail2[0].name}" if avail2 else "/static/audio/listening_q2.wav"
-    else:
-        if not t1_audio:
-            t1_audio = "/static/audio/listening_q1.wav"
-        if not t2_audio:
-            t2_audio = "/static/audio/listening_q2.wav"
+    if t2_audio and t2_audio.startswith(settings.MEDIA_URL):
+        rel2 = t2_audio[len(settings.MEDIA_URL):]
+        if not (Path(settings.MEDIA_ROOT) / rel2).exists():
+            t2_audio = ""
+
+    # TUYỆT ĐỐI KHÔNG FALLBACK GÁN FILE MẪU NẾU HỌC VIÊN CHƯA THU ÂM
+    # Nếu học viên chưa thu âm thì không có file thu âm (has_audio = False)
 
     tasks = [
         {
@@ -3100,16 +3094,13 @@ def submit_writing_speaking(request):
 
             )
 
-            tl_w = CauTraLoi.objects.create(
-
+            tl_w, _ = CauTraLoi.objects.update_or_create(
                 phien_lam_bai=phien_obj,
-
                 cau_hoi=cau_w,
-
-                noi_dung_tra_loi=f"[TASK 1]\n{task1_writing}\n\n[TASK 2]\n{task2_writing}",
-
-                diem_tu_dong=writing_scaled
-
+                defaults={
+                    'noi_dung_tra_loi': f"[TASK 1]\n{task1_writing}\n\n[TASK 2]\n{task2_writing}",
+                    'diem_tu_dong': writing_scaled
+                }
             )
 
             ChamDiemAI.objects.create(
@@ -3157,12 +3148,14 @@ def submit_writing_speaking(request):
                     'task2': saved_url_2
                 })
 
-            tl_s = CauTraLoi.objects.create(
+            tl_s, _ = CauTraLoi.objects.update_or_create(
                 phien_lam_bai=phien_obj,
                 cau_hoi=cau_s,
-                noi_dung_tra_loi=speaking_transcript if has_speaking else "Chưa thực hiện thu âm Speaking",
-                audio_url=combined_audio_json,
-                diem_tu_dong=speaking_scaled if has_speaking else 0.0
+                defaults={
+                    'noi_dung_tra_loi': speaking_transcript if has_speaking else "Chưa thực hiện thu âm Speaking",
+                    'audio_url': combined_audio_json,
+                    'diem_tu_dong': speaking_scaled if has_speaking else 0.0
+                }
             )
 
             ChamDiemAI.objects.create(
